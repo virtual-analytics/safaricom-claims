@@ -1,0 +1,67 @@
+{% extends 'myapp/base.html' %}
+{% block title %}Temporal Analysis - Minet Insurance{% endblock %}
+{% block content %}
+<div class="main-area">
+    <h1>The Verse - Acme_Brokers Dashboard</h1>
+    <h2>Temporal Claim Patterns</h2>
+    <div style="margin-bottom:2.2rem;">
+        <div style="display:flex; gap:2rem; margin-bottom:1rem;">
+            <div>
+                <label style="font-size:0.98rem; color:#888;">Time unit</label><br>
+                <select
+                    style="width: 160px; padding:0.4em 0.7em; border-radius:7px; border:1.5px solid #e3e8ee; font-size:1rem;">
+                    <option>Day</option>
+                </select>
+            </div>
+            <div>
+                <label style="font-size:0.98rem; color:#888;">Show metric</label><br>
+                <select
+                    style="width: 220px; padding:0.4em 0.7em; border-radius:7px; border:1.5px solid #e3e8ee; font-size:1rem;">
+                    <option>Claim Count</option>
+                    <option>Total Amount</option>
+                    <option>Average Amount</option>
+                </select>
+            </div>
+        </div>
+        <div
+            style="background:#f7fafd; border-radius:12px; min-height:120px; box-shadow:0 1px 6px rgba(24,49,83,0.04); display:flex; align-items:center; justify-content:center; color:#bbb; font-size:1.1rem; margin-bottom:2rem;">
+            <span>Temporal claim patterns chart will appear here</span>
+        </div>
+        <div style="font-size:1.1rem; font-weight:600; color:#222b45; margin-bottom:0.7rem;">Quick Insights</div>
+        <div style="display:flex; gap:2rem;">
+            <div>
+                <label style="font-size:0.98rem; color:#888;">Select numerical feature</label><br>
+                <select
+                    style="width: 180px; padding:0.4em 0.7em; border-radius:7px; border:1.5px solid #e3e8ee; font-size:1rem;">
+                    <option>fraud_flag</option>
+                </select>
+            </div>
+            <div>
+                <label style="font-size:0.98rem; color:#888;">Select categorical feature</label><br>
+                <select
+                    style="width: 180px; padding:0.4em 0.7em; border-radius:7px; border:1.5px solid #e3e8ee; font-size:1rem;">
+                    <option>treatment</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_head %}
+<style>
+    .main-area {
+        width: 100vw;
+        max-width: none;
+        margin: 0;
+        background: #fff;
+        border-radius: 0;
+        box-shadow: none;
+        padding: 0;
+    }
+
+    .tab-content {
+        padding: 2.2rem 0 1.5rem 0;
+        border-radius: 0;
+    }
+</style>
+{% endblock %}

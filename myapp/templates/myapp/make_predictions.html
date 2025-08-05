@@ -1,0 +1,39 @@
+{% extends 'myapp/base.html' %}
+{% block title %}Make Predictions - Minet Insurance{% endblock %}
+{% block content %}
+<div class="main-area">
+    <h1>The Verse - Acme_Brokers Dashboard</h1>
+    <h2>Make Predictions</h2>
+    <div style="margin-bottom:2.2rem;">
+        <div style="font-size:1.15rem; font-weight:600; color:#222b45; margin-bottom:0.7rem;">Prediction Content</div>
+        <div
+            style="background:#f7fafd; border-radius:12px; min-height:120px; box-shadow:0 1px 6px rgba(24,49,83,0.04); display:flex; align-items:center; justify-content:center; color:#bbb; font-size:1.1rem;">
+            <span>Prediction results and charts will appear here</span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_head %}
+<style>
+    .main-area {
+        width: 100vw;
+        /* or 100% if you want it to fit its parent */
+        max-width: none;
+        margin: 0;
+        background: #fff;
+        border-radius: 0;
+        /* Remove rounding if you want full edge-to-edge */
+        box-shadow: none;
+        /* Optional: remove shadow for flush look */
+        padding: 0;
+        /* Remove all padding */
+    }
+
+    .tab-content {
+        padding: 2.2rem 0 1.5rem 0;
+        /* Remove left/right padding, keep top/bottom if desired */
+        border-radius: 0;
+        /* Optional: remove rounding */
+    }
+</style>
+{% endblock %}

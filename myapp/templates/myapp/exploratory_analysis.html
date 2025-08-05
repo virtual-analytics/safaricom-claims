@@ -1,0 +1,546 @@
+{% extends 'myapp/base.html' %}
+{% block title %}Exploratory Data Analysis - Minet Insurance{% endblock %}
+{% block content %}
+<div class="main-area">
+    <h1>The Verse - Acme_Brokers Dashboard</h1>
+    <h2>Exploratory Data Analysis</h2>
+
+    <!-- Analysis Controls -->
+    <div style="margin-bottom:2.2rem;">
+        <h3>Data Analysis Tools</h3>
+        <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-bottom:1.5rem;">
+            <button id="loadClaimsOverview" class="analysis-btn">
+                <i class="fas fa-chart-bar"></i> Claims Overview
+            </button>
+            <button id="loadFraudDetection" class="analysis-btn">
+                <i class="fas fa-shield-alt"></i> Fraud Detection
+            </button>
+            <button id="loadAllAnalysis" class="analysis-btn primary">
+                <i class="fas fa-rocket"></i> Load All Analysis
+            </button>
+        </div>
+        <div id="loadingIndicator" style="display:none; text-align:center; padding:2rem;">
+            <div class="spinner"></div>
+            <p>Generating visualizations...</p>
+        </div>
+    </div>
+
+    <!-- Claims Overview Section -->
+    <div id="claimsOverviewSection" style="display:none; margin-bottom:3rem;">
+        <h3>Claims Overview Analysis</h3>
+
+        <!-- Summary Statistics -->
+        <div id="claimsSummary" class="stats-grid"></div>
+
+        <!-- Claims Overview Charts -->
+        <div id="claimsCharts" class="charts-container"></div>
+
+        <!-- Claims Overview Tables -->
+        <div id="claimsTables" class="tables-container"></div>
+    </div>
+
+    <!-- Fraud Detection Section -->
+    <div id="fraudDetectionSection" style="display:none; margin-bottom:3rem;">
+        <h3>Fraud Detection Analysis</h3>
+
+        <!-- Fraud Statistics -->
+        <div id="fraudStats" class="stats-grid"></div>
+
+        <!-- Fraud Detection Charts -->
+        <div id="fraudCharts" class="charts-container"></div>
+
+        <!-- Fraud Detection Tables -->
+        <div id="fraudTables" class="tables-container"></div>
+    </div>
+
+    <!-- Error Display -->
+    <div id="errorDisplay"
+        style="display:none; background:#fee; border:1px solid #fcc; border-radius:8px; padding:1rem; margin:1rem 0; color:#c33;">
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<style>
+    .main-area {
+        width: 100vw;
+        max-width: none;
+        margin: 0;
+        background: #fff;
+        border-radius: 0;
+        box-shadow: none;
+        padding: 2rem;
+    }
+
+    .analysis-btn {
+        background: #f8f9fa;
+        color: #495057;
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        padding: 0.8em 1.5em;
+        font-weight: 600;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .analysis-btn:hover {
+        background: #e9ecef;
+        border-color: #dee2e6;
+        transform: translateY(-2px);
+    }
+
+    .analysis-btn.primary {
+        background: #e30613;
+        color: #fff;
+        border-color: #e30613;
+    }
+
+    .analysis-btn.primary:hover {
+        background: #b8000b;
+        border-color: #b8000b;
+    }
+
+    .spinner {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #e30613;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 1rem;
+    }
+
+    @keyframes spin {
+        0% {
+            transform: rotate(0deg);
+        }
+
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-align: center;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #e30613;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .charts-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .chart-card {
+        background: #fff;
+        border: 1px solid #e9ecef;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .chart-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #212529;
+        margin-bottom: 1rem;
+        text-align: center;
+    }
+
+    .tables-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .table-card {
+        background: #fff;
+        border: 1px solid #e9ecef;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .table-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #212529;
+        margin-bottom: 1rem;
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+    }
+
+    .data-table th,
+    .data-table td {
+        padding: 0.75rem;
+        text-align: left;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    .data-table th {
+        background: #f8f9fa;
+        font-weight: 600;
+        color: #495057;
+    }
+
+    .data-table tr:hover {
+        background: #f8f9fa;
+    }
+
+    h3 {
+        color: #212529;
+        border-bottom: 2px solid #e30613;
+        padding-bottom: 0.5rem;
+        margin-bottom: 1.5rem;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        // Load Claims Overview
+        document.getElementById('loadClaimsOverview').addEventListener('click', function () {
+            loadClaimsOverview();
+        });
+
+        // Load Fraud Detection
+        document.getElementById('loadFraudDetection').addEventListener('click', function () {
+            loadFraudDetection();
+        });
+
+        // Load All Analysis
+        document.getElementById('loadAllAnalysis').addEventListener('click', function () {
+            loadAllAnalysis();
+        });
+
+        function showLoading() {
+            document.getElementById('loadingIndicator').style.display = 'block';
+            document.getElementById('errorDisplay').style.display = 'none';
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingIndicator').style.display = 'none';
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorDisplay');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            hideLoading();
+        }
+
+        function loadClaimsOverview() {
+            showLoading();
+
+            fetch('{% url "claims_overview_ajax" %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({})
+            })
+                .then(response => response.json())
+                .then(data => {
+                    hideLoading();
+                    if (data.success) {
+                        displayClaimsOverview(data);
+                    } else {
+                        showError(data.error || 'Failed to load claims overview');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showError('Failed to load claims overview');
+                });
+        }
+
+        function loadFraudDetection() {
+            showLoading();
+
+            fetch('{% url "fraud_detection_ajax" %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({})
+            })
+                .then(response => response.json())
+                .then(data => {
+                    hideLoading();
+                    if (data.success) {
+                        displayFraudDetection(data);
+                    } else {
+                        showError(data.error || 'Failed to load fraud detection');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showError('Failed to load fraud detection');
+                });
+        }
+
+        function loadAllAnalysis() {
+            showLoading();
+
+            fetch('{% url "exploratory_analysis_ajax" %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({})
+            })
+                .then(response => response.json())
+                .then(data => {
+                    hideLoading();
+                    if (data.success) {
+                        displayClaimsOverview(data.claims_overview);
+                        displayFraudDetection(data.fraud_detection);
+                    } else {
+                        showError(data.error || 'Failed to load analysis');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showError('Failed to load analysis');
+                });
+        }
+
+        function displayClaimsOverview(data) {
+            const section = document.getElementById('claimsOverviewSection');
+            section.style.display = 'block';
+
+            // Display summary statistics
+            const summaryDiv = document.getElementById('claimsSummary');
+            summaryDiv.innerHTML = `
+            <div class="stat-card">
+                <div class="stat-value">${data.total_claims.toLocaleString()}</div>
+                <div class="stat-label">Total Claims</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">KES ${data.total_amount.toLocaleString()}</div>
+                <div class="stat-label">Total Amount</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">KES ${data.avg_amount.toLocaleString()}</div>
+                <div class="stat-label">Average Amount</div>
+            </div>
+        `;
+
+            // Display benefit statistics table
+            const tablesDiv = document.getElementById('claimsTables');
+            if (data.benefit_stats && data.benefit_stats.length > 0) {
+                tablesDiv.innerHTML = `
+                <div class="table-card">
+                    <div class="table-title">Claims by Benefit Type</div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Benefit Type</th>
+                                <th>Claim Count</th>
+                                <th>Total Amount (KES)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data.benefit_stats.map(stat => `
+                                <tr>
+                                    <td>${stat.benefit_type}</td>
+                                    <td>${stat.claim_count.toLocaleString()}</td>
+                                    <td>${stat.total_amount.toLocaleString()}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            }
+
+            if (data.top_claimants && data.top_claimants.length > 0) {
+                tablesDiv.innerHTML += `
+                <div class="table-card">
+                    <div class="table-title">Top 10 Claimants</div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Policy Holder</th>
+                                <th>Claim Count</th>
+                                <th>Total Amount (KES)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data.top_claimants.map(claimant => `
+                                <tr>
+                                    <td>${claimant.policy_holder}</td>
+                                    <td>${claimant.claim_count.toLocaleString()}</td>
+                                    <td>${claimant.total_amount.toLocaleString()}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            }
+        }
+
+        function displayFraudDetection(data) {
+            const section = document.getElementById('fraudDetectionSection');
+            section.style.display = 'block';
+
+            // Display fraud statistics
+            const statsDiv = document.getElementById('fraudStats');
+            statsDiv.innerHTML = `
+            <div class="stat-card">
+                <div class="stat-value">${data.fraud_stats.total_claims.toLocaleString()}</div>
+                <div class="stat-label">Total Claims</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">${data.fraud_stats.suspicious_claims.toLocaleString()}</div>
+                <div class="stat-label">Suspicious Claims</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">${data.fraud_stats.fraud_percentage.toFixed(1)}%</div>
+                <div class="stat-label">Fraud Risk Rate</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">KES ${data.outlier_thresholds.upper.toLocaleString()}</div>
+                <div class="stat-label">Upper Threshold</div>
+            </div>
+        `;
+
+            // Display charts
+            const chartsDiv = document.getElementById('fraudCharts');
+            chartsDiv.innerHTML = '';
+
+            if (data.charts) {
+                Object.keys(data.charts).forEach(chartKey => {
+                    const chartContainer = document.createElement('div');
+                    chartContainer.className = 'chart-card';
+                    chartContainer.innerHTML = `<div class="chart-title">${getChartTitle(chartKey)}</div>`;
+
+                    const chartDiv = document.createElement('div');
+                    chartDiv.id = `chart-${chartKey}`;
+                    chartContainer.appendChild(chartDiv);
+                    chartsDiv.appendChild(chartContainer);
+
+                    // Parse and display the chart
+                    const chartData = JSON.parse(data.charts[chartKey]);
+                    Plotly.newPlot(`chart-${chartKey}`, chartData.data, chartData.layout);
+                });
+            }
+
+            // Display tables
+            const tablesDiv = document.getElementById('fraudTables');
+            tablesDiv.innerHTML = '';
+
+            if (data.suspicious_claims && data.suspicious_claims.length > 0) {
+                tablesDiv.innerHTML += `
+                <div class="table-card">
+                    <div class="table-title">Top Suspicious Claims</div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Claim ID</th>
+                                <th>Amount (KES)</th>
+                                <th>Policy Holder</th>
+                                <th>Benefit Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data.suspicious_claims.map(claim => `
+                                <tr>
+                                    <td>${claim.id}</td>
+                                    <td>${claim.amount.toLocaleString()}</td>
+                                    <td>${claim.pol_name || 'N/A'}</td>
+                                    <td>${claim.benefit_desc || 'N/A'}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            }
+
+            if (data.top_suspicious_providers && data.top_suspicious_providers.length > 0) {
+                tablesDiv.innerHTML += `
+                <div class="table-card">
+                    <div class="table-title">Top Suspicious Providers</div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Provider</th>
+                                <th>Fraud Risk (%)</th>
+                                <th>Total Amount (KES)</th>
+                                <th>Claim Count</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data.top_suspicious_providers.map(provider => `
+                                <tr>
+                                    <td>${provider.provider}</td>
+                                    <td>${(provider.fraud_risk_avg * 100).toFixed(1)}%</td>
+                                    <td>${provider.total_amount.toLocaleString()}</td>
+                                    <td>${provider.claim_count.toLocaleString()}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            }
+        }
+
+        function getChartTitle(chartKey) {
+            const titles = {
+                'fraud_pie': 'Fraud Risk Distribution',
+                'amount_hist': 'Claim Amount Distribution by Risk Level',
+                'suspicious_bar': 'Top Suspicious Claims by Amount',
+                'providers_bar': 'Top Suspicious Providers by Fraud Risk',
+                'benefit_risk_bar': 'Fraud Risk by Benefit Type',
+                'amount_scatter': 'Claim Amount vs Risk Level',
+                'fraud_trend': 'Monthly Fraud Risk Trend',
+                'gender_risk_bar': 'Fraud Risk by Gender'
+            };
+            return titles[chartKey] || chartKey.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        }
+    });
+</script>
+{% endblock %}

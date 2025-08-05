@@ -1,0 +1,216 @@
+{% extends 'myapp/base1.html' %}
+{% load static %}
+
+{% block title %}Claims Distribution | Safaricom{% endblock %}
+
+{% block content %}
+<!-- Add Plotly JS -->
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+<style>
+  .dashboard-container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 25px;
+    padding: 30px;
+  }
+
+  .dashboard-card {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
+    padding: 20px;
+  }
+
+  .card-header {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 15px;
+    color: #1BB64F;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 5px;
+  }
+
+  .chart-container {
+    height: 400px;
+    width: 100%;
+  }
+
+  .filter-controls {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+    padding: 0 30px;
+    flex-wrap: wrap;
+  }
+
+  .filter-control {
+    display: flex;
+    flex-direction: column;
+    min-width: 200px;
+    flex-grow: 1;
+  }
+
+  .filter-control label {
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+    color: #555;
+  }
+
+  .filter-control select {
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+    background: #fff;
+  }
+
+  .insights-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 20px;
+  }
+
+  @media (max-width: 768px) {
+    .dashboard-container {
+      grid-template-columns: 1fr;
+    }
+    .insights-container {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<!-- Header -->
+<div style="text-align:center; margin-top:2rem;">
+    <h1 style="color:#1BB64F; font-size:2.5rem; font-weight:800;">Claims Distribution Analysis</h1>
+    <p style="font-size:1.25rem; color:#232323; margin-bottom:2.5rem;">Analyze claim patterns by different dimensions</p>
+</div>
+
+
+
+<!-- Visualizations -->
+<div class="dashboard-container">
+    <!-- Claim Distribution by Treatment -->
+    <div class="dashboard-card">
+        <div class="card-header">Claim Distribution by Treatment</div>
+        <div class="chart-container" id="treatmentDistributionChart">
+            {% if treatment_distribution %}
+                {{ treatment_distribution|safe }}
+            {% else %}
+                <div style="text-align:center; padding:50px 20px; color:#777; font-style:italic;">
+                    No treatment distribution data available
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Claim Amounts by Category -->
+    <div class="dashboard-card">
+        <div class="card-header">Claim Amounts by Category</div>
+        <div class="chart-container" id="categoryAmountsChart">
+            {% if category_amounts %}
+                {{ category_amounts|safe }}
+            {% else %}
+                <div style="text-align:center; padding:50px 20px; color:#777; font-style:italic;">
+                    No category amounts data available
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Quick Insights -->
+<div class="dashboard-card" style="margin: 30px;">
+    <div class="card-header">Quick Insights</div>
+    
+    <div class="insights-container">
+        <div>
+            <label for="numericalFeature">Select Numerical Feature</label>
+            <select id="numericalFeature" class="form-control">
+                <option value="amount">Claim Amount</option>
+                <option value="quantity">Quantity</option>
+                <option value="age">Member Age</option>
+            </select>
+            <div class="chart-container" id="numericalFeatureChart" style="height:300px; margin-top:15px;">
+                <!-- Chart will be rendered here -->
+            </div>
+        </div>
+        
+        <div>
+            <label for="categoricalFeature">Select Categorical Feature</label>
+            <select id="categoricalFeature" class="form-control">
+                <option value="benefit">Benefit Type</option>
+                <option value="provider">Provider</option>
+                <option value="diagnosis">Diagnosis</option>
+            </select>
+            <div class="chart-container" id="categoricalFeatureChart" style="height:300px; margin-top:15px;">
+                <!-- Chart will be rendered here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<footer style="background-color: #f8f9fa; color: #333; text-align: center; padding: 1rem 0; font-size: 0.9rem; border-top: 1px solid #ddd; margin-top: 2rem; width: 100%;">
+    © 2025 Designed by Virtual Analytics, All Rights Reserved |
+    <a href="#" style="color: #1BB64F; text-decoration: none; margin: 0 8px;">Terms & Conditions</a> |
+    <a href="#" style="color: #1BB64F; text-decoration: none; margin: 0 8px;">Privacy Policy</a>
+</footer>
+
+
+
+<script>
+function updateCharts() {
+    // In a real implementation, this would fetch new data based on filters
+    // For now, we'll just show a loading message
+    const charts = document.querySelectorAll('.chart-container');
+    charts.forEach(chart => {
+        if (chart.innerHTML.trim() === '') {
+            chart.innerHTML = '<div style="text-align:center; padding:50px 20px; color:#777; font-style:italic;">Loading data...</div>';
+        }
+    });
+    
+    // Simulate loading
+    setTimeout(() => {
+        // This would be replaced with actual data fetching and chart updates
+        console.log('Filters applied:', {
+            time_period: document.getElementById('time_period').value,
+            benefit_type: document.getElementById('benefit_type').value
+        });
+    }, 1000);
+}
+
+// Initialize interactive charts
+document.addEventListener('DOMContentLoaded', function() {
+    // Set up event listeners for quick insights
+    document.getElementById('numericalFeature').addEventListener('change', function() {
+        updateNumericalChart(this.value);
+    });
+    
+    document.getElementById('categoricalFeature').addEventListener('change', function() {
+        updateCategoricalChart(this.value);
+    });
+    
+    // Initial chart updates
+    updateNumericalChart('amount');
+    updateCategoricalChart('benefit');
+});
+
+function updateNumericalChart(feature) {
+    // In a real app, this would fetch data and update the chart
+    const chartDiv = document.getElementById('numericalFeatureChart');
+    chartDiv.innerHTML = `<div style="text-align:center; padding:50px 20px; color:#777; font-style:italic;">
+        Histogram for ${feature} would be displayed here
+    </div>`;
+}
+
+function updateCategoricalChart(feature) {
+    // In a real app, this would fetch data and update the chart
+    const chartDiv = document.getElementById('categoricalFeatureChart');
+    chartDiv.innerHTML = `<div style="text-align:center; padding:50px 20px; color:#777; font-style:italic;">
+        Bar chart for ${feature} distribution would be displayed here
+    </div>`;
+}
+</script>
+{% endblock %}

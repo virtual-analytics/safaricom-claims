@@ -1,0 +1,157 @@
+{% extends "base1.html" %}
+{% load static %}
+
+{% block title %}Suspicious Providers - Safaricom Portal{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <h1><i class="fas fa-user-md"></i> Suspicious Providers</h1>
+    <p>Providers with unusual claim patterns or high fraud rates</p>
+</div>
+
+<div class="content-body">
+    <!-- Top Providers Chart -->
+    <div class="card">
+        <div class="card-header">
+            <h3>Top Providers</h3>
+            <div class="card-actions">
+                <select id="sort-providers" class="form-select">
+                    <option value="count" {% if sort_by == 'count' %}selected{% endif %}>By Fraud Count</option>
+                    <option value="rate" {% if sort_by == 'rate' %}selected{% endif %}>By Fraud Rate</option>
+                    <option value="amount" {% if sort_by == 'amount' %}selected{% endif %}>By Fraud Amount</option>
+                </select>
+            </div>
+        </div>
+        <div class="card-body">
+            {% if visualizations.providers %}
+                {{ visualizations.providers|safe }}
+            {% else %}
+                <div class="alert alert-warning">No provider data available</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Provider Summary -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Provider Details</h3>
+                </div>
+                <div class="card-body">
+                    <div class="provider-details">
+                        {% if provider_data %}
+                            <div class="provider-summary">
+                                <h4>{{ provider_data.0.Provider }}</h4>
+                                <div class="provider-metrics">
+                                    <div>
+                                        <span class="metric-value">{{ provider_data.0.Fraud_Count }}</span>
+                                        <span class="metric-label">Fraud Cases</span>
+                                    </div>
+                                    <div>
+                                        <span class="metric-value">{{ provider_data.0.Fraud_Rate|floatformat:1 }}%</span>
+                                        <span class="metric-label">Fraud Rate</span>
+                                    </div>
+                                    <div>
+                                        <span class="metric-value">KES {{ provider_data.0.Total_Amount|floatformat:0 }}</span>
+                                        <span class="metric-label">Total Amount</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="provider-actions">
+                                <button class="btn btn-investigate">
+                                    <i class="fas fa-search"></i> Investigate
+                                </button>
+                                <button class="btn btn-flag">
+                                    <i class="fas fa-flag"></i> Flag Provider
+                                </button>
+                            </div>
+                        {% else %}
+                            <div class="no-provider">
+                                Select a provider to view details
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Provider Comparison Chart -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Provider Comparison</h3>
+                </div>
+                <div class="card-body">
+                    <div id="provider-comparison-chart"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .content-header { margin-bottom: 2rem; }
+    .content-header h1 { color: #d62728; margin-bottom: 0.5rem; }
+    .content-header p { color: #666; }
+    .card { background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 2rem; border: 1px solid #e3e8ee; }
+    .card-header { padding: 1.5rem; border-bottom: 1px solid #e3e8ee; display: flex; justify-content: space-between; align-items: center; }
+    .card-header h3 { margin: 0; font-size: 1.2rem; }
+    .card-body { padding: 1.5rem; }
+    .form-select { padding: 0.5rem 1rem; border-radius: 6px; border: 1px solid #ddd; background-color: #f9f9f9; }
+    .provider-details { height: 100%; display: flex; flex-direction: column; }
+    .provider-summary { margin-bottom: 1.5rem; }
+    .provider-summary h4 { color: #333; margin-bottom: 1rem; }
+    .provider-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+    .provider-metrics div { text-align: center; background: #f7fdf9; padding: 1rem; border-radius: 6px; }
+    .metric-value { font-size: 1.2rem; font-weight: 700; display: block; color: #d62728; }
+    .metric-label { font-size: 0.8rem; color: #666; display: block; }
+    .provider-actions { margin-top: auto; display: flex; gap: 1rem; }
+    .btn-investigate { background: #1BB64F; color: white; border: none; border-radius: 6px; padding: 0.75rem 1.5rem; font-weight: 500; cursor: pointer; flex: 1; }
+    .btn-flag { background: #d62728; color: white; border: none; border-radius: 6px; padding: 0.75rem 1.5rem; font-weight: 500; cursor: pointer; flex: 1; }
+    .no-provider { text-align: center; color: #666; padding: 2rem 0; }
+    #provider-comparison-chart { height: 250px; }
+</style>
+
+<script>
+    // Reload page with selected sort filter
+    document.getElementById('sort-providers').addEventListener('change', function() {
+        const selected = this.value;
+        window.location.href = "?sort=" + selected;
+    });
+
+    // Render comparison chart
+    document.addEventListener('DOMContentLoaded', function() {
+        const providerNames = {{ provider_names|safe }};
+        const fraudRates = {{ provider_rates|safe }};
+        const avgRate = {{ avg_rate|safe }};
+
+        const trace1 = {
+            x: providerNames,
+            y: fraudRates,
+            type: 'bar',
+            name: 'Provider Fraud Rate',
+            marker: { color: '#d62728' }
+        };
+
+        const trace2 = {
+            x: providerNames,
+            y: Array(providerNames.length).fill(avgRate),
+            type: 'scatter',
+            mode: 'lines',
+            name: 'Average Rate',
+            line: { color: '#1BB64F', width: 2, dash: 'dash' }
+        };
+
+        const layout = {
+            title: 'Provider Fraud Rates vs Average',
+            xaxis: { title: 'Provider' },
+            yaxis: { title: 'Fraud Rate (%)' },
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            paper_bgcolor: 'rgba(0,0,0,0)'
+        };
+
+        Plotly.newPlot('provider-comparison-chart', [trace1, trace2], layout);
+    });
+</script>
+{% endblock %}

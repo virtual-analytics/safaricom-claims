@@ -1,0 +1,129 @@
+{% extends 'myapp/base.html' %}
+{% block title %}Fraud Detection Analysis - Minet Insurance{% endblock %}
+{% block content %}
+<div class="main-area">
+    <h1>The Verse - Acme_Brokers Dashboard</h1>
+    <h2>Fraud Detection Analysis</h2>
+    <div class="fraud-card">
+        <div class="fraud-summary">
+            <div>
+                <div class="summary-label">Potential Fraud Cases</div>
+                <div class="summary-value">0</div>
+            </div>
+            <div>
+                <div class="summary-label">Fraud Rate</div>
+                <div class="summary-value">0.0%</div>
+            </div>
+            <div>
+                <div class="summary-label">Amount at Risk</div>
+                <div class="summary-value">KES 0.00</div>
+            </div>
+        </div>
+        <div class="section-title">Fraud by Provider <span style="font-size:0.9em; color:#bbb;">&#8734;</span></div>
+        <div class="provider-info">No provider information available</div>
+        <div class="section-title">Fraud Patterns by Diagnosis</div>
+        <div class="section-sub">Diagnoses with Highest Fraud Rates</div>
+        <div class="chart-placeholder">Chart will appear here</div>
+        <div class="section-title" style="margin-top:2.5rem;">Fraud Over Time</div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_head %}
+<style>
+    .main-area {
+        width: 100%;
+        max-width: 100%;
+        margin: 0;
+        background: #fff;
+        border-radius: 14px;
+        box-shadow: 0 2px 16px rgba(35, 35, 35, 0.08);
+        padding: 2.5rem 2.5rem 2rem 2.5rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .main-area h1 {
+        font-size: 2.1rem;
+        font-weight: 700;
+        color: #232323;
+        margin-bottom: 0.2em;
+        letter-spacing: 0.01em;
+        text-align: center;
+    }
+
+    .main-area h2 {
+        font-size: 1.35rem;
+        font-weight: 700;
+        color: #e30613;
+        margin-bottom: 2.2rem;
+        letter-spacing: 0.01em;
+        text-align: center;
+    }
+
+    .fraud-card {
+        width: 100%;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 1px 6px rgba(35, 35, 35, 0.04);
+        padding: 2rem 2.5rem 1.5rem 2.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .fraud-summary {
+        display: flex;
+        gap: 3rem;
+        margin-bottom: 2.2rem;
+        justify-content: flex-start;
+    }
+
+    .summary-label {
+        font-size: 1.1rem;
+        color: #232323;
+        font-weight: 500;
+    }
+
+    .summary-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #e30613;
+    }
+
+    .section-title {
+        font-size: 1.15rem;
+        font-weight: 600;
+        color: #e30613;
+        margin-bottom: 0.7rem;
+        margin-top: 1.5rem;
+    }
+
+    .section-sub {
+        font-size: 1rem;
+        color: #888;
+        margin-bottom: 0.5rem;
+    }
+
+    .provider-info {
+        background: #fffbe6;
+        color: #bfae5e;
+        border-radius: 7px;
+        padding: 0.9em 1.2em;
+        border: 1px solid #f7e7b2;
+        font-size: 1.05rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .chart-placeholder {
+        background: #f5f5f5;
+        border-radius: 12px;
+        min-height: 180px;
+        box-shadow: 0 1px 6px rgba(35, 35, 35, 0.04);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #bbb;
+        font-size: 1.1rem;
+        margin-bottom: 1.2rem;
+    }
+</style>
+{% endblock %}

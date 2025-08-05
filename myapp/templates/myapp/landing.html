@@ -1,0 +1,79 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>the verse</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <link rel="icon" href="{% static 'icons/va_logo.jpg' %}">
+</head>
+
+<body
+  class="min-h-screen flex flex-col font-sans text-gray-800
+         bg-[linear-gradient(to_bottom,_#0ba3c1_0%,_#152238_44%,_#1c2a40_60%,_#eef2f7_95%,_#ffffff_100%)]">
+
+  <!-- HEADER -->
+  <header class="bg-[#0c1123]/95 text-white px-8 sm:px-12 lg:px-20 py-6 flex flex-wrap justify-between items-center shadow-lg">
+    <h1 class="text-3xl sm:text-4xl font-bold tracking-wide">the verse</h1>
+    <nav class="flex flex-col sm:flex-row gap-4 sm:gap-10 mt-4 sm:mt-0">
+      <a href="/" class="{% if active_page == 'home' %}text-[#1cb3c9] border-b-2 border-[#1cb3c9] pb-1{% else %}text-gray-300 hover:text-[#1cb3c9]{% endif %} text-xl font-medium transition">Home</a>
+      <a href="{% url 'login' %}" class="{% if active_page == 'login' %}text-[#1cb3c9] border-b-2 border-[#1cb3c9] pb-1{% else %}text-gray-300 hover:text-[#1cb3c9]{% endif %} text-xl font-medium transition">Login</a>
+    </nav>
+  </header>
+
+  <div class="h-1.5 bg-[linear-gradient(to_right,_#0ba3c1_0%,_#0c1123_50%,_#f9f9f9_100%)]"></div>
+
+  <!-- MAIN -->
+  <main class="flex-grow">
+    <section class="w-full text-white py-20 sm:py-24 px-2 sm:px-4">
+      <div class="max-w-[1800px] mx-auto flex flex-col md:flex-row items-center gap-4 lg:gap-8">
+
+        <!-- TEXT CONTENT - PUSHED FURTHER LEFT AND WIDER -->
+        <div class="min-w-[350px] md:basis-[50%] space-y-6 sm:space-y-8 pl-4 sm:pl-6 lg:pl-8">
+          <h2 class="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight whitespace-nowrap overflow-visible">
+            Manage Claims Data with Ease
+          </h2>
+          <p class="text-lg sm:text-xl lg:text-2xl max-w-[90%] md:max-w-[85%] text-white/90 leading-relaxed">
+            The Verse is an innovative application designed to enhance claims prediction in the insurance sector,
+            empowering insurers with accurate, data-driven insights to improve decision-making and operational efficiency.
+          </p>
+          
+          <a href="{% url 'login' %}"
+             class="inline-block min-w-[260px] sm:min-w-[300px] text-center bg-[#1cb3c9] hover:bg-[#148ea1] text-white px-8 sm:px-10 py-4 sm:py-5 rounded-lg font-semibold text-xl sm:text-2xl transition">
+            Login
+          </a>
+        </div>
+
+        <!-- LARGER VIDEO CONTENT -->
+        <div class="w-full min-w-[400px] md:basis-[50%] mt-12 md:mt-0">
+          <div class="bg-white/10 border-2 border-dashed border-gray-300/70 p-8 sm:p-10 rounded-3xl shadow-xl">
+            <div class="aspect-video w-full rounded-xl overflow-hidden" style="min-height: 500px;">
+              <video
+                class="w-full h-full object-cover pointer-events-none"
+                autoplay muted loop playsinline preload="auto"
+                aria-label="Hero animation"
+                poster="{% static 'icons/video_poster.jpg' %}"
+              >
+                <source src="{% static 'icons/Video.mp4' %}" type="video/mp4" />
+              </video>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="text-center py-10 sm:py-12 text-lg sm:text-xl">
+    <p class="text-gray-800/90">
+      &copy; 2025 Virtual Analytics, All Rights Reserved |
+      <a href="#" class="text-gray-900 font-semibold hover:underline mx-3">Terms &amp; Conditions</a> |
+      <a href="#" class="text-gray-900 font-semibold hover:underline mx-3">Privacy Policy</a>
+    </p>
+  </footer>
+</body>
+</html>

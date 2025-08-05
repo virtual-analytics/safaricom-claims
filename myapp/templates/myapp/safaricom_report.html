@@ -1,0 +1,486 @@
+{% extends 'myapp/base1.html' %}
+{% load custom_filters %}
+{% block title %}Safaricom Advanced Analytics{% endblock %}
+
+{% block content %}
+<!-- Add Plotly JS at the top of your content block -->
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<style>
+  /* Tab styling */
+  .analysis-tabs {
+    display: flex;
+    justify-content: center;
+    margin: 20px 0 30px;
+    border-bottom: 1px solid #ddd;
+  }
+  
+  .tab-link {
+    padding: 12px 25px;
+    margin: 0 5px;
+    cursor: pointer;
+    font-weight: 600;
+    color: #555;
+    border-radius: 5px 5px 0 0;
+    transition: all 0.3s ease;
+    text-decoration: none;
+  }
+  
+  .tab-link:hover {
+    background-color: #f5f5f5;
+    color: #333;
+  }
+  
+  .tab-link.active {
+    color: #1BB64F;
+    border-bottom: 3px solid #1BB64F;
+    background-color: #f9f9f9;
+  }
+
+  /* Dashboard styling */
+  .dashboard-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 25px;
+    padding: 30px;
+  }
+
+  .dashboard-card {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
+    padding: 20px;
+  }
+
+  .card-header {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 15px;
+    color: #1BB64F;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 5px;
+  }
+
+  .stats-container {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: stretch;
+    padding: 0 30px;
+    gap: 20px;
+    margin-bottom: 40px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+
+  .stat-card {
+    flex: 1;
+    min-width: 200px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.1);
+    padding: 15px 20px;
+    text-align: center;
+    transition: 0.3s ease;
+  }
+
+  .stat-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+  }
+
+  .stat-label {
+    font-size: 0.95rem;
+    color: #666;
+    margin-bottom: 5px;
+    font-weight: 500;
+  }
+
+  .stat-value {
+    font-size: 1.6rem;
+    font-weight: bold;
+    color: #1BB64F;
+  }
+
+  .full-width-card {
+    grid-column: 1 / -1;
+  }
+
+  .filter-controls {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+    padding: 0 30px;
+    flex-wrap: wrap;
+  }
+
+  .filter-control {
+    display: flex;
+    flex-direction: column;
+    min-width: 200px;
+    flex-grow: 1;
+  }
+
+  .filter-control label {
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+    color: #555;
+  }
+
+  .filter-control select {
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+    background: #fff;
+  }
+
+  .plotly-graph-div {
+    width: 100%;
+    height: 400px;
+  }
+
+  .loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+  }
+
+  .loading-spinner {
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid #1BB64F;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  @media (max-width: 1024px) {
+    .dashboard-container {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 768px) {
+    .dashboard-container {
+      grid-template-columns: 1fr;
+    }
+    .stats-container {
+      flex-direction: column;
+    }
+    .stat-card {
+      width: 100%;
+    }
+    .filter-control {
+      min-width: 100%;
+    }
+    .analysis-tabs {
+      flex-wrap: wrap;
+    }
+    .tab-link {
+      padding: 8px 15px;
+      font-size: 0.9rem;
+    }
+  }
+</style>
+
+<!-- Header -->
+<div style="text-align:center; margin-top:2rem;">
+    <h1 style="color:#1BB64F; font-size:2.5rem; font-weight:800;">Advanced Claims Analytics</h1>
+    <p style="font-size:1.25rem; color:#232323; margin-bottom:1.5rem;">Deep insights into claims patterns and relationships</p>
+</div>
+
+<!-- Analysis Tabs -->
+ <!--
+<div class="analysis-tabs">
+    <a href="{% url 'safaricom_claim_distribution' %}" class="tab-link {% if active_tab == 'claim_distribution' %}active{% endif %}">Claim Distribution</a>
+    <a href="{% url 'safaricom_temporal_analysis' %}" class="tab-link {% if active_tab == 'temporal_analysis' %}active{% endif %}">Temporal Analysis</a>
+    <a href="{% url 'safaricom_provider_efficiency' %}" class="tab-link {% if active_tab == 'provider_efficiency' %}active{% endif %}">Provider Efficiency</a>
+    <a href="{% url 'safaricom_diagnosis_patterns' %}" class="tab-link {% if active_tab == 'diagnosis_patterns' %}active{% endif %}">Diagnosis Patterns</a>
+</div>
+-->
+
+<!-- Filter Controls -->
+<form method="GET" class="filter-controls" onsubmit="showLoading()">
+    <div class="filter-control">
+        <label for="time_period">Time Period</label>
+        <select id="time_period" name="time_period" class="searchable-select">
+            <option value="all" {% if request.GET.time_period == 'all' %}selected{% endif %}>All Time</option>
+            <option value="3m" {% if request.GET.time_period == '3m' %}selected{% endif %}>Last 3 Months</option>
+            <option value="6m" {% if request.GET.time_period == '6m' %}selected{% endif %}>Last 6 Months</option>
+            <option value="12m" {% if request.GET.time_period == '12m' %}selected{% endif %}>Last 12 Months</option>
+        </select>
+    </div>
+    <div class="filter-control">
+        <label for="benefit_type">Benefit Type</label>
+        <select id="benefit_type" name="benefit_type" class="searchable-select">
+            <option value="all">All Types</option>
+            {% for type in visualizations.benefit_types %}
+            <option value="{{ type }}" {% if request.GET.benefit_type == type %}selected{% endif %}>{{ type }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="filter-control">
+        <label for="provider">Provider</label>
+        <select id="provider" name="provider" class="searchable-select">
+            <option value="all">All Providers</option>
+            {% for provider in visualizations.providers %}
+            <option value="{{ provider }}" {% if request.GET.provider == provider %}selected{% endif %}>{{ provider }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="filter-control">
+        <label for="cost_center">Cost Center</label>
+        <select id="cost_center" name="cost_center" class="searchable-select">
+            <option value="all">All Centers</option>
+            {% for center in visualizations.cost_centers %}
+            <option value="{{ center }}" {% if request.GET.cost_center == center %}selected{% endif %}>{{ center }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="filter-control" style="justify-content: flex-end;">
+        <label>&nbsp;</label>
+        <button type="submit" style="padding: 8px 16px; background:#1BB64F; color:white; border:none; border-radius:6px;">
+            Apply Filters
+        </button>
+    </div>
+</form>
+
+<!-- Interactive Claim Distribution Controls -->
+{% if active_tab == 'claim_distribution' %}
+<form method="GET" class="filter-controls">
+    <input type="hidden" name="time_period" value="{{ request.GET.time_period }}">
+    <input type="hidden" name="benefit_type" value="{{ request.GET.benefit_type }}">
+    <input type="hidden" name="provider" value="{{ request.GET.provider }}">
+    <input type="hidden" name="cost_center" value="{{ request.GET.cost_center }}">
+    
+    <div class="filter-control">
+        <label for="category">Group claims by</label>
+        <select id="category" name="category" class="searchable-select" onchange="this.form.submit()">
+            {% for col in visualizations.categorical_columns %}
+            <option value="{{ col }}" {% if col == visualizations.current_category %}selected{% endif %}>{{ col }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <div class="filter-control">
+        <label for="metric">Analysis metric</label>
+        <select id="metric" name="metric" onchange="this.form.submit()">
+            <option value="Count" {% if visualizations.current_metric == 'Count' %}selected{% endif %}>Count</option>
+            <option value="Sum of Amount" {% if visualizations.current_metric == 'Sum of Amount' %}selected{% endif %}>Sum of Amount</option>
+            <option value="Average Amount" {% if visualizations.current_metric == 'Average Amount' %}selected{% endif %}>Average Amount</option>
+        </select>
+    </div>
+    
+    <div class="filter-control">
+        <label for="filter_col">Filter by</label>
+        <select id="filter_col" name="filter_col" onchange="this.form.submit()">
+            <option value="None" {% if visualizations.current_filter_col == 'None' %}selected{% endif %}>None</option>
+            {% for col in visualizations.categorical_columns %}
+            <option value="{{ col }}" {% if col == visualizations.current_filter_col %}selected{% endif %}>{{ col }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    {% if visualizations.current_filter_col != 'None' %}
+    <div class="filter-control">
+        <label for="filter_values">Select values</label>
+        <select id="filter_values" name="filter_values" multiple class="searchable-select" onchange="this.form.submit()">
+            {% for value in visualizations.categorical_values|get_item:visualizations.current_filter_col %}
+            <option value="{{ value }}" {% if value in visualizations.current_filter_values %}selected{% endif %}>{{ value }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    {% endif %}
+</form>
+{% endif %}
+
+<div id="loadingOverlay" class="loading-overlay" style="display: none;">
+    <div class="loading-spinner"></div>
+</div>
+
+<!-- Summary Statistics -->
+<div class="stats-container">
+    <div class="stat-card">
+        <div class="stat-label">Total Claims</div>
+        <div class="stat-value">{{ visualizations.summary_stats.total_claims|floatformat:0 }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Total Amount</div>
+        <div class="stat-value">KES {{ visualizations.summary_stats.total_amount|floatformat:2 }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Avg. Claim</div>
+        <div class="stat-value">KES {{ visualizations.summary_stats.avg_claim|floatformat:2 }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Unique Members</div>
+        <div class="stat-value">{{ visualizations.summary_stats.unique_members|floatformat:0 }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Providers</div>
+        <div class="stat-value">{{ visualizations.summary_stats.unique_providers|floatformat:0 }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Avg. Claims/Member</div>
+        <div class="stat-value">{{ visualizations.summary_stats.claims_per_member|floatformat:1 }}</div>
+    </div>
+</div>
+
+<!-- Main Content -->
+<div class="dashboard-container">
+    {% if active_tab == 'claim_distribution' %}
+        <!-- Claim Distribution Content -->
+        <div class="dashboard-card full-width-card">
+            <div class="card-header">Claim Distribution by {{ visualizations.current_category }}</div>
+            {{ visualizations.claim_distribution|safe }}
+        </div>
+        
+        <div class="dashboard-card">
+            <div class="card-header">Cost Distribution by Percentile</div>
+            {{ visualizations.cost_percentiles|safe }}
+        </div>
+        <div class="dashboard-card">
+            <div class="card-header">Member Spending Segments</div>
+            {{ visualizations.member_segmentation|safe }}
+        </div>
+        <div class="dashboard-card">
+            <div class="card-header">Claim Amount Distribution</div>
+            {{ visualizations.amount_distribution|safe }}
+        </div>
+        <div class="dashboard-card full-width-card">
+            <div class="card-header">Top 10 Cost Centers</div>
+            {{ visualizations.cost_center_analysis|safe }}
+        </div>
+
+    {% elif active_tab == 'temporal_analysis' %}
+        <!-- Temporal Analysis Content -->
+        <div class="dashboard-card full-width-card">
+            <div class="card-header">Claims by Time of Day</div>
+            {{ visualizations.hourly_claims|safe }}
+        </div>
+        <div class="dashboard-card">
+            <div class="card-header">Monthly Claims Trend</div>
+            {{ visualizations.monthly_trend|safe }}
+        </div>
+        <div class="dashboard-card">
+            <div class="card-header">Claims by Day of Week</div>
+            {{ visualizations.day_of_week_analysis|safe }}
+        </div>
+        <div class="dashboard-card full-width-card">
+            <div class="card-header">Daily Claims Over Time</div>
+            {{ visualizations.time_series|safe }}
+        </div>
+
+    {% elif active_tab == 'provider_efficiency' %}
+        <!-- Provider Efficiency Content -->
+        <div class="dashboard-card full-width-card">
+            <div class="card-header">Provider Network Analysis</div>
+            {{ visualizations.provider_network|safe }}
+        </div>
+        <div class="dashboard-card full-width-card">
+            <div class="card-header">Provider Efficiency Analysis</div>
+            {{ visualizations.provider_efficiency|safe }}
+        </div>
+
+    {% elif active_tab == 'diagnosis_patterns' %}
+        <!-- Diagnosis Patterns Content -->
+        <div class="dashboard-card full-width-card">
+            <div class="card-header">Top 10 Ailments</div>
+            {{ visualizations.top_ailments|safe }}
+        </div>
+        <div class="dashboard-card full-width-card">
+            <div class="card-header">Age-Service Relationships</div>
+            {{ visualizations.age_service_matrix|safe }}
+        </div>
+        <div class="dashboard-card">
+            <div class="card-header">Claims by Gender</div>
+            {{ visualizations.gender_stats|safe }}
+        </div>
+        <div class="dashboard-card full-width-card">
+            <div class="card-header">Data Correlation Matrix</div>
+            {{ visualizations.correlation_matrix|safe }}
+        </div>
+    {% endif %}
+</div>
+
+
+
+<footer style="background-color: #f8f9fa; color: #333; text-align: center; padding: 1rem 0; font-size: 0.9rem; border-top: 1px solid #ddd; margin-top: 2rem; width: 100%;">
+    © 2025 Designed by Virtual Analytics, All Rights Reserved |
+    <a href="#" style="color: #1BB64F; text-decoration: none; margin: 0 8px;">Terms & Conditions</a> |
+    <a href="#" style="color: #1BB64F; text-decoration: none; margin: 0 8px;">Privacy Policy</a>
+</footer>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Select2
+    $('.searchable-select').select2({
+        placeholder: "Select an option",
+        allowClear: true,
+        width: '100%',
+        minimumResultsForSearch: 5,
+        dropdownAutoWidth: true,
+        templateResult: formatOption,
+        templateSelection: formatOption
+    });
+
+    function formatOption(option) {
+        if (!option.id) return option.text;
+        if (option.text.length > 50) {
+            return $('<span>' + option.text.substring(0, 47) + '...</span>');
+        }
+        return option.text;
+    }
+
+    // Set initial filter values from URL params
+    const urlParams = new URLSearchParams(window.location.search);
+    ['time_period', 'benefit_type', 'provider', 'cost_center', 'category', 'metric', 'filter_col'].forEach(param => {
+        if (urlParams.has(param)) {
+            const select = document.getElementById(param);
+            if (select) {
+                select.value = urlParams.get(param);
+                $(select).trigger('change');
+            }
+        }
+    });
+
+    // Handle multi-select filter values
+    if (urlParams.has('filter_values')) {
+        const filterValues = urlParams.getAll('filter_values');
+        const select = document.getElementById('filter_values');
+        if (select) {
+            filterValues.forEach(value => {
+                $(select).find(`option[value="${value}"]`).prop('selected', true);
+            });
+            $(select).trigger('change');
+        }
+    }
+
+    // Resize charts after they load
+    setTimeout(() => {
+        document.querySelectorAll('.plotly-graph-div').forEach(chart => {
+            chart.style.width = '100%';
+            chart.style.height = '400px';
+        });
+    }, 100);
+});
+
+function showLoading() {
+    document.getElementById('loadingOverlay').style.display = 'flex';
+}
+</script>
+{% endblock %}

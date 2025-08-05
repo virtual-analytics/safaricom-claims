@@ -1,0 +1,337 @@
+{% extends "base1.html" %}
+
+{% block title %}Impact Simulation - Safaricom Portal{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <h1><i class="fas fa-sliders-h"></i> Policy Impact Simulation</h1>
+    <p>Simulate the financial impact of potential policy changes</p>
+</div>
+
+<div class="content-body">
+    <div class="row">
+        <!-- Left: Parameters -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header"><h3>Policy Parameters</h3></div>
+                <div class="card-body">
+                    <form id="simulation-form">
+                        <div class="form-group">
+                            <label>Co-payment Change (%)</label>
+                            <input type="range" id="copay-change" min="-100" max="100" value="0" step="5">
+                            <div class="range-value" id="copay-value">0%</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Deductible Change (%)</label>
+                            <input type="range" id="deductible-change" min="-100" max="100" value="0" step="5">
+                            <div class="range-value" id="deductible-value">0%</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Expected Utilization Change (%)</label>
+                            <input type="range" id="utilization-change" min="-50" max="50" value="0" step="1">
+                            <div class="range-value" id="utilization-value">0%</div>
+                        </div>
+
+                        <button type="submit" class="btn btn-simulate">
+                            <i class="fas fa-calculator"></i> Run Simulation
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Results -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header"><h3>Simulation Results</h3></div>
+                <div class="card-body">
+                    <div class="simulation-results">
+                        <div class="result-metric">
+                            <div class="metric-label">Current Total Claims Cost</div>
+                            <div class="metric-value" id="current-total">{{ metrics.current_total }}</div>
+                        </div>
+
+                        <div class="result-metric">
+                            <div class="metric-label">Projected Total Claims Cost</div>
+                            <div class="metric-value highlight" id="projected-total">
+                                {{ metrics.projected_total }}
+                                <span class="metric-delta" id="savings-percent">{{ metrics.savings_percent }}</span>
+                            </div>
+                        </div>
+
+                        <div class="result-breakdown">
+                            <h4>Impact Breakdown</h4>
+                            <ul>
+                                <li>Co-payment change: <span id="copay-change-val">{{ metrics.copay_change }}%</span></li>
+                                <li>Deductible change: <span id="deductible-change-val">{{ metrics.deductible_change }}%</span></li>
+                                <li>Utilization change: <span id="utilization-change-val">{{ metrics.utilization_change }}%</span></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scenario Comparison -->
+    <div class="card">
+        <div class="card-header"><h3>Scenario Comparison</h3></div>
+        <div class="card-body">
+            <div class="scenario-comparison" id="scenario-comparison">
+                <!-- Will be updated dynamically -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* === Page Header === */
+.content-header {
+    margin-bottom: 2rem;
+}
+.content-header h1 {
+    color: #1BB64F;
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+}
+.content-header p {
+    color: #666;
+    font-size: 0.95rem;
+}
+
+/* === Card Layout === */
+.card {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    margin-bottom: 2rem;
+    border: 1px solid #e3e8ee;
+}
+.card-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid #e3e8ee;
+}
+.card-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+.card-body {
+    padding: 1.5rem;
+}
+
+/* === Form Controls === */
+.form-group {
+    margin-bottom: 1.5rem;
+}
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #333;
+}
+.form-range {
+    width: 100%;
+    height: 8px;
+    -webkit-appearance: none;
+    background: #e3e8ee;
+    border-radius: 4px;
+    outline: none;
+}
+.form-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    background: #1BB64F;
+    border-radius: 50%;
+    cursor: pointer;
+}
+.range-value {
+    text-align: center;
+    font-weight: 600;
+    color: #1BB64F;
+    margin-top: 0.5rem;
+}
+
+/* === Buttons === */
+.btn-simulate {
+    background: linear-gradient(90deg, #1BB64F 0%, #00A651 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0.8rem 1.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(27, 182, 79, 0.1);
+    transition: all 0.2s;
+    width: 100%;
+    margin-top: 1rem;
+}
+.btn-simulate:hover {
+    background: #00A651;
+    box-shadow: 0 6px 16px rgba(27, 182, 79, 0.15);
+    transform: translateY(-1px);
+}
+
+/* === Simulation Results === */
+.simulation-results {
+    padding: 1rem 0;
+}
+.result-metric {
+    margin-bottom: 1.5rem;
+}
+.metric-label {
+    color: #666;
+    font-size: 0.9rem;
+    margin-bottom: 0.3rem;
+}
+.metric-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #333;
+}
+.metric-value.highlight {
+    color: #1BB64F;
+}
+.metric-delta {
+    font-size: 1rem;
+    background: #f0f7f2;
+    color: #1BB64F;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    margin-left: 0.5rem;
+}
+.result-breakdown {
+    border-top: 1px solid #e3e8ee;
+    padding-top: 1rem;
+    margin-top: 1.5rem;
+}
+.result-breakdown h4 {
+    font-size: 1rem;
+    margin-bottom: 0.8rem;
+    color: #333;
+}
+.result-breakdown ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.result-breakdown li {
+    margin-bottom: 0.5rem;
+    color: #666;
+}
+
+/* === Scenario Comparison === */
+.scenario-comparison {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+}
+.scenario {
+    background: #f7fdf9;
+    border-radius: 8px;
+    padding: 1.5rem;
+    border: 1px solid #e3e8ee;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+.scenario:hover {
+    box-shadow: 0 4px 10px rgba(27, 182, 79, 0.15);
+    transform: translateY(-2px);
+}
+.scenario.active {
+    border: 2px solid #1BB64F;
+    background: #f0f7f2;
+}
+.scenario-name {
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+.scenario-amount {
+    font-weight: 700;
+    color: #1BB64F;
+    margin-bottom: 0.5rem;
+}
+.scenario-savings {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+
+
+
+</style>
+
+<script>
+<script>
+function runSimulation() {
+    const copayInput = document.getElementById('copay-change');
+    const deductibleInput = document.getElementById('deductible-change');
+    const utilizationInput = document.getElementById('utilization-change');
+
+    console.log("Inputs found:", copayInput, deductibleInput, utilizationInput); // Debug: see if null
+
+    const copayVal = parseFloat(copayInput.value) || 0;
+    const deductibleVal = parseFloat(deductibleInput.value) || 0;
+    const utilizationVal = parseFloat(utilizationInput.value) || 0;
+
+    console.log(`Running simulation with: Copay=${copayVal}%, Deductible=${deductibleVal}%, Utilization=${utilizationVal}%`);
+
+    const params = new URLSearchParams({
+        copay_change: copayVal,
+        deductible_change: deductibleVal,
+        utilization_change: utilizationVal
+    });
+
+    fetch("{% url 'impact_simulation' %}?" + params.toString(), {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.error) {
+            alert(data.error);
+            return;
+        }
+
+        // Update UI
+        document.getElementById('current-total').textContent = data.current_total;
+        document.getElementById('projected-total').innerHTML =
+            `${data.projected_total} <span class="metric-delta" id="savings-percent">${data.savings_percent}</span>`;
+        document.getElementById('copay-change-val').textContent = data.copay_change + '%';
+        document.getElementById('deductible-change-val').textContent = data.deductible_change + '%';
+        document.getElementById('utilization-change-val').textContent = data.utilization_change + '%';
+
+        const scenarioDiv = document.getElementById('scenario-comparison');
+        scenarioDiv.innerHTML = "";
+        data.scenarios.forEach(s => {
+            scenarioDiv.innerHTML += `
+                <div class="scenario">
+                    <div class="scenario-name">${s.name}</div>
+                    <div class="scenario-amount">${s.amount}</div>
+                    ${s.savings !== 'KES 0.00' ? `<div class="scenario-savings">Save ${s.savings}</div>` : ''}
+                </div>
+            `;
+        });
+    })
+    .catch(err => console.error("Simulation Error:", err));
+}
+
+// Live slider change listener
+['copay', 'deductible', 'utilization'].forEach(field => {
+    const el = document.getElementById(`${field}-change`);
+    if (el) {
+        el.addEventListener('input', function() {
+            document.getElementById(`${field}-value`).textContent = this.value + '%';
+        });
+    }
+});
+
+document.getElementById('simulation-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    runSimulation();
+});
+</script>
+
+{% endblock %}

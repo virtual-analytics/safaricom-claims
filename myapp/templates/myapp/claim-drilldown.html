@@ -1,0 +1,270 @@
+{% extends "base1.html" %}
+{% load static %}
+
+{% block title %}Claim Drilldown - Safaricom Portal{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <h1><i class="fas fa-search"></i> Claim-Level Drilldown</h1>
+    <p>Detailed examination of individual claims</p>
+</div>
+
+<div class="content-body">
+    <div class="card">
+        <div class="card-header">
+            <h3>All Claims</h3>
+            <div class="card-actions">
+                <button class="btn btn-export" id="export-all">
+                    <i class="fas fa-download"></i> Export All
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="drilldown-table" id="claims-table">
+                    <thead>
+                        <tr>
+                            <th>Select</th>
+                            <th>Claim ID</th>
+                            <th>Date</th>
+                            <th>Member</th>
+                            <th>Provider</th>
+                            <th>Diagnosis</th>
+                            <th>Amount (KES)</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for claim in claims_data %}
+                        <tr>
+                            <td><input type="checkbox" class="claim-checkbox" data-id="{{ claim.claim_id|default:forloop.counter }}"></td>
+                            <td>{{ claim.claim_id|default:"N/A" }}</td>
+                            <td>{{ claim.date|default:"N/A" }}</td>
+                            <td>{{ claim.claim_me|default:"N/A" }}</td>
+                            <td>{{ claim.provider_name|default:"N/A" }}</td>
+                            <td>{{ claim.diagnosis|default:"N/A" }}</td>
+                            <td>{{ claim.amount|default:"0" }}</td>
+                            <td>
+                                <span class="status-badge {% if claim.fraud_flag %}rejected{% else %}approved{% endif %}">
+                                    {% if claim.fraud_flag %}Flagged{% else %}Approved{% endif %}
+                                </span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center">No claims data available</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="selected-actions" id="selected-actions" style="display: none;">
+        <div class="action-buttons">
+            <span id="selected-count">0</span> claims selected
+            <button class="btn btn-export-selected" id="export-selected">
+                <i class="fas fa-download"></i> Export Selected
+            </button>
+            <button class="btn btn-flag-selected" id="flag-selected">
+                <i class="fas fa-flag"></i> Flag Selected
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .content-header {
+        margin-bottom: 2rem;
+    }
+    
+    .content-header h1 {
+        color: #1BB64F;
+        margin-bottom: 0.5rem;
+    }
+    
+    .content-header p {
+        color: #666;
+    }
+    
+    .card {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        margin-bottom: 2rem;
+        border: 1px solid #e3e8ee;
+    }
+    
+    .card-header {
+        padding: 1.5rem;
+        border-bottom: 1px solid #e3e8ee;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .card-header h3 {
+        margin: 0;
+        font-size: 1.2rem;
+    }
+    
+    .card-body {
+        padding: 1.5rem;
+    }
+    
+    .btn-export {
+        background: #f0f7f2;
+        color: #1BB64F;
+        border: none;
+        border-radius: 6px;
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+        cursor: pointer;
+    }
+    
+    .btn-export:hover {
+        background: #1BB64F;
+        color: white;
+    }
+    
+    .table-responsive {
+        overflow-x: auto;
+    }
+    
+    .drilldown-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .drilldown-table th, .drilldown-table td {
+        padding: 0.75rem 1rem;
+        text-align: left;
+        border-bottom: 1px solid #e3e8ee;
+    }
+    
+    .drilldown-table th {
+        background: #f7fdf9;
+        font-weight: 600;
+        color: #333;
+    }
+    
+    .drilldown-table tr:hover {
+        background: #f0f7f2;
+    }
+    
+    .status-badge {
+        font-size: 0.8rem;
+        padding: 0.3rem 0.6rem;
+        border-radius: 4px;
+        font-weight: 500;
+    }
+    
+    .status-badge.approved {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .status-badge.rejected {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    
+    .text-center {
+        text-align: center;
+    }
+    
+    .selected-actions {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        padding: 1rem 1.5rem;
+        border: 1px solid #e3e8ee;
+        margin-bottom: 2rem;
+    }
+    
+    .action-buttons {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .action-buttons span {
+        font-weight: 500;
+        color: #333;
+    }
+    
+    .btn-export-selected {
+        background: #f0f7f2;
+        color: #1BB64F;
+        border: none;
+        border-radius: 6px;
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+        cursor: pointer;
+    }
+    
+    .btn-flag-selected {
+        background: #fff3cd;
+        color: #856404;
+        border: none;
+        border-radius: 6px;
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+        cursor: pointer;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const checkboxes = document.querySelectorAll('.claim-checkbox');
+        const selectedActions = document.getElementById('selected-actions');
+        const selectedCount = document.getElementById('selected-count');
+        const exportSelectedBtn = document.getElementById('export-selected');
+        
+        // Track selected claims
+        let selectedClaims = [];
+        
+        // Update selected count and show/hide action bar
+        function updateSelection() {
+            selectedClaims = Array.from(document.querySelectorAll('.claim-checkbox:checked'))
+                .map(checkbox => checkbox.dataset.id);
+            
+            selectedCount.textContent = selectedClaims.length;
+            
+            if (selectedClaims.length > 0) {
+                selectedActions.style.display = 'block';
+            } else {
+                selectedActions.style.display = 'none';
+            }
+        }
+        
+        // Add event listeners to all checkboxes
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', updateSelection);
+        });
+        
+        // Export selected claims
+        exportSelectedBtn.addEventListener('click', function() {
+            if (selectedClaims.length > 0) {
+                alert(`Would export ${selectedClaims.length} selected claims in a real application`);
+                // In a real app, you would make an AJAX call to export the selected claims
+            }
+        });
+        
+        // Flag selected claims
+        document.getElementById('flag-selected').addEventListener('click', function() {
+            if (selectedClaims.length > 0) {
+                alert(`Would flag ${selectedClaims.length} selected claims for review`);
+                // In a real app, you would make an AJAX call to flag the selected claims
+            }
+        });
+        
+        // Export all claims
+        document.getElementById('export-all').addEventListener('click', function() {
+            alert('Would export all claims in a real application');
+            // In a real app, you would make an AJAX call to export all claims
+        });
+    });
+</script>
+{% endblock %}

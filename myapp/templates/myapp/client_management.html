@@ -1,0 +1,171 @@
+{% extends 'myapp/base.html' %}
+{% block title %}Client Management Portal - Minet Insurance{% endblock %}
+{% block content %}
+<div class="main-area">
+    <h1>The Verse - Acme_Brokers Dashboard</h1>
+    <h2>Client Management Portal</h2>
+    <div class="client-card">
+        <div class="section-block">
+            <label for="client-select" class="section-label">Select Client</label><br>
+            <select id="client-select">
+                <option>Acme Corp</option>
+                <option>Globex</option>
+            </select>
+        </div>
+        <div class="section-block" style="display:flex; align-items:center; gap:2.5rem;">
+            <div>
+                <div class="section-sub">Current Plan</div>
+                <div class="plan-value">premium</div>
+            </div>
+            <button>Upgrade Plan</button>
+            <button>Reset Client Data</button>
+        </div>
+        <div class="section-block">
+            <div class="section-sub">Authorized Users:</div>
+            <ul class="user-list">
+                <li>acme_admin</li>
+            </ul>
+        </div>
+        <div class="section-title">Client Access Configuration</div>
+        <div class="section-block">
+            <label class="section-label">Add New User</label>
+            <button>Grant Access</button>
+        </div>
+        <div class="section-title">Data Access Configuration</div>
+        <div class="section-block">
+            <label class="section-label">Allowed Data Access</label>
+            <div class="access-tags">
+                <span class="access-tag">claims</span>
+                <span class="access-tag">reports</span>
+                <span class="access-tag">predictions</span>
+            </div>
+            <button>Update Access Permissions</button>
+        </div>
+        <div class="section-title" style="margin-top:2.5rem;">Client Analytics Dashboard</div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_head %}
+<style>
+    .main-area {
+        width: 100%;
+        max-width: 100%;
+        margin: 0;
+        background: #fff;
+        border-radius: 14px;
+        box-shadow: 0 2px 16px rgba(35, 35, 35, 0.08);
+        padding: 2.5rem 2.5rem 2rem 2.5rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .main-area h1 {
+        font-size: 2.1rem;
+        font-weight: 700;
+        color: #232323;
+        margin-bottom: 0.2em;
+        letter-spacing: 0.01em;
+        text-align: center;
+    }
+
+    .main-area h2 {
+        font-size: 1.35rem;
+        font-weight: 700;
+        color: #e30613;
+        margin-bottom: 2.2rem;
+        letter-spacing: 0.01em;
+        text-align: center;
+    }
+
+    .client-card {
+        width: 100%;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 1px 6px rgba(35, 35, 35, 0.04);
+        padding: 2rem 2.5rem 1.5rem 2.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .section-title {
+        font-size: 1.15rem;
+        font-weight: 600;
+        color: #e30613;
+        margin-bottom: 0.7rem;
+        margin-top: 1.5rem;
+    }
+
+    .section-block {
+        margin-bottom: 1.2rem;
+    }
+
+    .section-label {
+        font-size: 1rem;
+        color: #232323;
+        font-weight: 500;
+    }
+
+    .section-sub {
+        font-size: 1.05rem;
+        color: #888;
+        margin-bottom: 0.5rem;
+    }
+
+    .plan-value {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #232323;
+    }
+
+    .user-list {
+        margin: 0 0 1.2em 1.2em;
+        color: #232323;
+    }
+
+    .access-tags {
+        margin-bottom: 1.2rem;
+    }
+
+    .access-tag {
+        background: #e30613;
+        color: #fff;
+        border-radius: 6px;
+        padding: 0.3em 0.8em;
+        margin-right: 0.5em;
+        font-size: 0.98rem;
+        display: inline-block;
+    }
+
+    select {
+        width: 60%;
+        max-width: 400px;
+        margin-top: 0.5rem;
+        margin-bottom: 1.2rem;
+        padding: 0.7em 1em;
+        border-radius: 7px;
+        border: 1.5px solid #e3e8ee;
+        font-size: 1.05rem;
+    }
+
+    button {
+        background: #e30613;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: 0.7em 1.5em;
+        font-weight: 600;
+        font-size: 1rem;
+        margin-bottom: 1.1rem;
+        margin-right: 1.1rem;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(227, 6, 19, 0.10);
+        transition: background 0.18s, box-shadow 0.18s, transform 0.13s;
+    }
+
+    button:hover {
+        background: #b8000b;
+        box-shadow: 0 4px 16px rgba(227, 6, 19, 0.18);
+        transform: scale(1.04);
+    }
+</style>
+{% endblock %}

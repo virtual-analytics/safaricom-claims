@@ -1,0 +1,468 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Safaricom Portal{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            background: #f7fdf9;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        .safaricom-header {
+            background: #f1f6f3ff;
+            padding: 0.7rem 2rem;
+            box-shadow: 0 2px 8px rgba(27, 182, 79, 0.04);
+            border-bottom: 2px solid #e3e8ee;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header-logos {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .minet-logo img,
+        .safaricom-logo img {
+            height: 60px;
+            width: auto;
+            display: block;
+        }
+
+        .minet-logo {
+            position: absolute;
+            left: 2rem;
+        }
+
+        .safaricom-logo svg {
+            height: 48px;
+        }
+
+        .safaricom-layout {
+            display: flex;
+            min-height: 100vh;
+            margin-top: 80px;
+        }
+
+        .safaricom-sidebar {
+            width: 270px;
+            background: #fff;
+            border-right: 2px solid #1BB64F;
+            padding: 2rem 1.5rem;
+            box-shadow: 2px 0 12px rgba(27, 182, 79, 0.06);
+            position: fixed;
+            top: 80px;
+            left: 0;
+            bottom: 0;
+            height: calc(100vh - 80px);
+            display: flex;
+            flex-direction: column;
+            z-index: 900;
+            border-top-right-radius: 18px;
+            border-bottom-right-radius: 18px;
+            overflow-y: auto;
+        }
+
+        /* Navigation Tabs Styling */
+        .nav-tabs {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 1.5rem 0;
+        }
+
+        .nav-tabs li {
+            margin-bottom: 0.3rem;
+        }
+
+        .nav-tabs a {
+            display: flex;
+            align-items: center;
+            padding: 0.8rem 1rem;
+            color: #333;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .nav-tabs a:hover {
+            background-color: #f0f7f2;
+            color: #1BB64F;
+        }
+
+        .nav-tabs a.active {
+            background-color: #1BB64F;
+            color: white;
+        }
+
+        .nav-tabs a i {
+            margin-right: 10px;
+            width: 20px;
+            text-align: center;
+        }
+
+        .sub-tabs {
+            list-style: none;
+            padding-left: 2rem;
+            margin: 0.5rem 0;
+            display: none;
+        }
+
+        .sub-tabs li a {
+            padding: 0.6rem 1rem;
+            font-size: 0.9rem;
+            color: #555;
+        }
+
+        .sub-tabs li a:hover {
+            background-color: #e8f4ea;
+        }
+
+        .sub-tabs li a.active {
+            background-color: #e8f4ea;
+            color: #1BB64F;
+            font-weight: 600;
+        }
+
+        .tab-with-arrow {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .tab-with-arrow .arrow {
+            transition: transform 0.2s;
+        }
+
+        .tab-with-arrow.active .arrow {
+            transform: rotate(90deg);
+        }
+
+        /* About Section Styling */
+        .sidebar-about {
+            margin-top: auto;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e3e8ee;
+        }
+
+        .sidebar-title {
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: #1BB64F;
+            margin-bottom: 1rem;
+        }
+
+        .sidebar-features {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 1.5rem 0;
+        }
+
+        .sidebar-features li {
+            color: #333;
+            font-size: 0.95rem;
+            margin-bottom: 0.7rem;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        .sidebar-features li:before {
+            content: '•';
+            color: #1BB64F;
+            position: absolute;
+            left: 0;
+            font-size: 1.2em;
+        }
+
+        .sidebar-btn {
+            background: linear-gradient(90deg, #1BB64F 0%, #00A651 100%);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 0.8rem 1.5rem;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(27, 182, 79, 0.1);
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-block;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            width: 100%;
+        }
+
+        .sidebar-btn:hover {
+            background: #00A651;
+            box-shadow: 0 6px 16px rgba(27, 182, 79, 0.15);
+            transform: translateY(-1px);
+        }
+
+        /* Logout Button */
+        .sidebar-logout {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e3e8ee;
+        }
+
+        .logout-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f0f7f2;
+            color: #1BB64F;
+            border: none;
+            border-radius: 8px;
+            padding: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+            text-decoration: none;
+        }
+
+        .logout-btn:hover {
+            background: #1BB64F;
+            color: white;
+        }
+
+        .logout-btn i {
+            margin-right: 8px;
+        }
+
+        /* Main Content */
+        .safaricom-main-content {
+            flex: 1;
+            padding: 3rem 3.5rem 2.5rem 3.5rem;
+            background: #f7fdf9;
+            margin-left: 270px;
+            min-height: 100vh;
+        }
+
+        @media (max-width: 900px) {
+            .safaricom-layout {
+                flex-direction: column;
+            }
+
+            .safaricom-sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 2px solid #1BB64F;
+                box-shadow: none;
+                padding: 1.5rem 1rem;
+                position: static;
+                height: auto;
+                border-radius: 0;
+            }
+
+            .safaricom-main-content {
+                padding: 2rem 1rem;
+                margin-left: 0;
+            }
+
+            .safaricom-header {
+                flex-direction: column;
+                padding: 1rem;
+            }
+
+            .header-logos {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .minet-logo {
+                position: static;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="safaricom-header">
+        <div class="header-logos">
+            <div class="minet-logo">
+                <img src="{% static 'images/Minet-Logo.png' %}" alt="Minet Logo" />
+            </div>
+            <div class="safaricom-logo">
+                <img src="{% static 'images/Safaricom_Logo.png' %}" alt="Safaricom Logo" />
+            </div>
+        </div>
+    </div>
+
+    <div class="safaricom-layout">
+        <aside class="safaricom-sidebar">
+            <ul class="nav-tabs">
+                <li>
+                    <a href="safaricom_home.html" class="tab-with-arrow">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span>Dashboard</span>
+                        <i class="fas fa-chevron-right arrow"></i>
+                    </a>
+                    <ul class="sub-tabs">
+                        <li><a href="{% url 'safaricom_home' %}">Total claims submitted</a></li>
+                        <li><a href="#">Claims Amount by Category</a></li>
+                        <li><a href="#">Claims Amount by Cost Centre</a></li>
+                        <li><a href="#">Service Utilization by Benefit Type</a></li>
+                    </ul>
+                </li>
+                <li>
+                    <a href="" class="tab-with-arrow">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Advanced Analysis</span>
+                        <i class="fas fa-chevron-right arrow"></i>
+                    </a>
+                    <ul class="sub-tabs">
+                        <li><a href="{% url 'safaricom_claim_distribution' %}">Claims Distribution</a></li>
+                        <li><a href="{% url 'safaricom_temporal_analysis' %}">Temporal Analysis</a></li>
+                        <li><a href="{% url 'safaricom_provider_efficiency' %}">Provider Efficiency</a></li>
+                        <li><a href="{% url 'safaricom_diagnosis_patterns' %}">Diagnosis Patterns</a></li>
+                    </ul>
+                </li>
+                <li>
+                    <a href="#" class="tab-with-arrow">
+                        <i class="fas fa-crystal-ball"></i>
+                        <span>Claims Prediction</span>
+                        <i class="fas fa-chevron-right arrow"></i>
+                    </a>
+                    <ul class="sub-tabs">
+                        <li><a href="{% url 'forecasted_volume' %}">Forecasted volume</a></li>
+                        <li><a href="{% url 'confidence_intervals' %}">Confidence intervals</a></li>
+                        <li><a href="{% url 'impact_simulation' %}">Impact simulation</a></li>
+                        <li><a href="{% url 'explainability' %}">Explainability</a></li>
+                    </ul>
+                </li>
+                <li>
+                    <a href="#" class="tab-with-arrow">
+                        <i class="fas fa-search-dollar"></i>
+                        <span>Fraud Detection</span>
+                        <i class="fas fa-chevron-right arrow"></i>
+                    </a>
+                    <ul class="sub-tabs">
+                        <li><a href="{% url 'risk_scores' %}">Risk Scores</a></li>
+                        <li><a href="{% url 'suspicious_providers' %}">Suspicious Providers</a></li>
+                        <li><a href="{% url 'diagnosis_patterns' %}">Diagnosis Patterns</a></li>
+                        <li><a href="{% url 'monthly_trends' %}">Monthly Trends</a></li>
+                        <li><a href="{% url 'potential_cases' %}">Potential Cases</a></li>
+                        <li><a href="{% url 'geospatial_heatmap' %}">Geospatial Heatmap</a></li>
+                    </ul>
+                </li>
+                <li>
+                    <a href="#" class="tab-with-arrow">
+                        <i class="fas fa-file-alt"></i>
+                        <span>Reporting</span>
+                        <i class="fas fa-chevron-right arrow"></i>
+                    </a>
+                    <ul class="sub-tabs">
+                        <li><a href="{% url 'download_reports' %}">Download Reports</a></li>
+                        <li><a href="{% url 'claim_drilldown' %}">Claim Drilldown</a></li>
+                        <li><a href="{% url 'custom_filters' %}">Custom Filters</a></li>
+                    </ul>
+                </li>
+            </ul>
+
+            <div class="sidebar-logout">
+                <a href="{% url 'logout' %}" class="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </a>
+            </div>
+
+            <div class="sidebar-about">
+                <div class="sidebar-title">About</div>
+                <p>A comprehensive healthcare claims reporting platform offering predictive modeling, real-time fraud detection, scenario analysis, and interactive reports—built to inform, empower, and elevate decision-making.</p>
+                
+                <a href="#" class="sidebar-btn">
+                    <i class="fas fa-rocket"></i> Launch API Console
+                </a>
+            </div>
+        </aside>
+
+        <main class="safaricom-main-content">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <script>
+        // Toggle sub-tabs when clicking on main tabs
+        document.querySelectorAll('.tab-with-arrow').forEach(tab => {
+            tab.addEventListener('click', function(e) {
+                e.preventDefault();
+                const parentLi = this.closest('li');
+                const subTabs = parentLi.querySelector('.sub-tabs');
+                
+                // Close all other open tabs
+                document.querySelectorAll('.sub-tabs').forEach(st => {
+                    if (st !== subTabs) {
+                        st.style.display = 'none';
+                        st.previousElementSibling.classList.remove('active');
+                    }
+                });
+                
+                // Toggle current tab
+                if (subTabs.style.display === 'block') {
+                    subTabs.style.display = 'none';
+                    this.classList.remove('active');
+                } else {
+                    subTabs.style.display = 'block';
+                    this.classList.add('active');
+                }
+            });
+        });
+
+        // Set active tab based on current page
+        document.addEventListener('DOMContentLoaded', function() {
+            // You would replace this with actual logic to determine active tab
+            // For demo purposes, we'll activate the first tab
+            const firstTab = document.querySelector('.tab-with-arrow');
+            if (firstTab) {
+                firstTab.classList.add('active');
+                firstTab.nextElementSibling.style.display = 'block';
+            }
+        });
+
+        // Set active tab based on current page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get current path
+            const path = window.location.pathname;
+            
+            // Find all nav links and check if they match current path
+            document.querySelectorAll('.nav-tabs a').forEach(link => {
+                if (link.getAttribute('href') === path) {
+                    link.classList.add('active');
+                    
+                    // If it's in a sub-tab, also activate the parent tab
+                    const parentTab = link.closest('.sub-tabs')?.previousElementSibling;
+                    if (parentTab) {
+                        parentTab.classList.add('active');
+                        parentTab.nextElementSibling.style.display = 'block';
+                    }
+                }
+            });
+        });
+    </script>
+
+    {% block extra_scripts %}
+        <!-- jQuery and Select2 (required by child templates) -->
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    {% endblock %}
+</body>
+</html>

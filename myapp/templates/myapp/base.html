@@ -1,0 +1,306 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Minet Insurance Dashboard{% endblock %}</title>
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #e30613;
+            --primary-dark: #232323;
+            --primary-light: #f5f5f5;
+            --accent: #e30613;
+            --sidebar-bg: #232323;
+            --sidebar-border: #e3e8ee;
+            --sidebar-shadow: 0 4px 24px rgba(35, 35, 35, 0.08);
+            --card-bg: #fff;
+            --card-shadow: 0 2px 16px rgba(35, 35, 35, 0.08);
+            --text-main: #232323;
+            --text-muted: #888;
+            --text-light: #fff;
+            --border-radius: 14px;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Roboto', sans-serif;
+            background: var(--primary-light);
+            min-height: 100vh;
+        }
+
+        .topbar {
+            width: 100%;
+            background: var(--sidebar-bg);
+            color: var(--text-light);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.7rem 2.5rem;
+            box-shadow: 0 2px 12px rgba(35, 35, 35, 0.10);
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1000;
+            height: 64px;
+        }
+
+        .topbar .company {
+            font-size: 1.3rem;
+            font-weight: bold;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+        }
+
+        .topbar .company img {
+            height: 48px;
+            border-radius: 12px;
+            background: #fff;
+            box-shadow: 0 2px 12px rgba(35, 35, 35, 0.10);
+            padding: 8px 16px;
+            display: block;
+            margin-right: 14px;
+        }
+
+        .layout {
+            display: flex;
+            margin-top: 64px;
+            min-height: calc(100vh - 64px);
+        }
+
+        .sidebar {
+            position: fixed;
+            top: 64px;
+            left: 0;
+            width: 270px;
+            height: calc(100vh - 64px);
+            background: var(--sidebar-bg);
+            box-shadow: var(--sidebar-shadow);
+            border-radius: 0 var(--border-radius) var(--border-radius) 0;
+            padding: 0.7rem 0.5rem 1rem 0.2rem;
+            display: flex;
+            flex-direction: column;
+            color: var(--text-light);
+            z-index: 999;
+            justify-content: flex-start;
+            overflow-y: auto;
+        }
+
+        .sidebar .logo {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .sidebar .logo img {
+            width: 150px;
+            border-radius: var(--border-radius);
+            background: #fff;
+            box-shadow: 0 2px 16px rgba(35, 35, 35, 0.13);
+            padding: 16px 28px;
+            display: block;
+            margin: 0 auto 12px auto;
+        }
+
+        .sidebar h3 {
+            color: var(--text-light);
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+            letter-spacing: 0.5px;
+        }
+
+        .sidebar .about {
+            font-size: 1rem;
+            color: #e3e8ee;
+            margin-bottom: 2rem;
+        }
+
+        .sidebar .about ul li {
+            color: #fff;
+        }
+
+        .sidebar .api-btn {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            padding: 0.9rem 1.2rem;
+            font-weight: bold;
+            margin-bottom: 2rem;
+            cursor: pointer;
+            font-size: 1.08rem;
+            box-shadow: 0 2px 8px rgba(227, 6, 19, 0.08);
+            transition: background 0.2s, box-shadow 0.2s, transform 0.18s;
+        }
+
+        .sidebar .api-btn:hover {
+            background: #b8000b;
+            box-shadow: 0 4px 16px rgba(227, 6, 19, 0.15);
+            transform: scale(1.04);
+        }
+
+        .sidebar .analysis-mode {
+            margin-bottom: 1.2rem;
+            flex: 1 1 auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar .analysis-mode label {
+            font-weight: bold;
+            color: var(--accent);
+        }
+
+        .sidebar .mode-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+            flex: 1 1 auto;
+            justify-content: flex-start;
+        }
+
+        .sidebar .mode-list li,
+        .sidebar .mode-list li a {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #353535;
+            color: #fff;
+            border-radius: 6px;
+            padding: 0.3rem 0.5rem;
+            font-size: 1.08rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.18s, box-shadow 0.18s, transform 0.13s;
+            box-shadow: 0 2px 8px rgba(35, 35, 35, 0.13);
+            border: none;
+            gap: 0.7rem;
+            letter-spacing: 0.01em;
+            text-decoration: none;
+            min-height: 28px;
+            margin-bottom: 0.7rem;
+            margin-left: 0;
+        }
+
+        .sidebar .mode-list li.selected,
+        .sidebar .mode-list li.selected a,
+        .sidebar .mode-list li:hover,
+        .sidebar .mode-list li a:hover {
+            background: var(--accent);
+            box-shadow: 0 4px 16px rgba(227, 6, 19, 0.18);
+            transform: scale(1.03);
+            color: #fff;
+        }
+
+        .sidebar .mode-list li i,
+        .sidebar .mode-list li a i {
+            font-size: 1.2rem;
+            min-width: 1.5rem;
+        }
+
+        .sidebar .logout {
+            text-align: center;
+            margin-top: auto;
+            margin-bottom: 1rem;
+        }
+
+        .sidebar .logout-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.7em;
+            background: #353535;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 0.7em 1.5em;
+            font-size: 1.05rem;
+            font-weight: bold;
+            margin-top: 0.5rem;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            box-shadow: 0 4px 18px rgba(35, 35, 35, 0.18);
+            transition: background 0.2s, color 0.2s, transform 0.18s, box-shadow 0.2s;
+            min-height: 48px;
+        }
+
+        .sidebar .logout-btn:hover {
+            background: var(--accent);
+            color: #fff;
+            transform: scale(1.05);
+            box-shadow: 0 8px 24px rgba(227, 6, 19, 0.22);
+        }
+
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 3rem 2vw 2rem 2vw;
+            margin-left: 340px;
+            background: linear-gradient(120deg, #f4f7fb 60%, #e3e8ee 100%);
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+
+<body>
+    <div class="topbar">
+        <div class="company">
+            <img src="{% static 'images/Minet.jpg' %}" alt="Minet Insurance Logo">
+            Minet Insurance 
+        </div>
+    </div>
+    <div class="layout">
+        <aside class="sidebar">
+
+            <div class="analysis-mode">
+                
+                <ul class="mode-list">
+                    <li class="{% if request.path == '/home/' %}selected{% endif %}"><a href="{% url 'home' %}"><i
+                                class="fas fa-chart-bar"></i> Claims upload</a></li>
+                    <li class="{% if request.path == '/claim_prediction/' %}selected{% endif %}"><a
+                            href="{% url 'claim_prediction' %}"><i class="fas fa-cog"></i> advanced analysis</a></li>            
+                    <li class="{% if request.path == '/claim_prediction/' %}selected{% endif %}"><a
+                            href="{% url 'claim_prediction' %}"><i class="fas fa-cog"></i> Claims prediction</a></li>
+                    <li class="{% if request.path == '/fraud_detection/' %}selected{% endif %}"><a
+                            href="{% url 'fraud_detection' %}"><i class="fas fa-shopping-bag"></i> Fraud Detection</a>
+                    </li>
+                    <li class="{% if request.path == '/client_management/' %}selected{% endif %}"><a
+                            href="{% url 'client_management' %}"><i class="fas fa-table"></i> Client Management</a></li>
+                    <li class="{% if request.path == '/reports/' %}selected{% endif %}"><a href="{% url 'reports' %}"><i
+                                class="fas fa-chart-line"></i> Reports</a></li>
+                </ul>
+            </div>
+            <h3 style="margin: 0.7rem 0 0.2rem 0;">About</h3>
+            <div class="about" style="margin-bottom: 0.7rem;">
+                AI-powered claims analytics providing:
+                <ul>
+                    <li>Predictive cost modeling</li>
+                    <li>Fraud pattern detection</li>
+                    <li>Client-specific business intelligence</li>
+                    <li>Scenario simulation engines</li>
+                </ul>
+            </div>
+            <button class="api-btn" style="margin-bottom: 0.7rem;">Launch API Console</button>
+            <div class="logout" style="margin-bottom: 1.5rem;">
+                <form action="{% url 'logout' %}" method="post" style="margin:0;">
+                    {% csrf_token %}
+                    <button type="submit" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
+                </form>
+            </div>
+            <div style="flex:1;"></div>
+        </aside>
+        <main class="main">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    {% block extra_body %}{% endblock %}
+</body>
+
+</html>

@@ -1,0 +1,309 @@
+{% extends 'myapp/base1.html' %}
+{% load static %}
+
+{% block title %}Provider Efficiency | Safaricom{% endblock %}
+
+{% block content %}
+<!-- Add Plotly JS -->
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<style>
+  .dashboard-container {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 25px;
+    padding: 30px;
+  }
+
+  .dashboard-card {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
+    padding: 20px;
+  }
+
+  .card-header {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 15px;
+    color: #1BB64F;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 5px;
+  }
+
+  .chart-container {
+    height: 500px;
+    width: 100%;
+  }
+
+  .filter-controls {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+    padding: 0 30px;
+    flex-wrap: wrap;
+  }
+
+  .filter-control {
+    display: flex;
+    flex-direction: column;
+    min-width: 200px;
+    flex-grow: 1;
+  }
+
+  .filter-control label {
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+    color: #555;
+  }
+
+  .filter-control select, 
+  .filter-control input {
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+    background: #fff;
+  }
+
+  .cost-inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+
+  .table-container {
+    margin-top: 20px;
+    overflow-x: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  th, td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+  }
+
+  th {
+    background-color: #f7fdf9;
+    color: #1BB64F;
+    font-weight: 600;
+  }
+
+  tr:hover {
+    background-color: #f5f5f5;
+  }
+
+  .efficiency-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  .efficient {
+    background-color: #d4edda;
+    color: #155724;
+  }
+
+  .inefficient {
+    background-color: #f8d7da;
+    color: #721c24;
+  }
+
+  .debug-info {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 5px;
+    margin-top: 20px;
+    font-family: monospace;
+    font-size: 0.9rem;
+  }
+
+  @media (max-width: 768px) {
+    .cost-inputs {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<!-- Header -->
+<div style="text-align:center; margin-top:2rem;">
+    <h1 style="color:#1BB64F; font-size:2.5rem; font-weight:800;">Provider Cost Efficiency</h1>
+    <p style="font-size:1.25rem; color:#232323; margin-bottom:2.5rem;">Analyze provider performance and cost efficiency</p>
+</div>
+
+<!-- Filter Controls -->
+<form method="GET" class="filter-controls">
+    <div class="filter-control">
+        <label for="time_period">Time Period</label>
+        <select id="time_period" name="time_period" class="searchable-select">
+            <option value="all" {% if request.GET.time_period == 'all' %}selected{% endif %}>All Time</option>
+            <option value="3m" {% if request.GET.time_period == '3m' %}selected{% endif %}>Last 3 Months</option>
+            <option value="6m" {% if request.GET.time_period == '6m' %}selected{% endif %}>Last 6 Months</option>
+            <option value="12m" {% if request.GET.time_period == '12m' %}selected{% endif %}>Last 12 Months</option>
+        </select>
+    </div>
+    <div class="filter-control">
+        <label for="benefit_type">Benefit Type</label>
+        <select id="benefit_type" name="benefit_type" class="searchable-select">
+            <option value="all">All Types</option>
+            {% for type in benefit_types %}
+            <option value="{{ type }}" {% if request.GET.benefit_type == type %}selected{% endif %}>{{ type }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="cost-inputs">
+        <div class="filter-control">
+            <label for="fixed_cost">Fixed Cost per Provider (KES)</label>
+            <input type="number" id="fixed_cost" name="fixed_cost" 
+                   value="{{ fixed_cost }}" min="0" step="1000">
+        </div>
+        <div class="filter-control">
+            <label for="variable_rate">Variable Cost Rate (%)</label>
+            <input type="number" id="variable_rate" name="variable_rate" 
+                   value="{{ variable_rate }}" min="0" max="100" step="1">
+        </div>
+    </div>
+    <div class="filter-control" style="justify-content: flex-end;">
+        <label>&nbsp;</label>
+        <button type="submit" style="padding: 8px 16px; background:#1BB64F; color:white; border:none; border-radius:6px;">
+            Apply Filters
+        </button>
+    </div>
+</form>
+
+<!-- Break-even Analysis -->
+<div class="dashboard-container">
+    <div class="dashboard-card">
+        <div class="card-header">Break-even Analysis</div>
+        <div class="chart-container" id="providerEfficiencyChart">
+            {% if visualizations.provider_efficiency %}
+                {{ visualizations.provider_efficiency|safe }}
+            {% elif visualizations.debug.error %}
+                <div style="text-align:center; padding:50px 20px; color:#ff6b6b;">
+                    {{ visualizations.debug.error }}
+                </div>
+            {% else %}
+                <div style="text-align:center; padding:50px 20px; color:#777; font-style:italic;">
+                    No provider efficiency data available
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Provider Performance Ranking -->
+<div class="dashboard-card" style="margin: 30px;">
+    <div class="card-header">Provider Performance Ranking</div>
+    
+    <h3 style="color:#1BB64F; margin-top:20px;">Most Efficient Providers</h3>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Provider</th>
+                    <th>Total Claims</th>
+                    <th>Total Amount</th>
+                    <th>Avg. Claim</th>
+                    <th>Efficiency Score</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for provider in visualizations.top_providers %}
+                <tr>
+                    <td>{{ provider.prov_name }}</td>
+                    <td>{{ provider.total_claims }}</td>
+                    <td>KES {{ provider.total_amount|floatformat:2 }}</td>
+                    <td>KES {{ provider.avg_amount|floatformat:2 }}</td>
+                    <td><span class="efficiency-badge efficient">{{ provider.efficiency_score|floatformat:2 }}</span></td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" style="text-align:center;">No provider data available</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <h3 style="color:#1BB64F; margin-top:30px;">Least Efficient Providers</h3>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Provider</th>
+                    <th>Total Claims</th>
+                    <th>Total Amount</th>
+                    <th>Avg. Claim</th>
+                    <th>Efficiency Score</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for provider in visualizations.bottom_providers %}
+                <tr>
+                    <td>{{ provider.prov_name }}</td>
+                    <td>{{ provider.total_claims }}</td>
+                    <td>KES {{ provider.total_amount|floatformat:2 }}</td>
+                    <td>KES {{ provider.avg_amount|floatformat:2 }}</td>
+                    <td><span class="efficiency-badge inefficient">{{ provider.efficiency_score|floatformat:2 }}</span></td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" style="text-align:center;">No provider data available</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+
+<footer style="background-color: #f8f9fa; color: #333; text-align: center; padding: 1rem 0; font-size: 0.9rem; border-top: 1px solid #ddd; margin-top: 2rem; width: 100%;">
+    © 2025 Designed by Virtual Analytics, All Rights Reserved |
+    <a href="#" style="color: #1BB64F; text-decoration: none; margin: 0 8px;">Terms & Conditions</a> |
+    <a href="#" style="color: #1BB64F; text-decoration: none; margin: 0 8px;">Privacy Policy</a>
+</footer>
+
+
+
+<!-- Debug Information -->
+{% if visualizations.debug %}
+<div class="debug-info">
+    <strong>Debug Information:</strong><br>
+    Providers Analyzed: {{ visualizations.debug.providers_analyzed }}<br>
+    {% if visualizations.debug.error %}
+    Error: {{ visualizations.debug.error }}
+    {% endif %}
+</div>
+{% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Select2
+    $('.searchable-select').select2({
+        placeholder: "Select an option",
+        allowClear: true,
+        width: '100%',
+        minimumResultsForSearch: 5,
+        dropdownAutoWidth: true
+    });
+
+    // Resize charts after they load
+    setTimeout(() => {
+        document.querySelectorAll('.plotly-graph-div').forEach(chart => {
+            chart.style.width = '100%';
+            chart.style.height = '100%';
+        });
+    }, 100);
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,331 @@
+{% extends 'myapp/base1.html' %}
+{% load static %}
+
+{% block title %}Diagnosis Patterns | Safaricom{% endblock %}
+
+{% block content %}
+<!-- Add Plotly JS -->
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<style>
+  .dashboard-container {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 25px;
+    padding: 30px;
+  }
+
+  .dashboard-card {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
+    padding: 20px;
+  }
+
+  .card-header {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 15px;
+    color: #1BB64F;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 5px;
+  }
+
+  .chart-container {
+    height: 600px;
+    width: 100%;
+  }
+
+  .filter-controls {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+    padding: 0 30px;
+    flex-wrap: wrap;
+  }
+
+  .filter-control {
+    display: flex;
+    flex-direction: column;
+    min-width: 200px;
+    flex-grow: 1;
+  }
+
+  .filter-control label {
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+    color: #555;
+  }
+
+  .filter-control select {
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+    background: #fff;
+  }
+
+  .summary-stats-container {
+        padding: 0 30px;
+        margin: 40px 0;
+    }
+    
+    .summary-stats-row {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 20px;
+        width: 100%;
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        padding: 25px 20px;
+        text-align: center;
+        transition: all 0.3s ease;
+        border-top: 4px solid #1BB64F;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+    }
+    
+    .stat-icon {
+        width: 40px;
+        height: 40px;
+        background: #f0f7f2;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 15px;
+        color: #1BB64F;
+        font-size: 18px;
+    }
+    
+    .stat-card h3 {
+        margin: 0;
+        font-size: 0.95rem;
+        color: #666;
+        font-weight: 600;
+        margin-bottom: 10px;
+    }
+    
+    .stat-card p {
+        margin: 0;
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #1BB64F;
+    }
+    
+    @media (max-width: 1200px) {
+        .summary-stats-row {
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .summary-stats-row {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .summary-stats-row {
+            grid-template-columns: 1fr;
+        }
+        
+        .stat-card {
+            padding: 20px 15px;
+        }
+        
+        .stat-card p {
+            font-size: 1.5rem;
+        }
+    }
+</style>
+
+<!-- Header -->
+<div style="text-align:center; margin-top:2rem;">
+    <h1 style="color:#1BB64F; font-size:2.5rem; font-weight:800;">Diagnosis-Treatment Patterns</h1>
+    <p style="font-size:1.25rem; color:#232323; margin-bottom:2.5rem;">Analyze relationships between diagnoses and treatments</p>
+</div>
+
+<!-- Filter Controls -->
+<form method="GET" class="filter-controls">
+    <div class="filter-control">
+        <label for="time_period">Time Period</label>
+        <select id="time_period" name="time_period" class="searchable-select">
+            <option value="all" {% if request.GET.time_period == 'all' %}selected{% endif %}>All Time</option>
+            <option value="3m" {% if request.GET.time_period == '3m' %}selected{% endif %}>Last 3 Months</option>
+            <option value="6m" {% if request.GET.time_period == '6m' %}selected{% endif %}>Last 6 Months</option>
+            <option value="12m" {% if request.GET.time_period == '12m' %}selected{% endif %}>Last 12 Months</option>
+        </select>
+    </div>
+    <div class="filter-control">
+        <label for="benefit_type">Benefit Type</label>
+        <select id="benefit_type" name="benefit_type" class="searchable-select">
+            <option value="all">All Types</option>
+            {% for type in benefit_types %}
+            <option value="{{ type }}" {% if request.GET.benefit_type == type %}selected{% endif %}>{{ type }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="filter-control">
+        <label for="provider">Provider</label>
+        <select id="provider" name="provider" class="searchable-select">
+            <option value="all">All Providers</option>
+            {% for provider in providers %}
+            <option value="{{ provider }}" {% if request.GET.provider == provider %}selected{% endif %}>{{ provider }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="filter-control" style="justify-content: flex-end;">
+        <label>&nbsp;</label>
+        <button type="submit" style="padding: 8px 16px; background:#1BB64F; color:white; border:none; border-radius:6px;">
+            Apply Filters
+        </button>
+    </div>
+</form>
+
+<!-- Summary Statistics -->
+<div class="summary-stats-container">
+    <div class="summary-stats-row">
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-file-invoice"></i>
+            </div>
+            <h3>Total Claims</h3>
+            <p>{{ summary.total_claims|default:"0" }}</p>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-money-bill-wave"></i>
+            </div>
+            <h3>Total Amount</h3>
+            <p>KES {{ summary.total_amount|default:"0.00" }}</p>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-calculator"></i>
+            </div>
+            <h3>Avg. Claim</h3>
+            <p>KES {{ summary.avg_claim|default:"0.00" }}</p>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-users"></i>
+            </div>
+            <h3>Unique Members</h3>
+            <p>{{ summary.unique_members|default:"0" }}</p>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-hospital"></i>
+            </div>
+            <h3>Providers</h3>
+            <p>{{ summary.providers|default:"0" }}</p>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <h3>Avg. Claims/Member</h3>
+            <p>{{ summary.avg_claims_per_member|default:"0.0" }}</p>
+        </div>
+    </div>
+</div>
+
+
+<!-- Diagnosis-Treatment Matrix -->
+<div class="dashboard-container">
+    <div class="dashboard-card">
+        <div class="card-header">Diagnosis-Treatment Matrix</div>
+        <div class="chart-container" id="diagnosisTreatmentChart">
+            {% if visualizations.diagnosis_treatment_matrix %}
+                {{ visualizations.diagnosis_treatment_matrix|safe }}
+            {% else %}
+                <div style="text-align:center; padding:50px 20px; color:#777; font-style:italic;">
+                    No diagnosis-treatment data available
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Top Ailments Chart -->
+<div class="dashboard-container">
+    <div class="dashboard-card">
+        <div class="card-header">Top 10 Ailments</div>
+        <div class="chart-container" id="topAilmentsChart">
+            {% if visualizations.top_ailments %}
+                {{ visualizations.top_ailments|safe }}
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Age-Service Relationships -->
+<div class="dashboard-container">
+    <div class="dashboard-card">
+        <div class="card-header">Age-Service Relationships</div>
+        <div class="chart-container" id="ageServiceChart">
+            {% if visualizations.age_service %}
+                {{ visualizations.age_service|safe }}
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Claims by Gender -->
+<div class="dashboard-container">
+    <div class="dashboard-card">
+        <div class="card-header">Claims by Gender</div>
+        <div class="chart-container" id="genderChart">
+            {% if visualizations.gender_distribution %}
+                {{ visualizations.gender_distribution|safe }}
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+
+
+<footer style="background-color: #f8f9fa; color: #333; text-align: center; padding: 1rem 0; font-size: 0.9rem; border-top: 1px solid #ddd; margin-top: 2rem; width: 100%;">
+    © 2025 Designed by Virtual Analytics, All Rights Reserved |
+    <a href="#" style="color: #1BB64F; text-decoration: none; margin: 0 8px;">Terms & Conditions</a> |
+    <a href="#" style="color: #1BB64F; text-decoration: none; margin: 0 8px;">Privacy Policy</a>
+</footer>
+
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Select2
+    $('.searchable-select').select2({
+        placeholder: "Select an option",
+        allowClear: true,
+        width: '100%',
+        minimumResultsForSearch: 5,
+        dropdownAutoWidth: true
+    });
+
+    // Resize charts after they load
+    setTimeout(() => {
+        document.querySelectorAll('.plotly-graph-div').forEach(chart => {
+            chart.style.width = '100%';
+            chart.style.height = '100%';
+        });
+    }, 100);
+});
+</script>
+{% endblock %}
