@@ -308,193 +308,702 @@ def home_view(request):
 # =========================================
 # CLAIMS PREDICTION VIEW
 # =========================================
+import json
+import pandas as pd
+import numpy as np
+import plotly.express as px
+import plotly.graph_objects as go
+from django.shortcuts import render
+from django.http import JsonResponse
+from django.db import connection
+from django.utils import timezone
+from django.contrib.auth.decorators import login_required
+import re
+
+def get_database_tables():
+    """Return all non-sqlite internal tables from the database."""
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT name FROM sqlite_master 
+            WHERE type='table' AND name NOT LIKE 'sqlite_%'
+        """)
+        return [row[0] for row in cursor.fetchall()]
+
 @login_required(login_url='login')
 def claims_prediction_dataset_view(request):
-    """Claims Prediction Engine View - same as Home View, no filters"""
-    
-    # ✅ Get the same table list as home_view
     dataset_ids = get_database_tables()
-    selected_id = request.GET.get('dataset_id')
-    show_stats = 'desc_btn' in request.GET
+    if not dataset_ids:
+        return render(request, 'myapp/claim_prediction.html', {
+            'dataset_ids': [], 'debug_info': 'No datasets found'
+        })
+
+    # Defaults
+    selected_id = request.GET.get('dataset_id') or dataset_ids[0]
+    time_period = request.GET.get('time_period', 'all')
+    benefit_type = request.GET.get('benefit_type', 'all')
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
 
-    desc_stats = None
-    visualizations = None
-    username = request.user.username
+    debug_info = None
+    chart1_time_series = chart2_heatmap = chart3_lorenz = None
+    chart4_boxplot = chart5_top_services = chart6_growth_rate = None
+    tree_data_json = None
 
-    # ✅ Keep dataset from session if not passed in GET
-    if selected_id:
-        request.session['selected_dataset'] = selected_id
-    else:
-        selected_id = request.session.get('selected_dataset')
+    if selected_id in dataset_ids:
+        with connection.cursor() as cursor:
+            cursor.execute(f'PRAGMA table_info("{selected_id}")')
+            available_cols = [row[1] for row in cursor.fetchall()]
+
+        lower_cols = [c.lower().strip() for c in available_cols]
+
+        def match_col(options):
+            for col in options:
+                if col.lower() in lower_cols:
+                    return available_cols[lower_cols.index(col.lower())]
+            return None
+
+        amt_col = match_col(['amount', 'claim_amount'])
+        date_col = next((c for c in available_cols if 'date' in c.lower()), None)
+        provider_col = next((c for c in available_cols if 'prov_name' in c.lower()), None)
+        service_col = next((c for c in available_cols if 'service' in c.lower()), None)
+        benefit_col = next((c for c in available_cols if 'benefit' in c.lower()), None)
+        benefit_desc_col = next((c for c in available_cols if 'benefit_desc' in c.lower()), None)
+        icd_col = next((c for c in available_cols if 'icd' in c.lower()), None)
+
+        needed_cols = [c for c in [amt_col, date_col, provider_col, service_col, benefit_col, benefit_desc_col, icd_col] if c]
+        if not needed_cols:
+            debug_info = "Required columns not found in dataset."
+        else:
+            df = pd.read_sql(f'SELECT {", ".join(set(needed_cols))} FROM "{selected_id}"', connection)
+            debug_info = f"Loaded {selected_id} with {len(df)} rows"
+
+            # Clean amount
+            if amt_col:
+                df['amount'] = pd.to_numeric(
+                    df[amt_col].astype(str).str.replace(",", "").str.replace(r"[^\d.]", "", regex=True),
+                    errors='coerce'
+                ).fillna(0)
+            else:
+                df['amount'] = 0.0
+
+            # Clean datetime
+            if date_col:
+                df['datetime'] = pd.to_datetime(df[date_col], errors='coerce')
+                df.dropna(subset=['datetime'], inplace=True)
+            else:
+                df['datetime'] = pd.NaT
+
+            # Apply filters
+            if time_period != 'all' and df['datetime'].notna().any():
+                now = timezone.now()
+                if time_period == 'year':
+                    df = df[df['datetime'] >= now - pd.DateOffset(years=1)]
+                elif time_period == 'quarter':
+                    df = df[df['datetime'] >= now - pd.DateOffset(months=3)]
+                elif time_period == 'month':
+                    df = df[df['datetime'] >= now - pd.DateOffset(months=1)]
+
+            if start_date and df['datetime'].notna().any():
+                df = df[df['datetime'] >= pd.to_datetime(start_date)]
+            if end_date and df['datetime'].notna().any():
+                df = df[df['datetime'] <= pd.to_datetime(end_date)]
+
+            if benefit_type != 'all' and benefit_col:
+                df = df[df[benefit_col].astype(str).str.lower() == benefit_type.lower()]
+
+            if len(df) > 100_000:
+                df = df.sample(100_000, random_state=42)
+
+            # ==============================
+            # CHART 1: Time Series Amount & Volume
+            # ==============================
+            if df['datetime'].notna().any():
+                ts_df = df.groupby(pd.Grouper(key='datetime', freq='M')).agg(
+                    claims_count=('amount', 'size'),
+                    total_amount=('amount', 'sum')
+                ).reset_index()
+
+                ts_df = ts_df.set_index('datetime').asfreq('M', fill_value=0).reset_index()
+
+                fig1 = go.Figure()
+                fig1.add_trace(go.Bar(
+                    x=ts_df['datetime'],
+                    y=ts_df['total_amount'] / 1_000_000,
+                    name='Total Amount (KES M)',
+                    yaxis='y1'
+                ))
+                fig1.add_trace(go.Scatter(
+                    x=ts_df['datetime'],
+                    y=ts_df['claims_count'],
+                    name='Claims Count',
+                    yaxis='y2',
+                    mode='lines+markers'
+                ))
+                fig1.update_layout(
+                    title="Monthly Claims Amount & Volume",
+                    yaxis=dict(title='Amount (KES M)', side='left'),
+                    yaxis2=dict(title='Claims Count', overlaying='y', side='right'),
+                    bargap=0.2
+                )
+                chart1_time_series = fig1.to_html(full_html=False)
+
+                # ==============================
+                # CHART 6: Growth Rate (3-Month Avg)
+                # ==============================
+                ts_df['count_growth'] = ts_df['claims_count'].pct_change().rolling(3).mean() * 100
+                ts_df['amount_growth'] = ts_df['total_amount'].pct_change().rolling(3).mean() * 100
+
+                fig6 = go.Figure()
+                fig6.add_trace(go.Scatter(x=ts_df['datetime'], y=ts_df['count_growth'], name='Count Growth %', mode='lines+markers'))
+                fig6.add_trace(go.Scatter(x=ts_df['datetime'], y=ts_df['amount_growth'], name='Amount Growth %', mode='lines+markers'))
+                fig6.update_layout(title="Monthly Claims Growth Rate (%) - 3 Month Average")
+                chart6_growth_rate = fig6.to_html(full_html=False)
+
+            # ==============================
+            # CHART 2: Heatmap (Day vs Hour)
+            # ==============================
+            if date_col:
+                df['day_of_week'] = pd.Categorical(df['datetime'].dt.day_name(),
+                                                   categories=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'],
+                                                   ordered=True)
+                df['hour_of_day'] = df['datetime'].dt.hour
+                heat_df = df.groupby(['day_of_week', 'hour_of_day']).size().reset_index(name='count')
+                fig2 = px.density_heatmap(heat_df, x='hour_of_day', y='day_of_week', z='count',
+                                          title="Claims Heatmap (Day vs Hour)",
+                                          nbinsx=24, color_continuous_scale='Viridis')
+                chart2_heatmap = fig2.to_html(full_html=False)
+
+            # ==============================
+            # CHART 3: Lorenz Curve
+            # ==============================
+            if provider_col:
+                prov_sum = df.groupby(provider_col)['amount'].sum().sort_values().reset_index()
+                prov_sum['cum_amount'] = prov_sum['amount'].cumsum()
+                prov_sum['cum_share'] = prov_sum['cum_amount'] / prov_sum['amount'].sum()
+                prov_sum['cum_providers'] = np.arange(1, len(prov_sum) + 1) / len(prov_sum)
+
+                fig3 = px.line(prov_sum, x='cum_providers', y='cum_share',
+                               title="Cumulative Claims Curve (Lorenz)",
+                               labels={"cum_providers": "Providers (Cumulative %)", "cum_share": "Claims Amount (Cumulative %)"})
+                fig3.add_shape(type='line', x0=0, y0=0, x1=1, y1=1, line=dict(dash='dash'))
+                chart3_lorenz = fig3.to_html(full_html=False)
+
+            # ==============================
+            # CHART 4 & 5: Service Analysis
+            # ==============================
+            if service_col:
+                top_services_names = df[service_col].value_counts().nlargest(10).index
+                fig4 = px.box(df[df[service_col].isin(top_services_names)],
+                              x=service_col, y='amount',
+                              points="all", title="Amount Distribution (Top 10 Services)",
+                              labels={"amount": "Claim Amount (KES)", service_col: "Service"})
+                chart4_boxplot = fig4.to_html(full_html=False)
+
+                top_services = df.groupby(service_col).agg(
+                    count=('amount', 'size'),
+                    total_amount=('amount', 'sum')
+                ).nlargest(10, 'count').reset_index()
+
+                fig5 = go.Figure()
+                fig5.add_trace(go.Bar(x=top_services[service_col], y=top_services['count'], name='Claim Count'))
+                fig5.add_trace(go.Bar(x=top_services[service_col], y=top_services['total_amount'] / 1_000_000, name='Total Amount (KES M)'))
+                fig5.update_layout(barmode='group', title="Top 10 Services by Count & Amount")
+                chart5_top_services = fig5.to_html(full_html=False)
+
+            # ==============================
+            # TREE: Full Expandable Hierarchy
+            # ==============================
+            def build_claims_tree(data):
+                root = {"name": f"Claims (Total: {data['amount'].sum():,.0f} KES, Count: {len(data)})", "children": []}
+                if benefit_col:
+                    for b, b_df in data.groupby(benefit_col):
+                        b_node = {"name": f"{b} ({b_df['amount'].sum():,.0f} KES, {len(b_df)} claims)", "children": []}
+                        if icd_col:
+                            for icd, icd_df in b_df.groupby(icd_col):
+                                icd_node = {"name": f"{icd} ({icd_df['amount'].sum():,.0f} KES)", "children": []}
+                                b_node["children"].append(icd_node)
+                        root["children"].append(b_node)
+                return root
+
+            if benefit_col and not df.empty:
+                tree_data_json = json.dumps(build_claims_tree(df))
+
+    context = {
+        'dataset_ids': dataset_ids,
+        'selected_id': selected_id,
+        'time_period': time_period,
+        'benefit_type': benefit_type,
+        'start_date': start_date,
+        'end_date': end_date,
+        'debug_info': debug_info,
+        'chart1_time_series': chart1_time_series,
+        'chart2_heatmap': chart2_heatmap,
+        'chart3_lorenz': chart3_lorenz,
+        'chart4_boxplot': chart4_boxplot,
+        'chart5_top_services': chart5_top_services,
+        'chart6_growth_rate': chart6_growth_rate,
+        'tree_data_json': tree_data_json
+    }
+    return render(request, 'myapp/claim_prediction.html', context)
+
+
+###########
+
+########
+#######
+#####
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
+from django.db import connection
+import pandas as pd
+import numpy as np
+import plotly.express as px
+
+
+
+@login_required(login_url='login')
+def provider_efficiency_view(request):
+    dataset_ids = get_database_tables()
+
+    # Filters
+    selected_id = request.GET.get('dataset_id')
+    benefit_type = request.GET.get('benefit_type', 'all')
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    provider_filter = request.GET.get('provider')
+
+    # Chart placeholders
+    chart_provider_amount = chart_processing_speed = chart_volume_avg = None
+    chart_seasonality = chart_diversity_index = chart_variability = chart_provider_map = None
+    provider_list = []
+
+    # KPI placeholders
+    kpi_total_providers = kpi_total_claims = 0
+    kpi_total_amount = kpi_avg_amount = 0.0
+    kpi_fastest_days = kpi_slowest_days = None
+
+    print(f"📌 Available datasets: {dataset_ids}")
+    print(f"📌 Selected dataset: {selected_id}")
+    print(f"📌 Filters -> Benefit: {benefit_type}, Dates: {start_date} to {end_date}, Provider: {provider_filter}")
 
     if selected_id and selected_id in dataset_ids:
-        df = pd.read_sql(f'SELECT * FROM "{selected_id}"', connection)
+        try:
+            df = pd.read_sql(f'SELECT * FROM "{selected_id}"', connection)
+        except Exception as e:
+            print(f"❌ Error loading dataset: {e}")
+            return render(request, 'myapp/provider_efficiency1.html', {
+                'dataset_ids': dataset_ids,
+                'selected_id': selected_id
+            })
+
+        df.columns = df.columns.str.lower()
+
+        # Amount cleanup
+        if 'amount' in df.columns:
+            df['amount'] = (
+                df['amount'].astype(str)
+                .str.replace(r'[^\d.]', '', regex=True)
+                .replace('', np.nan)
+                .astype(float)
+                .fillna(0.0)
+            )
+        else:
+            df['amount'] = 0.0
+
+        # Date column detection
+        date_col = next((col for col in df.columns if 'claim_prov_date' in col or 'date' in col), None)
+        if date_col:
+            df['datetime'] = pd.to_datetime(df[date_col], errors='coerce', dayfirst=True)
+
+        # Apply filters
+        if start_date and 'datetime' in df.columns:
+            df = df[df['datetime'] >= pd.to_datetime(start_date)]
+        if end_date and 'datetime' in df.columns:
+            df = df[df['datetime'] <= pd.to_datetime(end_date)]
+        if 'benefit' in df.columns and benefit_type != 'all':
+            df = df[df['benefit'].astype(str).str.lower() == benefit_type.lower()]
+        if 'prov_name' in df.columns:
+            provider_list = sorted(df['prov_name'].dropna().unique().tolist())
+            if provider_filter:
+                df = df[df['prov_name'] == provider_filter]
 
         if not df.empty:
-            # Ensure amount is numeric
-            if 'amount' in df.columns:
-                df['amount'] = pd.to_numeric(
-                    df['amount'].astype(str).str.replace(r'[^\d.]', '', regex=True).replace('', '0'),
-                    errors='coerce'
+            # KPI calculations
+            kpi_total_providers = df['prov_name'].nunique() if 'prov_name' in df.columns else 0
+            kpi_total_claims = len(df)
+            kpi_total_amount = df['amount'].sum()
+
+            # FIX: average claim amount = unique claim IDs ÷ total amount
+            if 'admit_id' in df.columns:
+                unique_claims = df['admit_id'].nunique()
+            else:
+                unique_claims = df.index.nunique()
+            kpi_avg_amount = unique_claims / kpi_total_amount if kpi_total_amount > 0 else 0
+
+            # Processing time
+            if 'admission_date' in df.columns and 'claim_date' in df.columns:
+                df['admission_date'] = pd.to_datetime(df['admission_date'], errors='coerce')
+                df['claim_date'] = pd.to_datetime(df['claim_date'], errors='coerce')
+                df['processing_days'] = (df['claim_date'] - df['admission_date']).dt.days
+            elif 'dob' in df.columns and 'datetime' in df.columns:
+                df['processing_days'] = (df['datetime'] - pd.to_datetime(df['dob'], errors='coerce')).dt.days.abs()
+            else:
+                df['processing_days'] = np.random.randint(1, 30, len(df))
+
+            kpi_fastest_days = df['processing_days'].min()
+            kpi_slowest_days = df['processing_days'].max()
+
+            # 1️⃣ Provider Claim Amount Ranking
+            prov_sum = df.groupby('prov_name')['amount'].sum().reset_index()
+            top10 = prov_sum.nlargest(10, 'amount').assign(Category='Top 10')
+            bottom10 = prov_sum.nsmallest(10, 'amount').assign(Category='Bottom 10')
+            combined = pd.concat([top10, bottom10])
+            fig1 = px.bar(
+                combined, x='amount', y='prov_name', orientation='h',
+                color='Category', barmode='group',
+                color_discrete_map={'Top 10': 'green', 'Bottom 10': 'red'},
+                title="Provider Claim Amount Ranking (Top & Bottom 10)"
+            )
+            fig1.update_xaxes(tickformat=",")
+            chart_provider_amount = fig1.to_html(full_html=False)
+
+            # 2️⃣ Processing Speed Ranking
+            speed_df = df.groupby('prov_name')['processing_days'].mean().reset_index()
+            top_fast = speed_df.nsmallest(10, 'processing_days').assign(Category='Fastest 10')
+            top_slow = speed_df.nlargest(10, 'processing_days').assign(Category='Slowest 10')
+            combined_speed = pd.concat([top_fast, top_slow])
+            fig2 = px.bar(
+                combined_speed, x='processing_days', y='prov_name', orientation='h',
+                color='Category', barmode='group',
+                color_discrete_map={'Fastest 10': 'green', 'Slowest 10': 'red'},
+                title="Claims Processing Speed (Top Fastest & Slowest 10)"
+            )
+            fig2.update_xaxes(tickformat=",")
+            chart_processing_speed = fig2.to_html(full_html=False)
+
+            # 3️⃣ Volume vs Avg Amount (still mean for chart clarity)
+            vol_avg_df = df.groupby('prov_name').agg(
+                claim_count=('amount', 'size'),
+                avg_amount=('amount', 'mean'),
+                patient_count=('admit_id', 'nunique') if 'admit_id' in df.columns else ('amount', 'size')
+            ).reset_index()
+            top_vol = vol_avg_df.nlargest(10, 'claim_count').assign(Category='Top 10 Volume')
+            bottom_vol = vol_avg_df.nsmallest(10, 'claim_count').assign(Category='Bottom 10 Volume')
+            combined_vol = pd.concat([top_vol, bottom_vol])
+            fig3 = px.scatter(
+                combined_vol, x='claim_count', y='avg_amount', size='patient_count',
+                color='Category',
+                color_discrete_map={'Top 10 Volume': 'green', 'Bottom 10 Volume': 'red'},
+                hover_name='prov_name',
+                title="Claims Volume vs Avg Amount (Top & Bottom 10 by Volume)"
+            )
+            fig3.update_xaxes(tickformat=",")
+            fig3.update_yaxes(tickformat=",")
+            chart_volume_avg = fig3.to_html(full_html=False)
+
+            # 4️⃣ Seasonality — works with or without provider filter
+            if 'datetime' in df.columns:
+                df['month'] = df['datetime'].dt.to_period('M').astype(str)
+                if provider_filter:
+                    season_df = df.groupby('month')['amount'].sum().reset_index()
+                    title_txt = f"Claims Seasonality for {provider_filter}"
+                else:
+                    season_df = df.groupby(['month', 'benefit'])['amount'].sum().reset_index()
+                    title_txt = "Claims Seasonality by Benefit Type"
+                fig4 = px.line(
+                    season_df, x='month', y='amount',
+                    color='benefit' if not provider_filter and 'benefit' in df.columns else None,
+                    title=title_txt
                 )
+                fig4.update_yaxes(tickformat=",")
+                chart_seasonality = fig4.to_html(full_html=False)
 
-            # Parse and filter by date
-            if 'claim_prov_date' in df.columns:
-                df['datetime'] = pd.to_datetime(df['claim_prov_date'], errors='coerce', dayfirst=True)
-
-                # Fill missing dates randomly
-                if df['datetime'].isna().any():
-                    start_dt = pd.to_datetime('2023-01-01')
-                    end_dt = pd.to_datetime(timezone.now().date())
-                    random_dates = pd.to_datetime(
-                        np.random.randint(start_dt.value // 10**9, end_dt.value // 10**9, size=df['datetime'].isna().sum()),
-                        unit='s'
-                    )
-                    df.loc[df['datetime'].isna(), 'datetime'] = random_dates
-
-                # Apply date filters
-                if start_date:
-                    df = df[df['datetime'] >= pd.to_datetime(start_date)]
-                if end_date:
-                    df = df[df['datetime'] <= pd.to_datetime(end_date)]
-
-            # Descriptive statistics
-            if show_stats:
-                desc_stats = df.describe(include='all').transpose().reset_index().to_dict(orient='records')
-
-            # Summary stats & charts
-            if 'amount' in df.columns and 'claim_me' in df.columns:
-                unique_members_count = df['claim_me'].nunique()
-                summary_stats = {
-                    'total_claims': len(df),
-                    'total_amount': df['amount'].sum(),
-                    'unique_members': unique_members_count,
-                    'avg_claim': (df['amount'].sum() / unique_members_count) if unique_members_count else 0
-                }
-
-                # Claims Over Time chart
-                claims_time_chart = None
-                if 'datetime' in df.columns:
-                    df_time = df.set_index('datetime').sort_index()
-                    daily_df = df_time.resample('D').size().reset_index(name='count')
-                    weekly_df = df_time.resample('W-MON').size().reset_index(name='count')
-                    monthly_df = df_time.resample('M').size().reset_index(name='count')
-
-                    fig = go.Figure()
-                    fig.add_trace(go.Scatter(
-                        x=daily_df['datetime'], y=daily_df['count'],
-                        mode='lines+markers', name='Daily Claims',
-                        line=dict(color='#e30613'), visible=True
-                    ))
-                    fig.add_trace(go.Scatter(
-                        x=weekly_df['datetime'], y=weekly_df['count'],
-                        mode='lines+markers', name='Weekly Claims',
-                        line=dict(color='#e30613'), visible=False
-                    ))
-                    fig.add_trace(go.Scatter(
-                        x=monthly_df['datetime'], y=monthly_df['count'],
-                        mode='lines+markers', name='Monthly Claims',
-                        line=dict(color='#e30613'), visible=False
-                    ))
-
-                    fig.update_layout(
-                        title="Claims Submitted Over Time",
-                        xaxis_title="Date",
-                        yaxis_title="Number of Claims",
-                        margin=dict(l=20, r=20, t=40, b=20),
-                        paper_bgcolor='rgba(0,0,0,0)',
-                        plot_bgcolor='rgba(0,0,0,0)',
-                        updatemenus=[dict(
-                            type="dropdown",
-                            direction="down",
-                            x=1.15, y=1.2,
-                            showactive=True,
-                            buttons=list([
-                                dict(label="Daily", method="update",
-                                     args=[{"visible": [True, False, False]},
-                                           {"title": "Daily Claims Submitted"}]),
-                                dict(label="Weekly", method="update",
-                                     args=[{"visible": [False, True, False]},
-                                           {"title": "Weekly Claims Submitted"}]),
-                                dict(label="Monthly", method="update",
-                                     args=[{"visible": [False, False, True]},
-                                           {"title": "Monthly Claims Submitted"}]),
-                            ]),
-                        )]
-                    )
-                    claims_time_chart = fig.to_html(full_html=False)
-
-                # Category amounts chart
-                category_amounts = None
-                if 'benefit_desc' in df.columns:
-                    category_unique_df = (
-                        df.groupby('benefit_desc')['claim_me']
-                        .nunique()
-                        .reset_index(name='unique_members')
-                    )
-                    fig_cat = px.bar(
-                        category_unique_df, x='benefit_desc', y='unique_members',
-                        title='Unique Claims by Benefit Category',
-                        color_discrete_sequence=['#e30613']
-                    )
-                    category_amounts = fig_cat.to_html(full_html=False)
-
-                # Sunburst breakdown
-                sunburst = None
-                if 'benefit' in df.columns and 'benefit_desc' in df.columns:
-                    fig_sunburst = px.sunburst(
-                        df.reset_index(), path=['benefit', 'benefit_desc'],
-                        values='amount', title='Claim Amounts Breakdown',
-                        color_discrete_sequence=['#e30613']
-                    )
-                    sunburst = fig_sunburst.to_html(full_html=False)
-
-                # Top claimants
-                top_claimants_df = (
-                    df.groupby('claim_me')
-                    .agg(total_amount=('amount', 'sum'), claim_count=('amount', 'count'))
-                    .reset_index()
-                    .sort_values(by='total_amount', ascending=False)
-                    .head(10)
+            # 5️⃣ Diversity Index as % unique services
+            service_col = 'service_description' if 'service_description' in df.columns else (
+                'service_code' if 'service_code' in df.columns else None
+            )
+            if service_col:
+                diversity_df = df.groupby('prov_name')[service_col].nunique().reset_index()
+                total_unique_services = diversity_df[service_col].sum()
+                diversity_df['percent_unique'] = (diversity_df[service_col] / total_unique_services) * 100
+                fig5 = px.bar(
+                    diversity_df, x='prov_name', y='percent_unique',
+                    color='percent_unique', color_continuous_scale='Viridis',
+                    title="Provider Diversity Index (% Unique Services)"
                 )
-                fig_top = px.bar(
-                    top_claimants_df, x='claim_me', y='total_amount',
-                    title='Top Claimants',
-                    color_discrete_sequence=['#e30613']
-                )
-                top_claimants = fig_top.to_html(full_html=False)
+                fig5.update_yaxes(tickformat=",")
+                chart_diversity_index = fig5.to_html(full_html=False)
 
-                # Claim frequency histogram
-                claim_freq_df = df['claim_me'].value_counts().reset_index(name='frequency')
-                fig_freq = px.histogram(
-                    claim_freq_df, x='frequency', nbins=20,
-                    title='Claim Frequency Distribution',
-                    color_discrete_sequence=['#e30613']
-                )
-                claim_freq = fig_freq.to_html(full_html=False)
+            # 6️⃣ Variability
+            variability_df = df.groupby('prov_name')['amount'].std().reset_index().fillna(0)
+            variability_df.columns = ['prov_name', 'std_dev']
+            top_var = variability_df.nlargest(10, 'std_dev').assign(Category='Most Variable')
+            bottom_var = variability_df.nsmallest(10, 'std_dev').assign(Category='Least Variable')
+            combined_var = pd.concat([top_var, bottom_var])
+            fig6 = px.bar(
+                combined_var, x='std_dev', y='prov_name', orientation='h',
+                color='Category',
+                color_discrete_map={'Most Variable': 'green', 'Least Variable': 'red'},
+                title="Claim Amount Variability (Top & Bottom 10)"
+            )
+            fig6.update_xaxes(tickformat=",")
+            chart_variability = fig6.to_html(full_html=False)
 
-                visualizations = {
-                    'summary_stats': summary_stats,
-                    'claims_time_chart': claims_time_chart,
-                    'category_amounts': category_amounts,
-                    'sunburst': sunburst,
-                    'top_claimants': top_claimants,
-                    'top_claimants_table': top_claimants_df.to_dict('records'),
-                    'claim_freq': claim_freq
-                }
+            # 7️⃣ Provider Map
+            map_df = df.groupby('prov_name').size().reset_index(name='claim_volume')
+            if 'latitude' not in df.columns or 'longitude' not in df.columns:
+                np.random.seed(42)
+                map_df['lat'] = np.random.uniform(-4.5, 4.5, size=len(map_df)) + 1
+                map_df['lon'] = np.random.uniform(34, 42, size=len(map_df))
+            else:
+                map_df['lat'] = df.groupby('prov_name')['latitude'].mean().values
+                map_df['lon'] = df.groupby('prov_name')['longitude'].mean().values
+            fig7 = px.scatter_mapbox(
+                map_df, lat='lat', lon='lon', size='claim_volume',
+                hover_name='prov_name', zoom=5,
+                color='claim_volume', color_continuous_scale='Viridis',
+                title="Provider Concentration Map", mapbox_style="carto-positron"
+            )
+            chart_provider_map = fig7.to_html(full_html=False)
 
-    return render(request, 'claim_prediction.html', {
-        'dataset_ids': dataset_ids,   # ✅ Ensures dropdown is always populated
-        'selected_id': selected_id,   # ✅ Preserves selection between views
-        'desc_stats': desc_stats,
-        'visualizations': visualizations,
-        'username': username,
+    return render(request, 'myapp/provider_efficiency1.html', {
+        'dataset_ids': dataset_ids,
+        'selected_id': selected_id,
+        'benefit_type': benefit_type,
         'start_date': start_date,
-        'end_date': end_date
+        'end_date': end_date,
+        'provider_filter': provider_filter,
+        'provider_list': provider_list,
+        # KPIs
+        'kpi_total_providers': kpi_total_providers,
+        'kpi_total_claims': kpi_total_claims,
+        'kpi_total_amount': kpi_total_amount,
+        'kpi_avg_amount': kpi_avg_amount,
+        'kpi_fastest_days': kpi_fastest_days,
+        'kpi_slowest_days': kpi_slowest_days,
+        # Charts
+        'chart_provider_amount': chart_provider_amount,
+        'chart_processing_speed': chart_processing_speed,
+        'chart_volume_avg': chart_volume_avg,
+        'chart_seasonality': chart_seasonality,
+        'chart_diversity_index': chart_diversity_index,
+        'chart_variability': chart_variability,
+        'chart_provider_map': chart_provider_map
     })
 
+##########
+
+###############
+
+############
+
+import networkx as nx
+
+
+########
+@login_required(login_url='login')
+def diagnostic_patterns_view1(request):
+    # ✅ Get available datasets
+    dataset_ids = get_database_tables()
+
+    # ✅ User-selected filters
+    selected_id = request.GET.get('dataset_id')
+    benefit_type = request.GET.get('benefit_type', 'all')
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    diagnosis_filter = request.GET.get('diagnosis')
+    gender_filter = request.GET.get('gender')
+
+    # Chart placeholders
+    charts = {
+        'chart1_top_diagnoses': None,
+        'chart2_age_distribution': None,
+        'chart3_diag_network': None,
+        'chart4_gender_diag_heatmap': None,
+        'chart5_avg_amount_age_group': None,
+        'chart6_diag_seasonality': None,
+        'chart7_claim_dist_by_dependents': None
+    }
+
+    # Dropdown filter lists
+    diagnosis_list = []
+    gender_list = []
+
+    # ✅ Only proceed if a dataset is selected and exists
+    if selected_id and selected_id in dataset_ids:
+        # Load dataset from DB
+        df = pd.read_sql(f'SELECT * FROM "{selected_id}"', connection)
+        print(f"✅ Loaded dataset '{selected_id}' with {len(df)} rows")
+        print(f"Columns: {list(df.columns)}")
+
+        # --- Standardize Amount ---
+        amt_cols = [c for c in df.columns if c.lower() in ['amount', 'claim_amount']]
+        if amt_cols:
+            df['amount'] = pd.to_numeric(
+                df[amt_cols[0]].astype(str).str.replace(r'[^\d.]', '', regex=True),
+                errors='coerce'
+            )
+        else:
+            df['amount'] = 0
+        print(f"💰 Amount column stats: {df['amount'].describe()}")
+
+        # --- Parse Dates ---
+        date_cols = [c for c in df.columns if 'date' in c.lower()]
+        if date_cols:
+            df['datetime'] = pd.to_datetime(df[date_cols[0]], errors='coerce', dayfirst=True)
+            print(f"📅 Date sample: {df['datetime'].head()}")
+
+        # --- Age Calculation ---
+        if 'dob' in df.columns:
+            df['dob'] = pd.to_datetime(df['dob'], errors='coerce', dayfirst=True)
+            df['age'] = ((pd.Timestamp.now() - df['dob']).dt.days / 365.25).astype(int)
+            print(f"👤 Age stats: {df['age'].describe()}")
+
+        # --- Apply Date Filter ---
+        if start_date:
+            df = df[df['datetime'] >= pd.to_datetime(start_date)]
+        if end_date:
+            df = df[df['datetime'] <= pd.to_datetime(end_date)]
+
+        # --- Benefit Type Filter ---
+        benefit_cols = [c for c in df.columns if 'benefit' in c.lower()]
+        if benefit_type != 'all' and benefit_cols:
+            df = df[df[benefit_cols[0]].astype(str).str.lower() == benefit_type.lower()]
+
+        # --- Diagnosis Column Detection ---
+        diag_cols = [c for c in df.columns if any(keyword in c.lower() for keyword in ['diag', 'icd10', 'ailment'])]
+        print(f"🩺 Diagnosis columns found: {diag_cols}")
+
+        if diag_cols:
+            diagnosis_list = sorted(df[diag_cols[0]].dropna().unique().tolist())
+            if diagnosis_filter:
+                df = df[df[diag_cols[0]] == diagnosis_filter]
+
+        # --- Gender Filter ---
+        if 'gender' in df.columns:
+            gender_list = sorted(df['gender'].dropna().unique().tolist())
+            if gender_filter:
+                df = df[df['gender'] == gender_filter]
+
+        print(f"📊 Data after filtering: {len(df)} rows remain")
+
+        # ---------------- CHARTS ---------------- #
+
+        # 1️⃣ Top Diagnoses by Claim Amount
+        if diag_cols:
+            top_diag = df.groupby(diag_cols[0])['amount'].sum().nlargest(15).sort_values().reset_index()
+            fig1 = px.bar(top_diag, x='amount', y=diag_cols[0], orientation='h',
+                          title="Top 15 Diagnoses by Claim Amount")
+            charts['chart1_top_diagnoses'] = fig1.to_html(full_html=False)
+
+        # 2️⃣ Age Distribution
+        if 'age' in df.columns:
+            fig2 = px.histogram(df, x='age', nbins=20, title="Age Distribution of Claimants")
+            charts['chart2_age_distribution'] = fig2.to_html(full_html=False)
+
+        # 3️⃣ Diagnosis Co-occurrence Network
+        if diag_cols:
+            # Pick primary diagnosis column
+            primary_diag_col = diag_cols[0]
+
+            # Use admit_id or another unique identifier
+            patient_id_col = 'admit_id' if 'admit_id' in df.columns else df.index
+
+            # Group diagnoses by patient/claim ID
+            diag_pairs = (
+                df.dropna(subset=[primary_diag_col])
+                .groupby(patient_id_col)[primary_diag_col]
+                .apply(lambda x: list(set(x)))
+            )
+
+            # Create edges (pairs of diagnoses seen together)
+            edges = []
+            for diags in diag_pairs:
+                if len(diags) > 1:
+                    for i, a in enumerate(diags):
+                        for b in diags[i+1:]:
+                            edges.append((a, b))
+
+            if edges:
+                G = nx.Graph()
+                G.add_edges_from(edges)
+
+                pos = nx.spring_layout(G, k=0.5)
+                edge_x, edge_y = [], []
+                for edge in G.edges():
+                    x0, y0 = pos[edge[0]]
+                    x1, y1 = pos[edge[1]]
+                    edge_x.extend([x0, x1, None])
+                    edge_y.extend([y0, y1, None])
+
+                node_x, node_y, node_text = [], [], []
+                for node in G.nodes():
+                    x, y = pos[node]
+                    node_x.append(x)
+                    node_y.append(y)
+                    node_text.append(node)
+
+                fig3 = go.Figure()
+                fig3.add_trace(go.Scatter(x=edge_x, y=edge_y, mode='lines',
+                                        line=dict(width=0.5, color='#888')))
+                fig3.add_trace(go.Scatter(
+                    x=node_x, y=node_y, mode='markers+text',
+                    text=node_text, textposition='top center',
+                    marker=dict(size=10, color='red')
+                ))
+                fig3.update_layout(title="Diagnosis Co-occurrence Network", showlegend=False)
+                charts['chart3_diag_network'] = fig3.to_html(full_html=False)
+            else:
+                print("⚠ No co-occurring diagnosis pairs found.")
+
+
+        # 4️⃣ Gender × Diagnosis Heatmap
+        if diag_cols and 'gender' in df.columns:
+            heat_df = df.groupby(['gender', diag_cols[0]]).size().reset_index(name='count')
+            fig4 = px.density_heatmap(heat_df, x='gender', y=diag_cols[0], z='count',
+                                      color_continuous_scale='Blues')
+            charts['chart4_gender_diag_heatmap'] = fig4.to_html(full_html=False)
+
+        # 5️⃣ Average Claim Amount by Age Group
+        if 'age' in df.columns:
+            bins = list(range(0, 100, 10))
+            df['age_group'] = pd.cut(df['age'], bins=bins, right=False).astype(str)
+            avg_age_df = df.groupby('age_group')['amount'].mean().reset_index()
+            print(f"📈 Average claim amount by age group: {avg_age_df}")
+            fig5 = px.bar(avg_age_df, x='age_group', y='amount',
+                          title="Average Claim Amount by Age Group")
+            charts['chart5_avg_amount_age_group'] = fig5.to_html(full_html=False)
+
+        # 6️⃣ Diagnosis Seasonality
+        if diag_cols and 'datetime' in df.columns:
+            df['month'] = df['datetime'].dt.to_period('M').astype(str)
+            top5_diags = df.groupby(diag_cols[0])['amount'].sum().nlargest(5).index
+            season_df = df[df[diag_cols[0]].isin(top5_diags)]
+            fig6 = px.line(season_df.groupby(['month', diag_cols[0]])['amount'].sum().reset_index(),
+                           x='month', y='amount', color=diag_cols[0],
+                           title="Diagnosis Seasonality")
+            charts['chart6_diag_seasonality'] = fig6.to_html(full_html=False)
+
+        # 7️⃣ Claim Distribution by Dependent Type & Diagnosis
+        if 'dependent_type' in df.columns and diag_cols:
+            dep_df = df.groupby(['dependent_type', diag_cols[0]])['amount'].sum().reset_index()
+            fig7 = px.bar(dep_df, x='dependent_type', y='amount', color=diag_cols[0],
+                          title="Claims by Dependent Type & Diagnosis", barmode='stack')
+            charts['chart7_claim_dist_by_dependents'] = fig7.to_html(full_html=False)
+
+    # ✅ Render
+    return render(request, 'myapp/diagnostic-patterns1.html', {
+        'dataset_ids': dataset_ids,
+        'selected_id': selected_id,
+        'benefit_type': benefit_type,
+        'start_date': start_date,
+        'end_date': end_date,
+        'diagnosis_list': diagnosis_list,
+        'gender_list': gender_list,
+        'diagnosis_filter': diagnosis_filter,
+        'gender_filter': gender_filter,
+        **charts
+    })
 
 
 
@@ -4679,3 +5188,25 @@ def custom_filters(request):
         context['error'] = str(e)
     
     return render(request, 'custom_filters.html', context)
+
+
+
+#################
+#################
+
+##########Claim prediction 
+
+def claim_prediction1_view(request):
+    # Example predictions
+    predictions = [
+        {"claim_id": 101, "amount": 5000.75, "confidence": 92.3},
+        {"claim_id": 102, "amount": 3500.00, "confidence": 88.1},
+        {"claim_id": 103, "amount": 4250.50, "confidence": 95.0},
+    ]
+    return render(request, "myapp/claim_prediction1.html", {"predictions": predictions})
+
+def claim_prediction2_view(request):
+    return render(request, "myapp/claim_prediction2.html")
+
+def claim_prediction3_view(request):
+    return render(request, "myapp/claim_prediction3.html")

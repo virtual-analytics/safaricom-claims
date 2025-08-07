@@ -1,0 +1,156 @@
+{% extends 'myapp/base.html' %}
+{% load humanize %}
+{% block title %}Provider Efficiency Dashboard - Minet Insurance{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<style>
+    .main-area {
+        width: 100%;
+        background: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+    h1 { font-size: 2rem; font-weight: 700; color: #232323; margin-bottom: 10px; }
+    h2 { font-size: 1.3rem; font-weight: 600; color: #e30613; margin-bottom: 25px; }
+
+    /* Sticky KPI Dashboard */
+    .kpi-container { 
+        display: grid; 
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); 
+        gap: 15px; 
+        margin-bottom: 15px; 
+        position: sticky; 
+        top: 0; 
+        background: #fff; 
+        padding: 10px 0; 
+        z-index: 200; 
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .kpi-card { padding: 15px; border-radius: 8px; color: white; font-weight: 600; box-shadow: 0 2px 5px rgba(0,0,0,0.08); text-align: center; }
+    .kpi-card h3 { font-size: 1rem; font-weight: 500; margin-bottom: 8px; }
+    .kpi-card p { font-size: 1.3rem; font-weight: bold; margin: 0; }
+    .kpi-blue { background: linear-gradient(135deg, #4e73df, #224abe); }
+    .kpi-green { background: linear-gradient(135deg, #1cc88a, #13855c); }
+    .kpi-red { background: linear-gradient(135deg, #e74a3b, #be2617); }
+    .kpi-purple { background: linear-gradient(135deg, #6f42c1, #4b2980); }
+    .kpi-orange { background: linear-gradient(135deg, #f6c23e, #dda20a); }
+
+    /* Sticky Filter Bar */
+    .filter-bar { 
+        display: flex; 
+        flex-wrap: wrap; 
+        gap: 15px; 
+        margin-bottom: 30px; 
+        background: #fafafa; 
+        padding: 15px; 
+        border-radius: 6px; 
+        border: 1px solid #e3e8ee;
+        position: sticky;
+        top: 110px; /* Just below KPIs */
+        z-index: 150;
+    }
+    .filter-group { display: flex; flex-direction: column; flex: 1; min-width: 200px; }
+    .filter-group label { font-size: 0.85rem; font-weight: 500; color: #555; margin-bottom: 5px; }
+    .filter-group select, .filter-group input { padding: 8px 10px; border-radius: 5px; border: 1px solid #ddd; font-size: 0.95rem; }
+    .filter-bar button { background: #e30613; color: #fff; border: none; border-radius: 5px; padding: 10px 15px; cursor: pointer; font-weight: 600; transition: background 0.2s ease; margin-top: 23px; }
+    .filter-bar button:hover { background: #c00511; }
+
+    /* Chart Grid */
+    .chart-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 25px; }
+    @media (max-width: 768px) {
+        .chart-grid { grid-template-columns: 1fr; }
+    }
+    .chart-card { background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); padding: 15px; border-left: 4px solid #e30613; }
+    .chart-card h3 { font-size: 1.05rem; font-weight: 600; color: #e30613; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+    .chart-content { min-height: 400px; overflow-x: auto; }
+    .no-data { color: #888; font-style: italic; font-size: 0.9rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="main-area">
+    <h1>Provider Efficiency Dashboard</h1>
+    <h2>Performance Insights by Provider</h2>
+
+    <!-- KPI Cards (Sticky) -->
+    <div class="kpi-container">
+        <div class="kpi-card kpi-blue"><h3>Total Providers</h3><p>{{ kpi_total_providers|intcomma }}</p></div>
+        <div class="kpi-card kpi-blue"><h3>Total Claims Processed</h3><p>{{ kpi_total_claims|intcomma }}</p></div>
+        <div class="kpi-card kpi-purple"><h3>Total Claim Amount (KES)</h3><p>KES {{ kpi_total_amount|intcomma }}</p></div>
+        <div class="kpi-card kpi-orange"><h3>Average Claim Amount (KES)</h3><p>KES {{ kpi_avg_amount|intcomma }}</p></div>
+        <div class="kpi-card kpi-green"><h3>Fastest Processing Time</h3><p>{{ kpi_fastest_days|intcomma }} days</p></div>
+        <div class="kpi-card kpi-red"><h3>Slowest Processing Time</h3><p>{{ kpi_slowest_days|intcomma }} days</p></div>
+    </div>
+
+    <!-- Filters (Sticky) -->
+    <form method="GET" action="" class="filter-bar">
+        <div class="filter-group">
+            <label>Select Dataset:</label>
+            <select name="dataset_id" required>
+                <option value="">-- Choose --</option>
+                {% for table in dataset_ids %}
+                    <option value="{{ table }}" {% if table == selected_id %}selected{% endif %}>{{ table }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Benefit Type:</label>
+            <select name="benefit_type">
+                <option value="all" {% if benefit_type == 'all' %}selected{% endif %}>All</option>
+                <option value="inpatient" {% if benefit_type == 'inpatient' %}selected{% endif %}>Inpatient</option>
+                <option value="outpatient" {% if benefit_type == 'outpatient' %}selected{% endif %}>Outpatient</option>
+                <option value="dental" {% if benefit_type == 'dental' %}selected{% endif %}>Dental</option>
+                <option value="optical" {% if benefit_type == 'optical' %}selected{% endif %}>Optical</option>
+            </select>
+        </div>
+        <div class="filter-group"><label>Start Date:</label><input type="date" name="start_date" value="{{ start_date|default:'' }}"></div>
+        <div class="filter-group"><label>End Date:</label><input type="date" name="end_date" value="{{ end_date|default:'' }}"></div>
+        <div class="filter-group">
+            <label>Provider:</label>
+            <select name="provider">
+                <option value="">-- All Providers --</option>
+                {% for prov in provider_list %}
+                    <option value="{{ prov }}" {% if prov == provider_filter %}selected{% endif %}>{{ prov }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-group" style="flex: 0 0 auto;"><button type="submit">Apply</button></div>
+    </form>
+
+    <!-- Charts -->
+    <div class="chart-grid">
+        <div class="chart-card">
+            <h3>1. Provider Claim Amount Ranking (Top & Bottom 10)</h3>
+            <div class="chart-content">{% if chart_provider_amount %}{{ chart_provider_amount|safe }}{% else %}<p class="no-data">No data available.</p>{% endif %}</div>
+        </div>
+        <div class="chart-card">
+            <h3>2. Claims Processing Speed (Fastest & Slowest 10)</h3>
+            <div class="chart-content">{% if chart_processing_speed %}{{ chart_processing_speed|safe }}{% else %}<p class="no-data">No data available.</p>{% endif %}</div>
+        </div>
+        <div class="chart-card">
+            <h3>3. Claims Volume vs Avg Amount</h3>
+            <div class="chart-content">{% if chart_volume_avg %}{{ chart_volume_avg|safe }}{% else %}<p class="no-data">No data available.</p>{% endif %}</div>
+        </div>
+        <div class="chart-card">
+            <h3>4. Claims Seasonality {% if provider_filter %}(for {{ provider_filter }}){% else %}(All Providers){% endif %}</h3>
+            <div class="chart-content">{% if chart_seasonality %}{{ chart_seasonality|safe }}{% else %}<p class="no-data">No seasonality trends available.</p>{% endif %}</div>
+        </div>
+        <div class="chart-card">
+            <h3>5. Provider Diversity Index (% Unique Services)</h3>
+            <div class="chart-content">{% if chart_diversity_index %}{{ chart_diversity_index|safe }}{% else %}<p class="no-data">No diversity data available.</p>{% endif %}</div>
+        </div>
+        <div class="chart-card">
+            <h3>6. Claim Amount Variability</h3>
+            <div class="chart-content">{% if chart_variability %}{{ chart_variability|safe }}{% else %}<p class="no-data">No variability data available.</p>{% endif %}</div>
+        </div>
+    </div>
+
+    <!-- Map -->
+    <div class="chart-card" style="margin-top: 25px;">
+        <h3>7. Provider Concentration Map</h3>
+        <div class="chart-content">{% if chart_provider_map %}{{ chart_provider_map|safe }}{% else %}<p class="no-data">No map data available.</p>{% endif %}</div>
+    </div>
+</div>
+{% endblock %}

@@ -3,281 +3,451 @@
 {% block extra_head %}
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <style>
-    /* Claim Distribution Styling */
-    .main-area {
-        width: 100%;
+    :root {
+        --primary: #E30613;
+        --primary-dark: #C10510;
+        --secondary: #232323;
+        --light-bg: #F5F5F5;
+        --border: #E3E8EE;
+        --text-muted: #888;
+        --card-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    }
+
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: "Segoe UI", Tahoma, sans-serif;
+        font-size: 16px;
+        background: var(--light-bg);
         margin: 0;
-        background: #fff;
-        padding: 0;
+        color: #333;
     }
+
+    /* ===== Main Area ===== */
+    .main-area {
+        padding: 2rem;
+        width: 100%;
+        max-width: 100%;
+        animation: fadeIn 0.4s ease-in-out;
+    }
+
     .main-area h1 {
-        font-size: 2.1rem;
+        font-size: 2.2rem;
         font-weight: 700;
-        color: #232323;
+        color: var(--secondary);
+        margin-bottom: 0.5rem;
     }
+
     .main-area h2 {
-        font-size: 1.35rem;
+        font-size: 1.4rem;
         font-weight: 700;
-        color: #e30613;
+        color: var(--primary);
         margin-bottom: 2rem;
     }
+
+    /* ===== Tabs ===== */
     .tabs {
         display: flex;
-        gap: 2.2rem;
-        border-bottom: 1.5px solid #e3e8ee;
-        margin-bottom: 2.2rem;
+        flex-wrap: wrap;
+        gap: 2rem;
+        border-bottom: 2px solid var(--border);
+        margin-bottom: 2rem;
     }
+
     .tab {
         font-size: 1rem;
-        color: #888;
-        padding-bottom: 0.7rem;
+        padding: 0.8rem 1.2rem;
         cursor: pointer;
         border: none;
         background: none;
         font-weight: 500;
-        transition: color 0.2s, border-bottom 0.2s;
-        border-bottom: 2.5px solid transparent;
+        color: var(--text-muted);
+        border-bottom: 3px solid transparent;
+        transition: all 0.25s ease;
     }
+
+    .tab:hover:not(.active) {
+        color: var(--primary);
+    }
+
     .tab.active {
-        color: #e30613;
-        border-bottom: 2.5px solid #e30613;
+        color: var(--primary);
+        border-bottom: 3px solid var(--primary);
         font-weight: 700;
+        background: rgba(227, 6, 19, 0.05);
+        border-radius: 6px 6px 0 0;
     }
-    .tab:hover:not(.active) { color: #e30613; }
-    .tab-content {
-        margin-top: 1.5rem;
-        background: #f5f5f5;
-        border-radius: 8px;
-        box-shadow: 0 1px 6px rgba(35,35,35,0.04);
-        padding: 2.2rem 0 1.5rem 0;
-        min-height: 180px;
-        animation: fadeIn 0.3s;
-    }
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(16px); }
-        to { opacity: 1; transform: none; }
-    }
-    .distribution-container {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
-        gap: 25px;
-        margin-bottom: 2rem;
-    }
-    .distribution-card {
-        background: #fff;
-        border-radius: 10px;
-        box-shadow: 0 1px 6px rgba(0,0,0,0.06);
-        padding: 20px;
-        border-left: 4px solid #e30613;
-    }
-    .distribution-header {
-        font-size: 1.2rem;
-        font-weight: 600;
-        margin-bottom: 15px;
-        color: #e30613;
-        border-bottom: 1px solid #e3e8ee;
-        padding-bottom: 5px;
-    }
-    .chart-container { height: 400px; width: 100%; }
-    .filter-controls {
+
+    /* ===== Filter Form ===== */
+    #filterForm {
         display: flex;
-        gap: 15px;
-        margin-bottom: 20px;
         flex-wrap: wrap;
+        gap: 15px;
+        padding: 1rem;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: var(--card-shadow);
+        margin-bottom: 2rem;
+        align-items: flex-end;
     }
-    .filter-control { flex: 1; min-width: 200px; }
-    .filter-control label {
+
+    #filterForm label {
         font-size: 0.9rem;
-        margin-bottom: 5px;
         color: #555;
+        margin-bottom: 4px;
+        display: block;
     }
-    .filter-control select {
-        padding: 8px 12px;
+
+    #filterForm select,
+    #filterForm input[type="date"] {
+        padding: 10px 14px;
         border-radius: 6px;
         border: 1px solid #ddd;
+        background: #fff;
+        min-width: 160px;
     }
-    .insights-container {
+
+    #filterForm select:focus,
+    #filterForm input:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 2px rgba(227, 6, 19, 0.1);
+    }
+
+    #filterForm button {
+        background: var(--primary);
+        color: #fff;
+        padding: 10px 18px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: background 0.3s ease, transform 0.2s ease;
+    }
+
+    #filterForm button:hover {
+        background: var(--primary-dark);
+        transform: translateY(-2px);
+    }
+
+    /* ===== Charts Container ===== */
+    #chartsContainer {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 20px;
-        margin-top: 20px;
+        gap: 2rem;
+        width: 100%;
+        margin: 0;
     }
-    @media (max-width: 768px) {
-        .distribution-container { grid-template-columns: 1fr; }
-        .insights-container { grid-template-columns: 1fr; }
+
+    #chartsContainer h3 {
+        grid-column: 1 / -1;
+        font-size: 1.5rem;
+        color: var(--secondary);
+        margin-bottom: 0.5rem;
+    }
+
+    /* ===== Chart Cards ===== */
+    #chartsContainer > div {
+        background: #fff;
+        border-radius: 10px;
+        box-shadow: var(--card-shadow);
+        padding: 1.5rem;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    #chartsContainer > div:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+    }
+
+    #chartsContainer h4 {
+        color: var(--primary);
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 0.8rem;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 0.5rem;
+    }
+
+    /* ===== Chart Container ===== */
+    .chart-container {
+        flex: 1;
+        min-height: 550px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 0;
+        background: #fafafa;
+        display: flex;
+        align-items: stretch;
+        justify-content: stretch;
+        width: 100%;
+    }
+
+    /* Force Plotly charts to fill space */
+    .chart-container > div,
+    .chart-container > svg,
+    .js-plotly-plot,
+    .plot-container {
+        width: 100% !important;
+        height: 100% !important;
+    }
+
+    /* ===== Tree View ===== */
+    #jsmind_container {
+        height: 500px;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: var(--card-shadow);
+        padding: 0.5rem;
+        width: 100%;
+    }
+
+    /* ===== Debug Info ===== */
+    .debug-info {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        background: #fff;
+        padding: 0.5rem 1rem;
+        border-left: 4px solid var(--primary);
+        margin-bottom: 1rem;
+        box-shadow: var(--card-shadow);
+        border-radius: 6px;
+    }
+
+    /* ===== Responsive ===== */
+    @media (max-width: 1024px) {
+        #chartsContainer {
+            grid-template-columns: 1fr;
+        }
+
+        #filterForm {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .main-area {
+            padding: 1rem;
+        }
+    }
+
+    /* ===== Animation ===== */
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(12px); }
+        to { opacity: 1; transform: translateY(0); }
     }
 </style>
+
 {% endblock %}
+
+
 
 {% block content %}
 {% csrf_token %}
 <div class="main-area">
-    <h1>The Verse - Acme_Brokers Dashboard</h1>
+    <h1>Broker Dashboard</h1>
     <h2>Claims Prediction Engine</h2>
 
-    <!-- Tab Navigation -->
+    <!-- Tabs (Claims Tree button removed) -->
     <div class="tabs">
-        <button class="tab active" onclick="showTab(event, 'data-prep')">Claim distribution</button>
-        <button class="tab" onclick="showTab(event, 'model-training')">Provider efficiency</button>
-        <button class="tab" onclick="showTab(event, 'make-predictions')">Diagnostic patterns</button>
+        <button class="tab active" onclick="showTab(event, 'data-prep')">Claim Distribution</button>
+        <a href="{% url 'provider_efficiency' %}" 
+           class="tab {% if request.resolver_match.url_name == 'provider_efficiency' %}active{% endif %}">
+           Provider Efficiency
+        </a>
+        <a href="{% url 'diagnostic-patterns1' %}" 
+           class="tab {% if request.resolver_match.url_name == 'diagnostic-patterns1' %}active{% endif %}">
+           Diagnostic Patterns
+        </a>
     </div>
 
     <!-- Claim Distribution Tab -->
     <div id="data-prep" class="tab-content" style="display:block;">
-
-        <!-- Dataset Selection Dropdown -->
-        <div class="dataset-selection">
-            <form method="GET" action="">
-                <label for="dataset_id">Select Dataset:</label>
-                <select name="dataset_id" id="dataset_id" required>
-                    <option value="">-- Choose a dataset --</option>
-                    {% for table in dataset_ids %}
-                        <option value="{{ table }}" {% if table == selected_id %}selected{% endif %}>{{ table }}</option>
-                    {% endfor %}
-                </select>
-                <button type="submit">Load Data</button>
-            </form>
-        </div>
-
-        <!-- Full Table Display -->
-        {% if full_table_html %}
-        <div class="dataset-table-container">
-            <h3>Dataset Preview</h3>
-            <div class="table-scroll">
-                {{ full_table_html|safe }}
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- Debug Info -->
-        {% if debug_info %}
-        <div class="debug-info">
-            <h4>Debug Info:</h4>
-            <pre>{{ debug_info|safe }}</pre>
-        </div>
-        {% endif %}
-
-        <!-- Section Title -->
-        <div class="section-title">
-            Claims Distribution Analysis
-        </div>
-
         <!-- Filters -->
-        <div class="filter-controls">
-            <div class="filter-control">
-                <label for="time_period">Time Period</label>
-                <select id="time_period" name="time_period" onchange="updateDistributionCharts()">
-                    <option value="all" {% if time_period == 'all' %}selected{% endif %}>All Time</option>
-                    <option value="year" {% if time_period == 'year' %}selected{% endif %}>Last Year</option>
-                    <option value="quarter" {% if time_period == 'quarter' %}selected{% endif %}>Last Quarter</option>
-                    <option value="month" {% if time_period == 'month' %}selected{% endif %}>Last Month</option>
-                </select>
-            </div>
-            <div class="filter-control">
-                <label for="benefit_type">Benefit Type</label>
-                <select id="benefit_type" name="benefit_type" onchange="updateDistributionCharts()">
-                    <option value="all" {% if benefit_type == 'all' %}selected{% endif %}>All Benefits</option>
-                    <option value="inpatient" {% if benefit_type == 'inpatient' %}selected{% endif %}>Inpatient</option>
-                    <option value="outpatient" {% if benefit_type == 'outpatient' %}selected{% endif %}>Outpatient</option>
-                    <option value="dental" {% if benefit_type == 'dental' %}selected{% endif %}>Dental</option>
-                    <option value="optical" {% if benefit_type == 'optical' %}selected{% endif %}>Optical</option>
-                </select>
-            </div>
-            <div class="filter-control">
-                <label for="group_by">Group By</label>
-                <select id="group_by" name="group_by" onchange="updateDistributionCharts()">
-                    <option value="treatment" {% if group_by == 'treatment' %}selected{% endif %}>Treatment</option>
-                    <option value="provider" {% if group_by == 'provider' %}selected{% endif %}>Provider</option>
-                    <option value="diagnosis" {% if group_by == 'diagnosis' %}selected{% endif %}>Diagnosis</option>
-                    <option value="age_group" {% if group_by == 'age_group' %}selected{% endif %}>Age Group</option>
-                </select>
-            </div>
-        </div>
+        <form id="filterForm" method="GET" action="">
+            <label for="dataset_id">Select Dataset:</label>
+            <select name="dataset_id" id="dataset_id" required>
+                {% for table in dataset_ids %}
+                    <option value="{{ table }}" {% if table == selected_id %}selected{% endif %}>{{ table }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="time_period">Time Period:</label>
+            <select name="time_period" id="time_period">
+                <option value="all" {% if time_period == 'all' %}selected{% endif %}>All Time</option>
+                <option value="year" {% if time_period == 'year' %}selected{% endif %}>Last Year</option>
+                <option value="quarter" {% if time_period == 'quarter' %}selected{% endif %}>Last Quarter</option>
+                <option value="month" {% if time_period == 'month' %}selected{% endif %}>Last Month</option>
+            </select>
+
+            <label for="start_date">Start Date:</label>
+            <input type="date" name="start_date" id="start_date" value="{{ start_date|default:'' }}">
+
+            <label for="end_date">End Date:</label>
+            <input type="date" name="end_date" id="end_date" value="{{ end_date|default:'' }}">
+
+            <label for="benefit_type">Benefit Type:</label>
+            <select name="benefit_type" id="benefit_type">
+                <option value="all" {% if benefit_type == 'all' %}selected{% endif %}>All Benefits</option>
+                <option value="inpatient" {% if benefit_type == 'inpatient' %}selected{% endif %}>Inpatient</option>
+                <option value="outpatient" {% if benefit_type == 'outpatient' %}selected{% endif %}>Outpatient</option>
+                <option value="dental" {% if benefit_type == 'dental' %}selected{% endif %}>Dental</option>
+                <option value="optical" {% if benefit_type == 'optical' %}selected{% endif %}>Optical</option>
+            </select>
+
+            <button type="submit">Apply</button>
+        </form>
+
+        {% if debug_info %}
+            <div class="debug-info">{{ debug_info }}</div>
+        {% endif %}
 
         <!-- Charts -->
-        <div class="distribution-container">
-            <div class="distribution-card">
-                <div class="distribution-header">Claim Distribution by Treatment</div>
-                <div class="chart-container">
-                    {% if treatment_distribution %}
-                        {{ treatment_distribution|safe }}
-                    {% else %}
-                        <div class="no-data">No treatment distribution data available</div>
-                    {% endif %}
-                </div>
+        <div id="chartsContainer">
+            <h3>Claims Distribution Analysis</h3>
+
+            <div>
+                <h4>1. Time Series: Claims Volume & Amount</h4>
+                {% if chart1_time_series %}{{ chart1_time_series|safe }}{% else %}<div>No data available</div>{% endif %}
             </div>
-            <div class="distribution-card">
-                <div class="distribution-header">Claim Amounts by Category</div>
-                <div class="chart-container">
-                    {% if category_amounts %}
-                        {{ category_amounts|safe }}
-                    {% else %}
-                        <div class="no-data">No category amounts data available</div>
-                    {% endif %}
-                </div>
+
+            <div>
+                <h4>2. Claims Heatmap (Day vs Hour)</h4>
+                {% if chart2_heatmap %}{{ chart2_heatmap|safe }}{% else %}<div>No data available</div>{% endif %}
+            </div>
+
+            <div>
+                <h4>3. Cumulative Claims Curve (Lorenz)</h4>
+                {% if chart3_lorenz %}{{ chart3_lorenz|safe }}{% else %}<div>No data available</div>{% endif %}
+            </div>
+
+            <div>
+                <h4>4. Amount Distribution by Service Type</h4>
+                {% if chart4_boxplot %}{{ chart4_boxplot|safe }}{% else %}<div>No data available</div>{% endif %}
+            </div>
+
+            <div>
+                <h4>5. Top 10 Services by Count & Amount</h4>
+                {% if chart5_top_services %}{{ chart5_top_services|safe }}{% else %}<div>No data available</div>{% endif %}
+            </div>
+
+            <div>
+                <h4>6. Monthly Claims Growth Rate</h4>
+                {% if chart6_growth_rate %}{{ chart6_growth_rate|safe }}{% else %}<div>No data available</div>{% endif %}
             </div>
         </div>
 
-        <!-- Quick Insights -->
-        <div class="distribution-card">
-            <div class="distribution-header">Quick Insights</div>
-            <div class="insights-container">
-                <div>
-                    <label for="numericalFeature">Select Numerical Feature</label>
-                    <select id="numericalFeature" onchange="updateNumericalChart(this.value)">
-                        <option value="amount">Claim Amount</option>
-                        <option value="quantity">Quantity</option>
-                        <option value="age">Member Age</option>
-                    </select>
-                    <div id="numericalFeatureChart" class="chart-container"></div>
-                </div>
-                <div>
-                    <label for="categoricalFeature">Select Categorical Feature</label>
-                    <select id="categoricalFeature" onchange="updateCategoricalChart(this.value)">
-                        <option value="benefit">Benefit Type</option>
-                        <option value="provider">Provider</option>
-                        <option value="diagnosis">Diagnosis</option>
-                    </select>
-                    <div id="categoricalFeatureChart" class="chart-container"></div>
-                </div>
-            </div>
+        <!-- Claims Tree Button (Moved Below Charts) -->
+        <div style="margin-top:20px;">
+            <button class="tab" onclick="loadClaimsTree(); scrollToSection('claims-tree-tab')">
+                Claims Tree
+            </button>
         </div>
     </div>
 
-    <!-- Other Tabs -->
-    <div id="model-training" class="tab-content" style="display:none;">
-        <!-- Provider efficiency content -->
-    </div>
-    <div id="make-predictions" class="tab-content" style="display:none;">
-        <!-- Diagnostic patterns content -->
+    <!-- Claims Tree Tab -->
+    <div id="claims-tree-tab" class="tab-content" style="display:none; margin-top:30px;">
+        <h3>7. Claims Tree Structure (Lazy Load)</h3>
+        <div id="treeContainer" style="width:100%;height:650px;border:1px solid #ccc;background:#fff;display:flex;align-items:center;justify-content:center;">
+            <em>Click the "Claims Tree" button above to load...</em>
+        </div>
     </div>
 </div>
 
+<!-- D3.js -->
+<script src="https://d3js.org/d3.v7.min.js"></script>
+
 <script>
+function scrollToSection(id) {
+    document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+}
+
 function showTab(event, tabId) {
     document.querySelectorAll('.tab-content').forEach(div => div.style.display = 'none');
     document.getElementById(tabId).style.display = 'block';
     document.querySelectorAll('.tab').forEach(btn => btn.classList.remove('active'));
-    event.target.classList.add('active');
+    if (event && event.target) {
+        event.target.classList.add('active');
+    }
 }
 
-function updateDistributionCharts() {
-    console.log("Update charts with filters...");
-}
-
-function updateNumericalChart(feature) {
-    document.getElementById('numericalFeatureChart').innerHTML =
-        `<div style="text-align:center; padding:50px; color:#777;">Histogram for ${feature}</div>`;
-}
-
-function updateCategoricalChart(feature) {
-    document.getElementById('categoricalFeatureChart').innerHTML =
-        `<div style="text-align:center; padding:50px; color:#777;">Bar chart for ${feature}</div>`;
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-    updateNumericalChart('amount');
-    updateCategoricalChart('benefit');
+document.getElementById('filterForm').addEventListener('change', function(e) {
+    const form = e.target.form;
+    const params = new URLSearchParams(new FormData(form)).toString();
+    fetch(window.location.pathname + '?' + params, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(res => res.json())
+    .then(data => {
+        document.getElementById('chartsContainer').innerHTML = data.html;
+    });
 });
+
+function loadClaimsTree() {
+    showTab(null, 'claims-tree-tab');
+
+    const params = new URLSearchParams(new FormData(document.getElementById('filterForm'))).toString();
+    fetch(window.location.pathname + '?' + params + '&load_tree=1')
+    .then(res => res.json())
+    .then(data => {
+        if (data.tree_data_json) {
+            renderClaimsTree(JSON.parse(data.tree_data_json));
+        } else {
+            document.getElementById('treeContainer').innerHTML = '<div>No data available</div>';
+        }
+    });
+}
+
+function renderClaimsTree(treeData) {
+    document.getElementById('treeContainer').innerHTML = "";
+    const width = document.getElementById('treeContainer').clientWidth;
+    const height = document.getElementById('treeContainer').clientHeight;
+
+    const svg = d3.select("#treeContainer").append("svg")
+        .attr("width", width)
+        .attr("height", height)
+        .append("g")
+        .attr("transform", "translate(50,50)");
+
+    const root = d3.hierarchy(treeData);
+    const treeLayout = d3.tree().size([height - 100, width - 200]);
+    treeLayout(root);
+
+    svg.selectAll('path.link')
+        .data(root.links())
+        .enter().append('path')
+        .attr('class', 'link')
+        .attr('d', d3.linkHorizontal()
+            .x(d => d.y)
+            .y(d => d.x))
+        .style("fill", "none")
+        .style("stroke", "#ccc")
+        .style("stroke-width", 2);
+
+    const node = svg.selectAll('g.node')
+        .data(root.descendants())
+        .enter().append('g')
+        .attr('class', 'node')
+        .attr('transform', d => `translate(${d.y},${d.x})`);
+
+    node.append('circle')
+        .attr('r', 6)
+        .style("fill", "#4e79a7")
+        .style("stroke", "#333")
+        .style("stroke-width", 1.5);
+
+    node.append('text')
+        .attr('dy', 3)
+        .attr('x', d => d.children ? -12 : 12)
+        .style('text-anchor', d => d.children ? 'end' : 'start')
+        .style('font-size', '12px')
+        .text(d => d.data.name.length > 30 ? d.data.name.slice(0, 30) + "..." : d.data.name)
+        .append("title")
+        .text(d => d.data.name);
+}
 </script>
 {% endblock %}

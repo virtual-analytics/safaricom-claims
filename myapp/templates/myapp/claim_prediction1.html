@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Claim Prediction - Model 1{% endblock %}
+
+{% block extra_head %}
+<style>
+    .prediction-tabs {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    .prediction-tabs a {
+        padding: 0.6rem 1.2rem;
+        background-color: var(--primary);
+        color: white;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: bold;
+        transition: background 0.2s ease;
+    }
+    .prediction-tabs a:hover {
+        background-color: #b8000b;
+    }
+    .prediction-tabs a.active {
+        background-color: var(--primary-dark);
+    }
+    .prediction-container {
+        width: 90%;
+        max-width: 1200px;
+        background: white;
+        padding: 1.5rem;
+        border-radius: var(--border-radius);
+        box-shadow: var(--card-shadow);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Navigation tabs at the top -->
+<div class="prediction-tabs">
+    <a href="{% url 'claim_prediction1' %}" class="active">Model 1</a>
+    <a href="{% url 'claim_prediction2' %}">Model 2</a>
+    <a href="{% url 'claim_prediction3' %}">Model 3</a>
+</div>
+
+<!-- Main Prediction Content -->
+<div class="prediction-container">
+    <h2>Claims Prediction - Model 1</h2>
+    <p>This section displays predictions generated using the first model. Use the tabs above to switch between models.</p>
+
+    <!-- Example of predicted results table -->
+    {% if predictions %}
+    <table border="1" cellpadding="8" style="border-collapse: collapse; width: 100%;">
+        <thead>
+            <tr>
+                <th>Claim ID</th>
+                <th>Predicted Amount</th>
+                <th>Prediction Confidence</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in predictions %}
+            <tr>
+                <td>{{ row.claim_id }}</td>
+                <td>{{ row.amount|floatformat:2 }}</td>
+                <td>{{ row.confidence|floatformat:2 }}%</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No predictions available.</p>
+    {% endif %}
+</div>
+
+{% endblock %}

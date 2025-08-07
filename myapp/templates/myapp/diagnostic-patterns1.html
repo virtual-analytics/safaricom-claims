@@ -1,0 +1,254 @@
+{% extends 'myapp/base.html' %}
+{% block title %}Diagnostic Patterns Dashboard - Minet Insurance{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<style>
+    /* Main Container */
+    .main-area {
+        width: 100%;
+        background: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+    .main-area h1 {
+        font-size: 2.2rem;
+        font-weight: 700;
+        color: #232323;
+        margin-bottom: 10px;
+    }
+    .main-area h2 {
+        font-size: 1.35rem;
+        font-weight: 700;
+        color: #e30613;
+        margin-bottom: 25px;
+    }
+
+    /* Filters */
+    .filter-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-bottom: 30px;
+        background: #fafafa;
+        padding: 15px;
+        border-radius: 6px;
+        border: 1px solid #e3e8ee;
+    }
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-width: 200px;
+    }
+    .filter-group label {
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: #555;
+        margin-bottom: 5px;
+    }
+    .filter-group select, 
+    .filter-group input {
+        padding: 8px 10px;
+        border-radius: 5px;
+        border: 1px solid #ddd;
+        font-size: 0.95rem;
+    }
+    .filter-bar button {
+        background: #e30613;
+        color: #fff;
+        border: none;
+        border-radius: 5px;
+        padding: 10px 15px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: background 0.2s ease;
+        margin-top: 23px;
+    }
+    .filter-bar button:hover {
+        background: #c00511;
+    }
+
+    /* Charts Layout */
+    .chart-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+        gap: 25px;
+    }
+    .chart-card {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+        padding: 15px;
+        border-left: 4px solid #e30613;
+    }
+    .chart-card h3 {
+        font-size: 1.05rem;
+        font-weight: 600;
+        color: #e30613;
+        margin-bottom: 10px;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 5px;
+    }
+    .chart-content {
+        min-height: 400px;
+        overflow-x: auto;
+    }
+    .no-data {
+        color: #888;
+        font-style: italic;
+        font-size: 0.9rem;
+    }
+</style>
+
+<script>
+    // Auto-submit filters on change
+    document.addEventListener("DOMContentLoaded", function() {
+        const filterForm = document.getElementById("filterForm");
+        const inputs = filterForm.querySelectorAll("select, input[type='date']");
+        
+        inputs.forEach(input => {
+            input.addEventListener("change", function() {
+                filterForm.submit();
+            });
+        });
+    });
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="main-area">
+    <h1>Diagnostic Patterns Dashboard</h1>
+    <h2>Claims Analysis by Diagnosis</h2>
+
+    <!-- Filters -->
+    <form method="GET" action="" class="filter-bar" id="filterForm">
+        <div class="filter-group">
+            <label>Select Dataset:</label>
+            <select name="dataset_id" required>
+                <option value="">-- Choose --</option>
+                {% for table in dataset_ids %}
+                    <option value="{{ table }}" {% if table == selected_id %}selected{% endif %}>{{ table }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Benefit Type:</label>
+            <select name="benefit_type">
+                <option value="all" {% if benefit_type == 'all' %}selected{% endif %}>All</option>
+                <option value="inpatient" {% if benefit_type == 'inpatient' %}selected{% endif %}>Inpatient</option>
+                <option value="outpatient" {% if benefit_type == 'outpatient' %}selected{% endif %}>Outpatient</option>
+                <option value="dental" {% if benefit_type == 'dental' %}selected{% endif %}>Dental</option>
+                <option value="optical" {% if benefit_type == 'optical' %}selected{% endif %}>Optical</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Start Date:</label>
+            <input type="date" name="start_date" value="{{ start_date|default:'' }}">
+        </div>
+        <div class="filter-group">
+            <label>End Date:</label>
+            <input type="date" name="end_date" value="{{ end_date|default:'' }}">
+        </div>
+        <div class="filter-group">
+            <label>Diagnosis:</label>
+            <select name="diagnosis">
+                <option value="">-- All Diagnoses --</option>
+                {% for diag in diagnosis_list %}
+                    <option value="{{ diag }}" {% if diag == diagnosis_filter %}selected{% endif %}>{{ diag }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Gender:</label>
+            <select name="gender">
+                <option value="">-- All --</option>
+                {% for gen in gender_list %}
+                    <option value="{{ gen }}" {% if gen == gender_filter %}selected{% endif %}>{{ gen }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-group" style="flex: 0 0 auto;">
+            <button type="submit">Apply</button>
+        </div>
+    </form>
+
+    <!-- Charts: 2 per row -->
+    <div class="chart-grid">
+        <div class="chart-card">
+            <h3>1. Top 15 Diagnoses by Claim Amount</h3>
+            <div class="chart-content">
+                {% if chart1_top_diagnoses %}
+                    {{ chart1_top_diagnoses|safe }}
+                {% else %}
+                    <p class="no-data">No data available.</p>
+                {% endif %}
+            </div>
+        </div>
+        <div class="chart-card">
+            <h3>2. Age Distribution of Claimants</h3>
+            <div class="chart-content">
+                {% if chart2_age_distribution %}
+                    {{ chart2_age_distribution|safe }}
+                {% else %}
+                    <p class="no-data">No data available.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h3>3. Diagnosis Co-occurrence Network</h3>
+            <div class="chart-content">
+                {% if chart3_diag_network %}
+                    {{ chart3_diag_network|safe }}
+                {% else %}
+                    <p class="no-data">No data available.</p>
+                {% endif %}
+            </div>
+        </div>
+        <div class="chart-card">
+            <h3>4. Gender × Diagnosis Heatmap</h3>
+            <div class="chart-content">
+                {% if chart4_gender_diag_heatmap %}
+                    {{ chart4_gender_diag_heatmap|safe }}
+                {% else %}
+                    <p class="no-data">No data available.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h3>5. Average Claim Amount by Age Group</h3>
+            <div class="chart-content">
+                {% if chart5_avg_amount_age_group %}
+                    {{ chart5_avg_amount_age_group|safe }}
+                {% else %}
+                    <p class="no-data">No data available.</p>
+                {% endif %}
+            </div>
+        </div>
+        <div class="chart-card">
+            <h3>6. Diagnosis Seasonality</h3>
+            <div class="chart-content">
+                {% if chart6_diag_seasonality %}
+                    {{ chart6_diag_seasonality|safe }}
+                {% else %}
+                    <p class="no-data">No data available.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="chart-card" style="grid-column: span 2;">
+            <h3>7. Claim Distribution by Dependent Type & Diagnosis</h3>
+            <div class="chart-content">
+                {% if chart7_claim_dist_by_dependents %}
+                    {{ chart7_claim_dist_by_dependents|safe }}
+                {% else %}
+                    <p class="no-data">No data available.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

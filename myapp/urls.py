@@ -7,8 +7,10 @@ urlpatterns = [
     path('login/', views.login_view, name='login'),
     path('home/', views.home_view, name='home'),
     path('logout/', views.logout_view, name='logout'),
+
+    # Claims Prediction Dataset View
     path('claim_prediction/', views.claims_prediction_dataset_view, name='claim_prediction'),
-    path('claim_prediction/', views.claim_prediction, name='claim_prediction'),
+
     path('fraud_detection/', views.fraud_detection, name='fraud_detection'),
     path('client_management/', views.client_management, name='client_management'),
     path('reports/', views.reports, name='reports'),
@@ -24,7 +26,7 @@ urlpatterns = [
     path('exploratory_analysis_ajax/', views.exploratory_analysis_ajax, name='exploratory_analysis_ajax'),
     path('advanced_analysis_ajax/', views.advanced_analysis_ajax, name='advanced_analysis_ajax'),
     
-    # Safaricom URLs - Updated with consistent naming
+    # Safaricom URLs
     path('safaricom/', views.safaricom_home, name='safaricom_home'),
     path('safaricom/reports/', views.advanced_analysis, name='safaricom_reports'),
     path('safaricom/data/', views.get_claim_data, name='safaricom_data'),
@@ -39,11 +41,6 @@ urlpatterns = [
     path('claims-prediction/confidence-intervals/', views.confidence_intervals, name='confidence_intervals'),
     path('claims-prediction/impact-simulation/', views.impact_simulation, name='impact_simulation'),
     path('claims-prediction/explainability/', views.explainability, name='explainability'),
-
-    # Added new dataset-dependent claims prediction view
-    #path('claims-prediction/dataset-view/', views.claims_prediction_view, name='claims_prediction_dataset'),
-    
-    # Added new AJAX endpoint for filtering/updating charts
     path('claims-prediction/update-charts/', views.update_charts_ajax, name='update_charts_ajax'),
     
     # Fraud Detection URLs
@@ -60,4 +57,12 @@ urlpatterns = [
     path('reporting/download-reports/', views.reporting_home, name='download_reports'),
     path('reporting/claim-drilldown/', views.claim_drilldown, name='claim_drilldown'),
     path('reporting/custom-filters/', views.custom_filters, name='custom_filters'),
+
+    # -------------------------------
+    # NEW: Provider Efficiency View
+    # -------------------------------
+    path('provider-efficiency/', views.provider_efficiency_view, name='provider_efficiency'),
+    # urls.py
+    path('diagnostic-patterns1/', views.diagnostic_patterns_view1, name='diagnostic-patterns1'),
+
 ]
