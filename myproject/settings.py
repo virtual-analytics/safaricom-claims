@@ -27,10 +27,20 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-pc@bka8k0h@4f$^!ha-w!za(8n*#s!azueupf2h974&4_3_fta'
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DB_LIVE = os.getenv("DB_LIVE", "False").lower() in ["true", "1", "yes"]
 
-ALLOWED_HOSTS = ["*"]
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = os.getenv("DEBUG", "False").lower() in ["true", "1", "yes"]
+
+# Allow all hosts in dev, restrict in production
+if DB_LIVE:
+    ALLOWED_HOSTS = [
+        "safaricom-claims-production-be5c.up.railway.app",
+        "localhost",
+        "127.0.0.1"
+    ]
+else:
+    ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -88,6 +98,11 @@ if not DB_LIVE:
         }
     }
 else:
+    # Check for required DB env vars
+    required_vars = ["DB_NAME", "DB_USER", "DB_PASSWORD", "DB_HOST", "DB_PORT"]
+    missing = [var for var in required_vars if not os.environ.get(var)]
+    if missing:
+        raise Exception(f"Missing required database environment variables: {', '.join(missing)}")
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
