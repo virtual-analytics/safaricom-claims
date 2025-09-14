@@ -1,28 +1,124 @@
 {% extends "base1.html" %}
 {% load static %}
 
-{% block title %}Risk Scores - Safaricom Portal{% endblock %}
+{% block title %}Fraud Detection Dashboard - Safaricom Portal{% endblock %}
 
 {% block content %}
 <div class="content-header">
-    <h1><i class="fas fa-exclamation-triangle"></i> Fraud Risk Scores</h1>
-    <p>Identification of high-risk claims based on predictive models</p>
+    <div class="header-content">
+        <h1><i class="fas fa-shield-alt"></i> Fraud Detection Dashboard</h1>
+        <p>Comprehensive fraud detection and analysis with advanced analytics</p>
+    </div>
+    <div class="header-actions">
+        <div class="last-updated">
+            <i class="fas fa-sync-alt"></i> Last updated: {{ last_updated }}
+        </div>
+        <div class="data-range">
+            <i class="fas fa-calendar"></i> Data range: {{ data_time_range|default:"All available data" }}
+        </div>
+    </div>
 </div>
 
 <div class="content-body">
+    <!-- Filter Section -->
+    <div class="filter-section">
+        <div class="filter-card">
+            <h3><i class="fas fa-filter"></i> Filter Data</h3>
+            <div class="filter-options">
+                <a href="?date_filter=30days" class="filter-btn {% if data_time_range == 'Last 30 Days' %}active{% endif %}">Last 30 Days</a>
+                <a href="?date_filter=90days" class="filter-btn {% if data_time_range == 'Last 90 Days' %}active{% endif %}">Last 90 Days</a>
+                <a href="?date_filter=365days" class="filter-btn {% if data_time_range == 'Last 12 Months' %}active{% endif %}">Last 12 Months</a>
+                <a href="?refresh=true" class="filter-btn refresh-btn"><i class="fas fa-sync"></i> Refresh Data</a>
+            </div>
+        </div>
+    </div>
+
     <!-- Summary Metrics -->
-    <div class="fraud-metrics">
-        <div class="metric-card danger">
-            <div class="metric-value">{{ metrics.fraud_count|default:"0" }}</div>
-            <div class="metric-label">Potential Fraud Cases</div>
+    <div class="metrics-grid">
+        <div class="metric-card critical">
+            <div class="metric-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">{{ metrics.fraud_count|default:"0" }}</div>
+                <div class="metric-label">Potential Fraud Cases</div>
+                <div class="metric-change">{{ metrics.high_risk_claims|default:"0" }} high confidence</div>
+            </div>
         </div>
+        
         <div class="metric-card warning">
-            <div class="metric-value">{{ metrics.fraud_rate|default:"0%" }}</div>
-            <div class="metric-label">Fraud Rate</div>
+            <div class="metric-icon">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">{{ metrics.fraud_rate|default:"0%" }}</div>
+                <div class="metric-label">Fraud Rate</div>
+                <div class="metric-change">Avg score: {{ metrics.avg_fraud_score|default:"0.00" }}</div>
+            </div>
         </div>
+        
+        <div class="metric-card danger">
+            <div class="metric-icon">
+                <i class="fas fa-money-bill-wave"></i>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">{{ metrics.fraud_amount|default:"KES 0" }}</div>
+                <div class="metric-label">Amount at Risk</div>
+                <div class="metric-change">{{ metrics.fraud_percentage|default:"0%" }} of total</div>
+            </div>
+        </div>
+        
         <div class="metric-card info">
-            <div class="metric-value">{{ metrics.fraud_amount|default:"KES 0" }}</div>
-            <div class="metric-label">Amount at Risk</div>
+            <div class="metric-icon">
+                <i class="fas fa-file-invoice"></i>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">{{ metrics.total_claims|default:"0" }}</div>
+                <div class="metric-label">Total Claims</div>
+                <div class="metric-change">{{ metrics.total_amount|default:"KES 0" }} total value</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="charts-row">
+        <div class="chart-card">
+            <div class="card-header">
+                <h3>Risk Score Distribution</h3>
+                <div class="card-tooltip">
+                    <i class="fas fa-info-circle"></i>
+                    <span class="tooltip-text">Distribution of fraud risk scores across all claims</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="risk-distribution-chart"></div>
+            </div>
+        </div>
+        
+        <div class="chart-card">
+            <div class="card-header">
+                <h3>Monthly Fraud Trends</h3>
+                <div class="card-tooltip">
+                    <i class="fas fa-info-circle"></i>
+                    <span class="tooltip-text">Monthly trends in fraud cases and amounts</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="monthly-trends-chart"></div>
+            </div>
+        </div>
+        
+        <div class="chart-card">
+            <div class="card-header">
+                <h3>Hourly Fraud Patterns</h3>
+                <div class="card-tooltip">
+                    <i class="fas fa-info-circle"></i>
+                    <span class="tooltip-text">Fraud rate by hour of day</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="hourly-patterns-chart"></div>
+            </div>
         </div>
     </div>
 
@@ -31,6 +127,10 @@
         <div class="card-header">
             <h3>High Risk Claims</h3>
             <div class="card-actions">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="claimSearch" placeholder="Search claims...">
+                </div>
                 <button class="btn btn-export" onclick="exportTableToCSV('high_risk_claims.csv')">
                     <i class="fas fa-download"></i> Export
                 </button>
@@ -38,36 +138,47 @@
         </div>
         <div class="card-body">
             <div class="table-responsive">
-                <table class="fraud-table" id="fraudTable">
+                <table class="data-table" id="fraudTable">
                     <thead>
                         <tr>
                             <th>Date</th>
                             <th>Amount</th>
                             <th>Provider</th>
                             <th>Diagnosis</th>
+                            <th>Service Type</th>
+                            <th>Patient Age</th>
                             <th>Risk Score</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for claim in risky_claims %}
-                        <tr>
+                        <tr data-claim-id="{{ claim.id|default:0 }}" data-flag-url="{% if claim.id %}{% url 'flag_claim' claim.id %}{% endif %}">
                             <td>{{ claim.date|date:"Y-m-d" }}</td>
                             <td>KES {{ claim.amount|floatformat:2 }}</td>
                             <td>{{ claim.provider_name }}</td>
-                            <td>{{ claim.diagnosis }}</td>
+                            <td>{{ claim.icd10_code }}</td>
+                            <td>{{ claim.service_type|default:"N/A" }}</td>
+                            <td>{{ claim.patient__age|default:"N/A" }}</td>
                             <td>
                                 <div class="risk-score" style="--score: {{ claim.fraud_score|default:0 }};">
                                     {{ claim.fraud_score|floatformat:2 }}
                                 </div>
                             </td>
                             <td>
-                                <button class="btn btn-sm btn-review">Review</button>
+                                <div class="action-buttons">
+                                    <button class="btn btn-sm btn-review" title="Review claim">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-flag" title="Flag as confirmed fraud">
+                                        <i class="fas fa-flag"></i>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="6" class="text-center">No high-risk claims found</td>
+                            <td colspan="8" class="text-center">No high-risk claims found</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -76,32 +187,147 @@
         </div>
     </div>
 
-    <!-- Charts and Factors -->
+    <!-- Insights & Analysis -->
     <div class="row">
+        <!-- Suspicious Providers -->
         <div class="col-md-6">
             <div class="card">
                 <div class="card-header">
-                    <h3>Risk Score Distribution</h3>
+                    <h3>Suspicious Providers</h3>
+                    <div class="card-tooltip">
+                        <i class="fas fa-info-circle"></i>
+                        <span class="tooltip-text">Providers with highest fraud rates</span>
+                    </div>
                 </div>
                 <div class="card-body">
-                    <div id="risk-distribution-chart"></div>
+                    <div class="insight-list">
+                        {% for provider in suspicious_providers %}
+                        <div class="insight-item">
+                            <div class="insight-main">
+                                <div class="insight-title">{{ provider.provider_name }}</div>
+                                <div class="insight-value">{{ provider.fraud_count }} fraud cases</div>
+                            </div>
+                            <div class="insight-meta">
+                                <div class="insight-stat">{{ provider.fraud_rate|floatformat:2 }}% rate</div>
+                                <div class="insight-stat">KES {{ provider.total_amount|floatformat:2 }}</div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="text-center">No suspicious providers found</div>
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
         </div>
 
+        <!-- Diagnosis Patterns -->
         <div class="col-md-6">
             <div class="card">
                 <div class="card-header">
-                    <h3>Risk Factors</h3>
+                    <h3>Suspicious Diagnosis Patterns</h3>
+                    <div class="card-tooltip">
+                        <i class="fas fa-info-circle"></i>
+                        <span class="tooltip-text">Diagnosis codes with highest fraud rates</span>
+                    </div>
                 </div>
                 <div class="card-body">
-                    <ul class="risk-factors">
-                        <li><span class="factor-name">Unusual Amount</span><span class="factor-impact high">High Impact</span></li>
-                        <li><span class="factor-name">Duplicate Claims</span><span class="factor-impact medium">Medium Impact</span></li>
-                        <li><span class="factor-name">Provider History</span><span class="factor-impact high">High Impact</span></li>
-                        <li><span class="factor-name">Diagnosis Pattern</span><span class="factor-impact medium">Medium Impact</span></li>
-                        <li><span class="factor-name">Time of Submission</span><span class="factor-impact low">Low Impact</span></li>
-                    </ul>
+                    <div class="insight-list">
+                        {% for diagnosis in diagnosis_patterns %}
+                        <div class="insight-item">
+                            <div class="insight-main">
+                                <div class="insight-title">{{ diagnosis.icd10_code }}</div>
+                                <div class="insight-value">{{ diagnosis.fraud_count }} fraud cases</div>
+                            </div>
+                            <div class="insight-meta">
+                                <div class="insight-stat">{{ diagnosis.fraud_rate|floatformat:2 }}% rate</div>
+                                <div class="insight-stat">{{ diagnosis.total_claims }} total claims</div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="text-center">No suspicious diagnosis patterns found</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Additional Insights -->
+    <div class="row">
+        <!-- Temporal Patterns -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Temporal Patterns</h3>
+                </div>
+                <div class="card-body">
+                    <div class="insight-list compact">
+                        {% for pattern in temporal_patterns %}
+                        <div class="insight-item">
+                            <div class="insight-main">
+                                <div class="insight-title">{{ pattern.claim_hour }}:00 hour</div>
+                                <div class="insight-value">{{ pattern.fraud_count }} fraud cases</div>
+                            </div>
+                            <div class="insight-meta">
+                                <div class="insight-stat">{{ pattern.fraud_rate|floatformat:2 }}% rate</div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="text-center">No temporal patterns found</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Geographic Insights -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Geographic Insights</h3>
+                </div>
+                <div class="card-body">
+                    <div class="insight-list compact">
+                        {% for location in geographic_insights %}
+                        <div class="insight-item">
+                            <div class="insight-main">
+                                <div class="insight-title">{{ location.provider_location }}</div>
+                                <div class="insight-value">{{ location.fraud_count }} fraud cases</div>
+                            </div>
+                            <div class="insight-meta">
+                                <div class="insight-stat">{{ location.fraud_rate|floatformat:2 }}% rate</div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="text-center">No geographic insights found</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Service Type Analysis -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Service Type Analysis</h3>
+                </div>
+                <div class="card-body">
+                    <div class="insight-list compact">
+                        {% for service in service_type_analysis %}
+                        <div class="insight-item">
+                            <div class="insight-main">
+                                <div class="insight-title">{{ service.service_type }}</div>
+                                <div class="insight-value">{{ service.fraud_count }} fraud cases</div>
+                            </div>
+                            <div class="insight-meta">
+                                <div class="insight-stat">{{ service.fraud_rate|floatformat:2 }}% rate</div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="text-center">No service analysis found</div>
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
         </div>
@@ -111,146 +337,194 @@
 <style>
     /* Header */
     .content-header {
-        margin-bottom: 2rem;
-    }
-    .content-header h1 {
-        color: #d62728;
-        margin-bottom: 0.5rem;
-    }
-    .content-header p {
-        color: #666;
-    }
-
-    /* Metrics Cards */
-    .fraud-metrics {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 1.5rem;
-        margin-bottom: 2rem;
-    }
-    .metric-card {
-        background: white;
-        border-radius: 8px;
-        padding: 1.5rem;
-        text-align: center;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-    }
-    .metric-card.danger { border-top: 4px solid #d62728; }
-    .metric-card.warning { border-top: 4px solid #ff7f0e; }
-    .metric-card.info { border-top: 4px solid #1f77b4; }
-    .metric-value {
-        font-size: 1.8rem;
-        font-weight: 700;
-        margin-bottom: 0.5rem;
-    }
-    .metric-card.danger .metric-value { color: #d62728; }
-    .metric-card.warning .metric-value { color: #ff7f0e; }
-    .metric-card.info .metric-value { color: #1f77b4; }
-    .metric-label { color: #666; font-size: 0.9rem; }
-
-    /* Card Layout */
-    .card {
-        background: white;
-        border-radius: 10px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        margin-bottom: 2rem;
-        border: 1px solid #e3e8ee;
-    }
-    .card-header {
-        padding: 1.5rem;
-        border-bottom: 1px solid #e3e8ee;
         display: flex;
         justify-content: space-between;
-        align-items: center;
+        align-items: flex-start;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+        gap: 1rem;
     }
-    .card-header h3 { margin: 0; font-size: 1.2rem; }
-    .card-body { padding: 1.5rem; }
+    .header-content h1 {
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+        font-size: 1.8rem;
+    }
+    .header-content p {
+        color: #7f8c8d;
+        margin: 0;
+    }
+    .header-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        text-align: right;
+    }
+    .last-updated, .data-range {
+        font-size: 0.85rem;
+        color: #7f8c8d;
+    }
 
-    /* Table */
+    /* Filter Section */
+    .filter-section { margin-bottom: 2rem; }
+    .filter-card {
+        background: white; border-radius: 10px; padding: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05); border: 1px solid #e3e8ee;
+    }
+    .filter-card h3 { margin: 0 0 1rem 0; font-size: 1.1rem; color: #2c3e50; }
+    .filter-options { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+    .filter-btn {
+        padding: 0.5rem 1rem; border-radius: 6px; background: #f8f9fa; color: #495057;
+        text-decoration: none; font-size: 0.9rem; transition: all 0.2s; border: 1px solid #e9ecef;
+    }
+    .filter-btn:hover, .filter-btn.active { background: #1BB64F; color: white; border-color: #1BB64F; }
+    .refresh-btn { background: #e3f2fd; color: #1976d2; border-color: #bbdefb; }
+    .refresh-btn:hover { background: #1976d2; color: white; }
+
+    /* Metrics Grid */
+    .metrics-grid {
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem; margin-bottom: 2rem;
+    }
+    .metric-card {
+        background: white; border-radius: 10px; padding: 1.5rem; display: flex; align-items: center; gap: 1rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05); border: 1px solid #e3e8ee; border-top: 4px solid;
+    }
+    .metric-card.critical { border-top-color: #d62728; }
+    .metric-card.warning  { border-top-color: #ff7f0e; }
+    .metric-card.danger   { border-top-color: #c62828; }
+    .metric-card.info     { border-top-color: #1f77b4; }
+    .metric-icon {
+        font-size: 2rem; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 10px;
+    }
+    .metric-card.critical .metric-icon { background: #ffebee; color: #d62728; }
+    .metric-card.warning  .metric-icon { background: #fff3e0; color: #ff7f0e; }
+    .metric-card.danger   .metric-icon { background: #ffebee; color: #c62828; }
+    .metric-card.info     .metric-icon { background: #e3f2fd; color: #1f77b4; }
+    .metric-content { flex: 1; }
+    .metric-value { font-size: 1.8rem; font-weight: 700; margin-bottom: 0.25rem; }
+    .metric-card.critical .metric-value { color: #d62728; }
+    .metric-card.warning  .metric-value { color: #ff7f0e; }
+    .metric-card.danger   .metric-value { color: #c62828; }
+    .metric-card.info     .metric-value { color: #1f77b4; }
+    .metric-label { color: #666; font-weight: 500; margin-bottom: 0.25rem; }
+    .metric-change { font-size: 0.85rem; color: #7f8c8d; }
+
+    /* Charts Row */
+    .charts-row {
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 1.5rem; margin-bottom: 2rem;
+    }
+    .chart-card {
+        background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        border: 1px solid #e3e8ee; height: 350px; display: flex; flex-direction: column;
+    }
+    .chart-card .card-header {
+        padding: 1.25rem; border-bottom: 1px solid #e3e8ee; display: flex; justify-content: space-between; align-items: center;
+    }
+    .chart-card .card-header h3 { margin: 0; font-size: 1.1rem; color: #2c3e50; }
+    .chart-card .card-body { padding: 1.25rem; flex: 1; display: flex; }
+    .chart-card .card-body > div { width: 100%; height: 100%; }
+
+    /* Card Tooltip */
+    .card-tooltip { position: relative; cursor: help; }
+    .card-tooltip .fa-info-circle { color: #95a5a6; font-size: 0.9rem; }
+    .tooltip-text {
+        visibility: hidden; width: 200px; background: #2c3e50; color: white; text-align: center; border-radius: 6px; padding: 5px;
+        position: absolute; z-index: 1; bottom: 125%; left: 50%; transform: translateX(-50%); opacity: 0; transition: opacity 0.3s;
+        font-size: 0.8rem; line-height: 1.4;
+    }
+    .card-tooltip:hover .tooltip-text { visibility: visible; opacity: 1; }
+
+    /* Data Table */
+    .card { background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 2rem; border: 1px solid #e3e8ee; }
+    .card-header {
+        padding: 1.25rem; border-bottom: 1px solid #e3e8ee; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;
+    }
+    .card-header h3 { margin: 0; font-size: 1.2rem; color: #2c3e50; }
+    .card-actions { display: flex; align-items: center; gap: 1rem; }
+    .search-box { position: relative; }
+    .search-box .fa-search {
+        position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #95a5a6;
+    }
+    .search-box input {
+        padding: 0.5rem 1rem 0.5rem 2rem; border: 1px solid #e3e8ee; border-radius: 6px; font-size: 0.9rem; width: 200px;
+    }
+    .btn-export {
+        background: #f0f7f2; color: #1BB64F; border: none; border-radius: 6px; padding: 0.5rem 1rem; font-weight: 500; cursor: pointer; transition: all 0.2s; font-size: 0.9rem;
+    }
+    .btn-export:hover { background: #1BB64F; color: white; }
+    .card-body { padding: 1.25rem; }
     .table-responsive { overflow-x: auto; }
-    .fraud-table {
-        width: 100%;
-        border-collapse: collapse;
+    .data-table { width: 100%; border-collapse: collapse; }
+    .data-table th, .data-table td { padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid #e3e8ee; }
+    .data-table th {
+        background: #f7fdf9; font-weight: 600; color: #333; position: sticky; top: 0;
     }
-    .fraud-table th, .fraud-table td {
-        padding: 0.75rem 1rem;
-        text-align: left;
-        border-bottom: 1px solid #e3e8ee;
-    }
-    .fraud-table th {
-        background: #f7fdf9;
-        font-weight: 600;
-        color: #333;
-    }
-    .fraud-table tr:hover { background: #f0f7f2; }
+    .data-table tr:hover { background: #f0f7f2; }
 
     /* Risk Score Label */
     .risk-score {
         --hue: calc(var(--score) * 120);
-        background: hsl(var(--hue), 80%, 90%);
-        color: hsl(var(--hue), 80%, 30%);
-        padding: 0.3rem 0.5rem;
-        border-radius: 4px;
-        font-weight: 600;
-        display: inline-block;
-        min-width: 50px;
-        text-align: center;
+        background: hsl(var(--hue), 80%, 90%); color: hsl(var(--hue), 80%, 30%);
+        padding: 0.3rem 0.5rem; border-radius: 4px; font-weight: 600; display: inline-block; min-width: 50px; text-align: center;
     }
 
-    /* Buttons */
-    .btn-export {
-        background: #f0f7f2;
-        color: #1BB64F;
-        border: none;
-        border-radius: 6px;
-        padding: 0.5rem 1rem;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-    .btn-export:hover {
-        background: #1BB64F;
-        color: white;
-    }
-    .btn-review {
-        background: #f0f7f2;
-        color: #1BB64F;
-        border: none;
-        border-radius: 4px;
-        padding: 0.3rem 0.6rem;
-        font-size: 0.8rem;
-        cursor: pointer;
-    }
-    .btn-review:hover {
-        background: #1BB64F;
-        color: white;
-    }
-    .text-center { text-align: center; }
+    /* Action Buttons */
+    .action-buttons { display: flex; gap: 0.5rem; }
+    .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.8rem; border-radius: 4px; border: none; cursor: pointer; }
+    .btn-review { background: #e3f2fd; color: #1976d2; }
+    .btn-review:hover { background: #1976d2; color: white; }
+    .btn-flag { background: #ffebee; color: #d32f2f; }
+    .btn-flag:hover { background: #d32f2f; color: white; }
 
-    /* Risk Factors */
-    .risk-factors { list-style: none; padding: 0; margin: 0; }
-    .risk-factors li {
-        display: flex;
-        justify-content: space-between;
-        padding: 0.75rem 0;
-        border-bottom: 1px solid #e3e8ee;
+    /* Insight Lists */
+    .insight-list { display: flex; flex-direction: column; gap: 0.75rem; }
+    .insight-list.compact { gap: 0.5rem; }
+    .insight-item {
+        display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; border-radius: 6px; background: #f8f9fa; transition: background 0.2s;
     }
-    .factor-name { font-weight: 500; }
-    .factor-impact { font-size: 0.9rem; }
-    .factor-impact.high { color: #d62728; }
-    .factor-impact.medium { color: #ff7f0e; }
-    .factor-impact.low { color: #2ca02c; }
+    .insight-item:hover { background: #e9ecef; }
+    .insight-main { flex: 1; }
+    .insight-title { font-weight: 600; color: #2c3e50; margin-bottom: 0.25rem; }
+    .insight-value { font-size: 0.9rem; color: #6c757d; }
+    .insight-meta { text-align: right; }
+    .insight-stat { font-size: 0.85rem; color: #495057; margin-bottom: 0.25rem; }
 
-    /* Chart container */
-    #risk-distribution-chart { height: 300px; }
+    /* Text Utilities */
+    .text-center { text-align: center; color: #6c757d; padding: 1rem; }
+
+    /* Chart containers */
+    #risk-distribution-chart, #monthly-trends-chart, #hourly-patterns-chart { width: 100%; height: 100%; }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .content-header { flex-direction: column; }
+        .header-actions { text-align: left; }
+        .metrics-grid { grid-template-columns: 1fr; }
+        .charts-row { grid-template-columns: 1fr; }
+        .card-actions { flex-direction: column; align-items: stretch; }
+        .search-box input { width: 100%; }
+    }
 </style>
 
+<!-- Vendor libs (ensure jQuery before DataTables) -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
 <script src="https://cdn.plot.ly/plotly-2.33.0.min.js"></script>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+
 <script>
+// CSRF helper for AJAX
+function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+}
+const csrftoken = getCookie('csrftoken');
+
 document.addEventListener('DOMContentLoaded', function() {
+    // Risk Distribution Chart
     const riskData = {{ risk_distribution_data|safe }} || {bins: [], counts: []};
-
-
     if (riskData && riskData.bins && riskData.counts) {
         Plotly.newPlot('risk-distribution-chart', [{
             x: riskData.bins,
@@ -265,8 +539,102 @@ document.addEventListener('DOMContentLoaded', function() {
             paper_bgcolor: 'rgba(0,0,0,0)'
         });
     }
+
+    // Monthly Trends Chart
+    const monthlyData = {{ charts.monthly_trends|safe }} || {dates: [], fraud_counts: [], amounts: []};
+    if (monthlyData && monthlyData.dates && monthlyData.dates.length > 0) {
+        Plotly.newPlot('monthly-trends-chart', [{
+            x: monthlyData.dates,
+            y: monthlyData.fraud_counts,
+            type: 'scatter',
+            mode: 'lines+markers',
+            name: 'Fraud Cases',
+            line: { color: '#d62728' }
+        }, {
+            x: monthlyData.dates,
+            y: monthlyData.amounts,
+            type: 'bar',
+            name: 'Amount (KES)',
+            yaxis: 'y2',
+            marker: { color: 'rgba(100, 100, 100, 0.2)' }
+        }], {
+            title: 'Monthly Fraud Trends',
+            xaxis: { title: 'Month' },
+            yaxis: { title: 'Fraud Cases', side: 'left' },
+            yaxis2: { title: 'Amount (KES)', side: 'right', overlaying: 'y' },
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            paper_bgcolor: 'rgba(0,0,0,0)'
+        });
+    }
+
+    // Hourly Patterns Chart
+    const hourlyData = {{ charts.hourly_patterns|safe }} || {hours: [], rates: []};
+    if (hourlyData && hourlyData.hours && hourlyData.hours.length > 0) {
+        Plotly.newPlot('hourly-patterns-chart', [{
+            x: hourlyData.hours,
+            y: hourlyData.rates,
+            type: 'scatter',
+            mode: 'lines+markers',
+            fill: 'tozeroy',
+            line: { color: '#ff7f0e' }
+        }], {
+            title: 'Fraud Rate by Hour of Day',
+            xaxis: { title: 'Hour of Day' },
+            yaxis: { title: 'Fraud Rate (%)' },
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            paper_bgcolor: 'rgba(0,0,0,0)'
+        });
+    }
+
+    // DataTables init + custom search binding
+    const dt = $('#fraudTable').DataTable({
+        pageLength: 10,
+        order: [[6, 'desc']], // Risk Score column
+        dom: 'tip',           // Keep it minimal; we have our own search box & export
+    });
+    const searchInput = document.getElementById('claimSearch');
+    if (searchInput) {
+        searchInput.addEventListener('keyup', function() {
+            dt.search(this.value).draw();
+        });
+    }
+
+    // Review button (stub - hook your modal or detail route)
+    document.querySelectorAll('.btn-review').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const tr = this.closest('tr');
+            const claimId = tr.getAttribute('data-claim-id');
+            // TODO: navigate to a detail page or open a modal
+            alert('Review claim #' + claimId);
+        });
+    });
+
+    // Flag button -> POST to backend (expects JSON {success, message})
+    document.querySelectorAll('.btn-flag').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const tr = this.closest('tr');
+            const url = tr.getAttribute('data-flag-url');
+            try {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrftoken,
+                        'Accept': 'application/json'
+                    }
+                });
+                const data = await res.json();
+                alert(data.message || (data.success ? 'Flagged successfully' : 'Action failed'));
+                if (data.success) {
+                    tr.classList.add('table-warning');
+                }
+            } catch (e) {
+                alert('Network error while flagging claim.');
+            }
+        });
+    });
 });
 
+// CSV export (keeps your original behavior)
 function exportTableToCSV(filename) {
     const rows = document.querySelectorAll("#fraudTable tr");
     let csv = [];

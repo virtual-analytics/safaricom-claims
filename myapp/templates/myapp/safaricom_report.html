@@ -1,147 +1,275 @@
 {% extends 'myapp/base1.html' %}
+{% load humanize %}
 {% load custom_filters %}
 {% block title %}Safaricom Advanced Analytics{% endblock %}
 
-{% block content %}
-<!-- Add Plotly JS at the top of your content block -->
+{% block head %}
+{{ block.super }}
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+{% endblock %}
 
+{% block content %}
 <style>
-  /* Tab styling */
-  .analysis-tabs {
+:root {
+    --safaricom-green: #1BB64F;
+    --safaricom-dark-green: #00A651;
+    --safaricom-light-green: #E8F5E9;
+    --safaricom-gray: #F8F9FA;
+    --safaricom-dark-gray: #495057;
+    --safaricom-border: #E0E0E0;
+    --safaricom-card-shadow: 0 4px 12px rgba(27, 182, 79, 0.08);
+    --safaricom-hover-shadow: 0 8px 24px rgba(27, 182, 79, 0.12);
+    --transition-speed: 0.3s;
+}
+
+body {
+    font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+    background-color: #f7fdf9;
+    color: #333;
+    line-height: 1.6;
+}
+
+/* Tab styling */
+.analysis-tabs {
     display: flex;
     justify-content: center;
     margin: 20px 0 30px;
-    border-bottom: 1px solid #ddd;
-  }
-  
-  .tab-link {
+    border-bottom: 1px solid var(--safaricom-border);
+    padding: 0 30px;
+    max-width: 1800px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.tab-link {
     padding: 12px 25px;
     margin: 0 5px;
     cursor: pointer;
     font-weight: 600;
     color: #555;
     border-radius: 5px 5px 0 0;
-    transition: all 0.3s ease;
+    transition: all var(--transition-speed);
     text-decoration: none;
-  }
-  
-  .tab-link:hover {
+    position: relative;
+}
+
+.tab-link:hover {
     background-color: #f5f5f5;
     color: #333;
-  }
-  
-  .tab-link.active {
-    color: #1BB64F;
-    border-bottom: 3px solid #1BB64F;
-    background-color: #f9f9f9;
-  }
+}
 
-  /* Dashboard styling */
-  .dashboard-container {
+.tab-link.active {
+    color: var(--safaricom-green);
+    border-bottom: 3px solid var(--safaricom-green);
+    background-color: #f9f9f9;
+}
+
+/* Dashboard styling */
+.dashboard-container {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 25px;
     padding: 30px;
-  }
+    max-width: 1800px;
+    margin: 0 auto;
+}
 
-  .dashboard-card {
-    background: #fff;
-    border-radius: 10px;
-    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
-    padding: 20px;
-  }
-
-  .card-header {
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin-bottom: 15px;
-    color: #1BB64F;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 5px;
-  }
-
-  .stats-container {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: stretch;
-    padding: 0 30px;
-    gap: 20px;
-    margin-bottom: 40px;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-  }
-
-  .stat-card {
-    flex: 1;
-    min-width: 200px;
+.dashboard-card {
     background: #fff;
     border-radius: 12px;
-    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.1);
-    padding: 15px 20px;
-    text-align: center;
-    transition: 0.3s ease;
-  }
-
-  .stat-card:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-    transform: translateY(-2px);
-  }
-
-  .stat-label {
-    font-size: 0.95rem;
-    color: #666;
-    margin-bottom: 5px;
-    font-weight: 500;
-  }
-
-  .stat-value {
-    font-size: 1.6rem;
-    font-weight: bold;
-    color: #1BB64F;
-  }
-
-  .full-width-card {
-    grid-column: 1 / -1;
-  }
-
-  .filter-controls {
-    display: flex;
-    gap: 15px;
-    margin-bottom: 20px;
-    padding: 0 30px;
-    flex-wrap: wrap;
-  }
-
-  .filter-control {
+    box-shadow: var(--safaricom-card-shadow);
+    padding: 24px;
+    transition: all var(--transition-speed);
+    border: 1px solid rgba(27, 182, 79, 0.05);
+    position: relative;
+    overflow: hidden;
+    height: 100%;
     display: flex;
     flex-direction: column;
-    min-width: 200px;
-    flex-grow: 1;
-  }
+}
 
-  .filter-control label {
-    font-size: 0.9rem;
-    margin-bottom: 5px;
-    color: #555;
-  }
+.dashboard-card:hover {
+    box-shadow: var(--safaricom-hover-shadow);
+    transform: translateY(-3px);
+}
 
-  .filter-control select {
-    padding: 8px 12px;
-    border-radius: 6px;
-    border: 1px solid #ddd;
+.dashboard-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(to bottom, var(--safaricom-green), var(--safaricom-dark-green));
+}
+
+.card-header {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 20px;
+    color: var(--safaricom-green);
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--safaricom-border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.card-header i {
+    font-size: 1.1rem;
+}
+
+.stats-container {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 20px;
+    padding: 0 30px;
+    margin-bottom: 30px;
+    max-width: 1800px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.stat-card {
     background: #fff;
-  }
+    border-radius: 12px;
+    box-shadow: var(--safaricom-card-shadow);
+    padding: 20px;
+    text-align: center;
+    transition: all var(--transition-speed);
+    border: 1px solid rgba(27, 182, 79, 0.05);
+    position: relative;
+    overflow: hidden;
+}
 
-  .plotly-graph-div {
+.stat-card:hover {
+    box-shadow: var(--safaricom-hover-shadow);
+    transform: translateY(-3px);
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(to right, var(--safaricom-green), var(--safaricom-dark-green));
+}
+
+.stat-label {
+    font-size: 0.95rem;
+    color: #666;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.stat-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--safaricom-green);
+    margin-bottom: 5px;
+}
+
+.stat-subtext {
+    font-size: 0.85rem;
+    color: #888;
+}
+
+.full-width-card {
+    grid-column: 1 / -1;
+}
+
+.two-column-card {
+    grid-column: span 2;
+}
+
+.filter-controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+    padding: 0 30px;
+    max-width: 1800px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.filter-control {
+    display: flex;
+    flex-direction: column;
+}
+
+.filter-control label {
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+    color: var(--safaricom-dark-gray);
+    font-weight: 500;
+}
+
+.filter-control select {
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--safaricom-border);
+    background: #fff;
+    font-family: 'Inter', sans-serif;
+    transition: all var(--transition-speed);
+}
+
+.filter-control select:focus {
+    border-color: var(--safaricom-green);
+    box-shadow: 0 0 0 3px rgba(27, 182, 79, 0.1);
+    outline: none;
+}
+
+.filter-button {
+    display: flex;
+    align-items: flex-end;
+}
+
+.filter-button button {
+    padding: 10px 20px;
+    background: var(--safaricom-green);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-speed);
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: fit-content;
+}
+
+.filter-button button:hover {
+    background: var(--safaricom-dark-green);
+    transform: translateY(-2px);
+}
+
+.plotly-graph-div {
     width: 100%;
     height: 400px;
-  }
+}
 
-  .loading-overlay {
+.chart-container {
+    height: 400px;
+    width: 100%;
+    flex-grow: 1;
+}
+
+.no-data-message {
+    text-align: center;
+    padding: 50px 20px;
+    color: #777;
+    font-style: italic;
+}
+
+.loading-overlay {
     position: fixed;
     top: 0;
     left: 0;
@@ -152,66 +280,189 @@
     justify-content: center;
     align-items: center;
     z-index: 9999;
-  }
+}
 
-  .loading-spinner {
+.loading-spinner {
     border: 5px solid #f3f3f3;
-    border-top: 5px solid #1BB64F;
+    border-top: 5px solid var(--safaricom-green);
     border-radius: 50%;
     width: 50px;
     height: 50px;
     animation: spin 1s linear infinite;
-  }
+}
 
-  @keyframes spin {
+@keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
-  }
+}
 
-  @media (max-width: 1024px) {
-    .dashboard-container {
-      grid-template-columns: repeat(2, 1fr);
-    }
-  }
+/* Header */
+.dashboard-header {
+    padding: 2rem;
+    background-color: #ffffff;
+    text-align: center;
+    border-bottom: 1px solid var(--safaricom-border);
+    margin-bottom: 1.5rem;
+}
 
-  @media (max-width: 768px) {
-    .dashboard-container {
-      grid-template-columns: 1fr;
-    }
+.dashboard-title {
+    color: var(--safaricom-green);
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.dashboard-subtitle {
+    font-size: 1.25rem;
+    color: #555;
+    margin: 0.5rem 0 0 0;
+}
+
+footer {
+    background-color: #f8f9fa;
+    color: #333;
+    text-align: center;
+    padding: 1.5rem 0;
+    font-size: 0.9rem;
+    border-top: 1px solid var(--safaricom-border);
+    margin-top: 3rem;
+    width: 100%;
+}
+
+footer a {
+    color: var(--safaricom-green);
+    text-decoration: none;
+    margin: 0 8px;
+    transition: all var(--transition-speed);
+}
+
+footer a:hover {
+    text-decoration: underline;
+    color: var(--safaricom-dark-green);
+}
+
+/* Responsive Design */
+@media (max-width: 1400px) {
     .stats-container {
-      flex-direction: column;
+        grid-template-columns: repeat(3, 1fr);
     }
-    .stat-card {
-      width: 100%;
+    
+    .dashboard-container {
+        grid-template-columns: repeat(2, 1fr);
     }
-    .filter-control {
-      min-width: 100%;
+    
+    .two-column-card {
+        grid-column: span 2;
     }
+}
+
+@media (max-width: 992px) {
+    .dashboard-container {
+        grid-template-columns: 1fr;
+        padding: 20px;
+    }
+    
+    .two-column-card {
+        grid-column: 1;
+    }
+    
+    .stats-container {
+        grid-template-columns: repeat(2, 1fr);
+        padding: 0 20px;
+    }
+
+    .filter-controls {
+        grid-template-columns: 1fr;
+        padding: 0 20px;
+    }
+    
     .analysis-tabs {
-      flex-wrap: wrap;
+        flex-wrap: wrap;
+        padding: 0 20px;
     }
+    
     .tab-link {
-      padding: 8px 15px;
-      font-size: 0.9rem;
+        padding: 10px 15px;
+        font-size: 0.9rem;
+        margin-bottom: 5px;
     }
-  }
+}
+
+@media (max-width: 576px) {
+    .dashboard-header {
+        padding: 1.5rem 1rem;
+    }
+    
+    .dashboard-title {
+        font-size: 2rem;
+    }
+    
+    .dashboard-subtitle {
+        font-size: 1.1rem;
+    }
+    
+    .stat-value {
+        font-size: 1.5rem;
+    }
+    
+    .stats-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .analysis-tabs {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .tab-link {
+        width: 100%;
+        text-align: center;
+        margin: 2px 0;
+        border-radius: 6px;
+    }
+    
+    .tab-link.active {
+        border-bottom: 3px solid var(--safaricom-green);
+        border-radius: 6px 6px 0 0;
+    }
+}
+
+/* Select2 customization */
+.select2-container--default .select2-selection--single,
+.select2-container--default .select2-selection--multiple {
+    border: 1px solid var(--safaricom-border);
+    border-radius: 8px;
+    padding: 6px;
+    min-height: 42px;
+    font-family: 'Inter', sans-serif;
+}
+
+.select2-container--default .select2-selection--single:focus,
+.select2-container--default .select2-selection--multiple:focus {
+    border-color: var(--safaricom-green);
+    outline: none;
+}
+
+.select2-container--default.select2-container--focus .select2-selection--multiple {
+    border-color: var(--safaricom-green);
+}
+
+.select2-container--default .select2-results__option--highlighted[aria-selected] {
+    background-color: var(--safaricom-green);
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 40px;
+}
 </style>
 
 <!-- Header -->
-<div style="text-align:center; margin-top:2rem;">
-    <h1 style="color:#1BB64F; font-size:2.5rem; font-weight:800;">Advanced Claims Analytics</h1>
-    <p style="font-size:1.25rem; color:#232323; margin-bottom:1.5rem;">Deep insights into claims patterns and relationships</p>
+<div class="dashboard-header">
+    <h1 class="dashboard-title">Advanced Claims Analytics</h1>
+    <p class="dashboard-subtitle">Deep insights into claims patterns and relationships</p>
 </div>
 
-<!-- Analysis Tabs -->
- <!--
-<div class="analysis-tabs">
-    <a href="{% url 'safaricom_claim_distribution' %}" class="tab-link {% if active_tab == 'claim_distribution' %}active{% endif %}">Claim Distribution</a>
-    <a href="{% url 'safaricom_temporal_analysis' %}" class="tab-link {% if active_tab == 'temporal_analysis' %}active{% endif %}">Temporal Analysis</a>
-    <a href="{% url 'safaricom_provider_efficiency' %}" class="tab-link {% if active_tab == 'provider_efficiency' %}active{% endif %}">Provider Efficiency</a>
-    <a href="{% url 'safaricom_diagnosis_patterns' %}" class="tab-link {% if active_tab == 'diagnosis_patterns' %}active{% endif %}">Diagnosis Patterns</a>
-</div>
--->
+
 
 <!-- Filter Controls -->
 <form method="GET" class="filter-controls" onsubmit="showLoading()">
@@ -251,10 +502,9 @@
             {% endfor %}
         </select>
     </div>
-    <div class="filter-control" style="justify-content: flex-end;">
-        <label>&nbsp;</label>
-        <button type="submit" style="padding: 8px 16px; background:#1BB64F; color:white; border:none; border-radius:6px;">
-            Apply Filters
+    <div class="filter-button">
+        <button type="submit">
+            <i class="fas fa-filter"></i> Apply Filters
         </button>
     </div>
 </form>
@@ -313,116 +563,197 @@
 </div>
 
 <!-- Summary Statistics -->
-<div class="stats-container">
-    <div class="stat-card">
-        <div class="stat-label">Total Claims</div>
-        <div class="stat-value">{{ visualizations.summary_stats.total_claims|floatformat:0 }}</div>
+<div class="stats-container" style="display: flex; flex-wrap: wrap; gap: 10px;">
+    <div class="stat-card" style="flex: 1; min-width: 120px; padding: 6px; border-radius: 6px; background: #f9f9f9; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+        <div class="stat-label" style="font-size: 10px; font-weight: 600; color: #555;">Total Claims</div>
+        <div class="stat-value" style="font-size: 14px; font-weight: bold; color: #1e3a8a;">{{ visualizations.summary_stats.total_claims|floatformat:0|intcomma }}</div>
+        <div class="stat-subtext" style="font-size: 9px; color: #777;">Unique claims (claim_ce)</div>
     </div>
-    <div class="stat-card">
-        <div class="stat-label">Total Amount</div>
-        <div class="stat-value">KES {{ visualizations.summary_stats.total_amount|floatformat:2 }}</div>
+
+    <div class="stat-card" style="flex: 1; min-width: 120px; padding: 6px; border-radius: 6px; background: #f9f9f9; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+        <div class="stat-label" style="font-size: 10px; font-weight: 600; color: #555;">Total Amount</div>
+        <div class="stat-value" style="font-size: 14px; font-weight: bold; color: #1e3a8a;">KES {{ visualizations.summary_stats.total_amount|floatformat:2|intcomma }}</div>
+        <div class="stat-subtext" style="font-size: 9px; color: #777;">Total value of claims</div>
     </div>
-    <div class="stat-card">
-        <div class="stat-label">Avg. Claim</div>
-        <div class="stat-value">KES {{ visualizations.summary_stats.avg_claim|floatformat:2 }}</div>
+
+    <div class="stat-card" style="flex: 1; min-width: 120px; padding: 6px; border-radius: 6px; background: #f9f9f9; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+        <div class="stat-label" style="font-size: 10px; font-weight: 600; color: #555;">Avg. Claim</div>
+        <div class="stat-value" style="font-size: 14px; font-weight: bold; color: #1e3a8a;">KES {{ visualizations.summary_stats.avg_claim|floatformat:2|intcomma }}</div>
+        <div class="stat-subtext" style="font-size: 9px; color: #777;">Per unique claim</div>
     </div>
-    <div class="stat-card">
-        <div class="stat-label">Unique Members</div>
-        <div class="stat-value">{{ visualizations.summary_stats.unique_members|floatformat:0 }}</div>
+
+    <div class="stat-card" style="flex: 1; min-width: 120px; padding: 6px; border-radius: 6px; background: #f9f9f9; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+        <div class="stat-label" style="font-size: 10px; font-weight: 600; color: #555;">Unique Members</div>
+        <div class="stat-value" style="font-size: 14px; font-weight: bold; color: #1e3a8a;">{{ visualizations.summary_stats.unique_members|floatformat:0|intcomma }}</div>
+        <div class="stat-subtext" style="font-size: 9px; color: #777;">Members with claims</div>
     </div>
-    <div class="stat-card">
-        <div class="stat-label">Providers</div>
-        <div class="stat-value">{{ visualizations.summary_stats.unique_providers|floatformat:0 }}</div>
+
+    <div class="stat-card" style="flex: 1; min-width: 120px; padding: 6px; border-radius: 6px; background: #f9f9f9; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+        <div class="stat-label" style="font-size: 10px; font-weight: 600; color: #555;">Providers</div>
+        <div class="stat-value" style="font-size: 14px; font-weight: bold; color: #1e3a8a;">{{ visualizations.summary_stats.unique_providers|floatformat:0|intcomma }}</div>
+        <div class="stat-subtext" style="font-size: 9px; color: #777;">Healthcare providers</div>
     </div>
-    <div class="stat-card">
-        <div class="stat-label">Avg. Claims/Member</div>
-        <div class="stat-value">{{ visualizations.summary_stats.claims_per_member|floatformat:1 }}</div>
+
+    <div class="stat-card" style="flex: 1; min-width: 120px; padding: 6px; border-radius: 6px; background: #f9f9f9; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+        <div class="stat-label" style="font-size: 10px; font-weight: 600; color: #555;">Claims/Member</div>
+        <div class="stat-value" style="font-size: 14px; font-weight: bold; color: #1e3a8a;">{{ visualizations.summary_stats.claims_per_member|floatformat:1|intcomma }}</div>
+        <div class="stat-subtext" style="font-size: 9px; color: #777;">Avg. unique claims per member</div>
     </div>
 </div>
+
+
 
 <!-- Main Content -->
 <div class="dashboard-container">
     {% if active_tab == 'claim_distribution' %}
         <!-- Claim Distribution Content -->
         <div class="dashboard-card full-width-card">
-            <div class="card-header">Claim Distribution by {{ visualizations.current_category }}</div>
-            {{ visualizations.claim_distribution|safe }}
+            <div class="card-header">
+                <i class="fas fa-chart-pie"></i> Claim Distribution by {{ visualizations.current_category }}
+            </div>
+            <div class="chart-container">
+                {{ visualizations.claim_distribution|safe }}
+            </div>
         </div>
         
         <div class="dashboard-card">
-            <div class="card-header">Cost Distribution by Percentile</div>
-            {{ visualizations.cost_percentiles|safe }}
+            <div class="card-header">
+                <i class="fas fa-chart-line"></i> Cost Distribution by Percentile
+            </div>
+            <div class="chart-container">
+                {{ visualizations.cost_percentiles|safe }}
+            </div>
         </div>
+        
         <div class="dashboard-card">
-            <div class="card-header">Member Spending Segments</div>
-            {{ visualizations.member_segmentation|safe }}
+            <div class="card-header">
+                <i class="fas fa-users"></i> Member Spending Segments
+            </div>
+            <div class="chart-container">
+                {{ visualizations.member_segmentation|safe }}
+            </div>
         </div>
+        
         <div class="dashboard-card">
-            <div class="card-header">Claim Amount Distribution</div>
-            {{ visualizations.amount_distribution|safe }}
+            <div class="card-header">
+                <i class="fas fa-chart-bar"></i> Claim Amount Distribution
+            </div>
+            <div class="chart-container">
+                {{ visualizations.amount_distribution|safe }}
+            </div>
         </div>
+        
         <div class="dashboard-card full-width-card">
-            <div class="card-header">Top 10 Cost Centers</div>
-            {{ visualizations.cost_center_analysis|safe }}
+            <div class="card-header">
+                <i class="fas fa-building"></i> Top 10 Cost Centers
+            </div>
+            <div class="chart-container">
+                {{ visualizations.cost_center_analysis|safe }}
+            </div>
         </div>
 
     {% elif active_tab == 'temporal_analysis' %}
         <!-- Temporal Analysis Content -->
         <div class="dashboard-card full-width-card">
-            <div class="card-header">Claims by Time of Day</div>
-            {{ visualizations.hourly_claims|safe }}
+            <div class="card-header">
+                <i class="fas fa-clock"></i> Claims by Time of Day
+            </div>
+            <div class="chart-container">
+                {{ visualizations.hourly_claims|safe }}
+            </div>
         </div>
+        
         <div class="dashboard-card">
-            <div class="card-header">Monthly Claims Trend</div>
-            {{ visualizations.monthly_trend|safe }}
+            <div class="card-header">
+                <i class="fas fa-calendar-alt"></i> Monthly Claims Trend
+            </div>
+            <div class="chart-container">
+                {{ visualizations.monthly_trend|safe }}
+            </div>
         </div>
+        
         <div class="dashboard-card">
-            <div class="card-header">Claims by Day of Week</div>
-            {{ visualizations.day_of_week_analysis|safe }}
+            <div class="card-header">
+                <i class="fas fa-calendar-day"></i> Claims by Day of Week
+            </div>
+            <div class="chart-container">
+                {{ visualizations.day_of_week_analysis|safe }}
+            </div>
         </div>
+        
         <div class="dashboard-card full-width-card">
-            <div class="card-header">Daily Claims Over Time</div>
-            {{ visualizations.time_series|safe }}
+            <div class="card-header">
+                <i class="fas fa-chart-line"></i> Daily Claims Over Time
+            </div>
+            <div class="chart-container">
+                {{ visualizations.time_series|safe }}
+            </div>
         </div>
 
     {% elif active_tab == 'provider_efficiency' %}
         <!-- Provider Efficiency Content -->
         <div class="dashboard-card full-width-card">
-            <div class="card-header">Provider Network Analysis</div>
-            {{ visualizations.provider_network|safe }}
+            <div class="card-header">
+                <i class="fas fa-network-wired"></i> Provider Network Analysis
+            </div>
+            <div class="chart-container">
+                {{ visualizations.provider_network|safe }}
+            </div>
         </div>
+        
         <div class="dashboard-card full-width-card">
-            <div class="card-header">Provider Efficiency Analysis</div>
-            {{ visualizations.provider_efficiency|safe }}
+            <div class="card-header">
+                <i class="fas fa-tachometer-alt"></i> Provider Efficiency Analysis
+            </div>
+            <div class="chart-container">
+                {{ visualizations.provider_efficiency|safe }}
+            </div>
         </div>
 
     {% elif active_tab == 'diagnosis_patterns' %}
         <!-- Diagnosis Patterns Content -->
         <div class="dashboard-card full-width-card">
-            <div class="card-header">Top 10 Ailments</div>
-            {{ visualizations.top_ailments|safe }}
+            <div class="card-header">
+                <i class="fas fa-heartbeat"></i> Top 10 Ailments
+            </div>
+            <div class="chart-container">
+                {{ visualizations.top_ailments|safe }}
+            </div>
         </div>
+        
         <div class="dashboard-card full-width-card">
-            <div class="card-header">Age-Service Relationships</div>
-            {{ visualizations.age_service_matrix|safe }}
+            <div class="card-header">
+                <i class="fas fa-brain"></i> Age-Service Relationships
+            </div>
+            <div class="chart-container">
+                {{ visualizations.age_service_matrix|safe }}
+            </div>
         </div>
+        
         <div class="dashboard-card">
-            <div class="card-header">Claims by Gender</div>
-            {{ visualizations.gender_stats|safe }}
+            <div class="card-header">
+                <i class="fas fa-venus-mars"></i> Claims by Gender
+            </div>
+            <div class="chart-container">
+                {{ visualizations.gender_stats|safe }}
+            </div>
         </div>
+        
         <div class="dashboard-card full-width-card">
-            <div class="card-header">Data Correlation Matrix</div>
-            {{ visualizations.correlation_matrix|safe }}
+            <div class="card-header">
+                <i class="fas fa-project-diagram"></i> Data Correlation Matrix
+            </div>
+            <div class="chart-container">
+                {{ visualizations.correlation_matrix|safe }}
+            </div>
         </div>
     {% endif %}
 </div>
 
-
-
-<footer style="background-color: #f8f9fa; color: #333; text-align: center; padding: 1rem 0; font-size: 0.9rem; border-top: 1px solid #ddd; margin-top: 2rem; width: 100%;">
+<footer>
     © 2025 Designed by Virtual Analytics, All Rights Reserved |
-    <a href="#" style="color: #1BB64F; text-decoration: none; margin: 0 8px;">Terms & Conditions</a> |
-    <a href="#" style="color: #1BB64F; text-decoration: none; margin: 0 8px;">Privacy Policy</a>
+    <a href="https://www.virtualanalytics.co.ke/">Terms & Conditions</a> |
+    <a href="#">Privacy Policy</a>
 </footer>
 
 <script>
@@ -477,6 +808,28 @@ document.addEventListener('DOMContentLoaded', function() {
             chart.style.height = '400px';
         });
     }, 100);
+    
+    // Add interactivity to cards
+    document.querySelectorAll('.dashboard-card').forEach(card => {
+        card.addEventListener('mouseenter', () => {
+            card.style.transform = 'translateY(-5px)';
+        });
+        
+        card.addEventListener('mouseleave', () => {
+            card.style.transform = 'translateY(0)';
+        });
+    });
+
+    // Add animation to stat cards
+    document.querySelectorAll('.stat-card').forEach(card => {
+        card.addEventListener('mouseenter', () => {
+            card.style.transform = 'translateY(-5px)';
+        });
+        
+        card.addEventListener('mouseleave', () => {
+            card.style.transform = 'translateY(0)';
+        });
+    });
 });
 
 function showLoading() {

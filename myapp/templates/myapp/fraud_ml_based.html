@@ -1,0 +1,1206 @@
+{% extends "base.html" %}
+{% load custom_filters %}
+{% load static %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/charts.css/dist/charts.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+:root {
+    --primary-color: #E30613;
+    --primary-dark: #B0000B;
+    --secondary-color: #6c757d;
+    --light-bg: #f8f9fa;
+    --card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --border-radius: 12px;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background-color: #f5f7f9;
+}
+
+.fraud-container {
+    background-color: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--card-shadow);
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+}
+
+.section-header {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    padding-bottom: 1.5rem;
+    margin-bottom: 2.5rem;
+}
+
+.section-title {
+    color: var(--primary-color);
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    font-size: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.section-subtitle {
+    color: var(--secondary-color);
+    font-size: 1.1rem;
+    max-width: 800px;
+    line-height: 1.6;
+}
+
+.card {
+    border: none;
+    border-radius: var(--border-radius);
+    box-shadow: var(--card-shadow);
+    margin-bottom: 2rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+    background: white;
+}
+
+.card-header {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    color: white;
+    font-weight: 600;
+    padding: 1.25rem 1.5rem;
+    font-size: 1.15rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.card-body {
+    padding: 1.75rem;
+}
+
+.form-label {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    display: inline-block;
+}
+
+.form-control, .form-select {
+    display: block;
+    width: 100%;
+    padding: 0.375rem 0.75rem;
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.5;
+    color: #212529;
+    background-color: #fff;
+    background-clip: padding-box;
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.btn-primary {
+    color: #fff;
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    display: inline-block;
+    font-weight: 400;
+    line-height: 1.5;
+    text-align: center;
+    text-decoration: none;
+    vertical-align: middle;
+    cursor: pointer;
+    user-select: none;
+    border: 1px solid transparent;
+    padding: 0.375rem 0.75rem;
+    font-size: 1rem;
+    border-radius: 0.375rem;
+    transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.btn-outline {
+    color: var(--secondary-color);
+    background-color: transparent;
+    background-image: none;
+    border-color: var(--secondary-color);
+    display: inline-block;
+    font-weight: 400;
+    line-height: 1.5;
+    text-align: center;
+    text-decoration: none;
+    vertical-align: middle;
+    cursor: pointer;
+    user-select: none;
+    border: 1px solid;
+    padding: 0.375rem 0.75rem;
+    font-size: 1rem;
+    border-radius: 0.375rem;
+    transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.alert {
+    position: relative;
+    padding: 1rem 1rem;
+    margin-bottom: 1rem;
+    border: 1px solid transparent;
+    border-radius: 0.375rem;
+}
+
+.alert-info {
+    color: #055160;
+    background-color: #cff4fc;
+    border-color: #b6effb;
+}
+
+.alert-warning {
+    color: #664d03;
+    background-color: #fff3cd;
+    border-color: #ffecb5;
+}
+
+.alert-danger {
+    color: #721c24;
+    background-color: #f8d7da;
+    border-color: #f5c2c7;
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.35em 0.65em;
+    font-size: 0.75em;
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: 0.375rem;
+}
+
+.badge-success {
+    color: #fff;
+    background-color: #198754;
+}
+
+.badge-info {
+    color: #fff;
+    background-color: #0dcaf0;
+}
+
+.badge-danger {
+    color: #fff;
+    background-color: #dc3545;
+}
+
+.badge-secondary {
+    color: #fff;
+    background-color: #6c757d;
+}
+
+.metric-card {
+    border-left: 4px solid var(--primary-color);
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 4px;
+    background: var(--light-bg);
+}
+
+.metric-title {
+    color: var(--secondary-color);
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+}
+
+.metric-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--primary-color);
+}
+
+.feature-checkbox-container {
+    display: flex;
+    flex-wrap: wrap;
+    margin-right: -15px;
+    margin-left: -15px;
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 0.5rem;
+    border: 1px solid #eee;
+    border-radius: 4px;
+}
+
+.feature-checkbox-item {
+    flex: 0 0 auto;
+    width: 25%;
+    padding: 0.25rem;
+}
+
+.report-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    flex-wrap: wrap;
+}
+
+.report-actions .btn {
+    margin-bottom: 0.5rem;
+}
+
+.loading-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.9);
+    z-index: 9999;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
+
+.loading-content {
+    text-align: center;
+    max-width: 400px;
+    padding: 2rem;
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--card-shadow);
+}
+
+.spinner {
+    width: 3rem;
+    height: 3rem;
+    border: 0.25em solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spinner-border 0.75s linear infinite;
+    color: var(--primary-color);
+    margin: 0 auto;
+}
+
+.progress {
+    height: 6px;
+    overflow: hidden;
+    background-color: #e9ecef;
+    margin-top: 0.5rem;
+}
+
+.progress-bar {
+    height: 100%;
+    background-color: var(--primary-color);
+    background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, transparent 75%, transparent);
+    background-size: 1rem 1rem;
+    animation: progress-bar-stripes 1s linear infinite;
+    width: 100%;
+}
+
+@keyframes spinner-border {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes progress-bar-stripes {
+    0% { background-position-x: 1rem; }
+}
+
+.nav-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    padding-left: 0;
+    margin-bottom: 0;
+    list-style: none;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.nav-tabs .nav-item {
+    margin-bottom: -1px;
+}
+
+.nav-tabs .nav-link {
+    display: block;
+    padding: 0.5rem 1rem;
+    color: #6b7280;
+    font-weight: 500;
+    border: none;
+    border-bottom: 3px solid transparent;
+}
+
+.nav-tabs .nav-link.active {
+    color: var(--primary-color);
+    font-weight: 600;
+    border-bottom-color: var(--primary-color);
+    background: transparent;
+}
+
+.tab-content {
+    padding-top: 1rem;
+}
+
+.visualization-grid {
+    display: flex;
+    flex-wrap: wrap;
+    margin-right: -15px;
+    margin-left: -15px;
+}
+
+.visualization-item {
+    flex: 0 0 auto;
+    width: 50%;
+    padding-right: 15px;
+    padding-left: 15px;
+    margin-bottom: 1rem;
+}
+
+.visualization-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    word-wrap: break-word;
+    background-color: #fff;
+    background-clip: border-box;
+    border: 1px solid rgba(0, 0, 0, 0.125);
+    border-radius: 0.375rem;
+}
+
+.visualization-header {
+    padding: 0.5rem 1rem;
+    margin-bottom: 0;
+    background-color: rgba(0, 0, 0, 0.03);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.visualization-body {
+    flex: 1 1 auto;
+    padding: 1rem;
+}
+
+.visualization-body img {
+    max-width: 100%;
+    height: auto;
+}
+
+.feature-importance-container {
+    margin-top: 1.5rem;
+}
+
+.feature-importance-plot {
+    max-width: 100%;
+    height: auto;
+}
+
+.results-summary {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.results-summary h5 {
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+}
+
+.results-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.summary-item {
+    background-color: white;
+    padding: 1rem;
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.summary-item .label {
+    font-size: 0.9rem;
+    color: var(--secondary-color);
+    margin-bottom: 0.5rem;
+}
+
+.summary-item .value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+@media (max-width: 768px) {
+    .fraud-container {
+        padding: 1.5rem;
+    }
+    
+    .visualization-item {
+        width: 100%;
+    }
+    
+    .feature-checkbox-item {
+        width: 50%;
+    }
+    
+    .report-actions {
+        flex-direction: column;
+    }
+    
+    .results-summary-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="fraud-container">
+    <!-- Header section -->
+    <div class="section-header">
+        <h2 class="section-title">
+            <i class="fas fa-shield-alt"></i> Machine Learning Fraud Detection
+        </h2>
+        <p class="section-subtitle">
+            Detect fraudulent transactions using advanced machine learning algorithms. 
+            Select your dataset, choose models, and analyze the results.
+        </p>
+    </div>
+
+    <!-- Status messages container -->
+    <div id="statusMessages"></div>
+
+    <!-- Dataset Selection Form -->
+    <div class="card">
+        <div class="card-header">
+            <i class="fas fa-database"></i> Dataset Selection
+        </div>
+        <div class="card-body">
+            <form id="datasetForm">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-5">
+                        <div class="mb-3">
+                            <label for="datasetSelect" class="form-label">Select Dataset</label>
+                            <select class="form-select" id="datasetSelect" name="datasetSelect" required>
+                                <option value="">-- Select a dataset --</option>
+                                {% for table in data_tables %}
+                                    <option value="{{ table }}" 
+                                            {% if table == current_table %}selected{% endif %}>
+                                        {{ table }}
+                                    </option>
+                                {% empty %}
+                                    <option value="" disabled>No datasets available</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-7">
+                        <div class="mb-3">
+                            <label class="form-label">Dataset Info</label>
+                            <div id="datasetInfo" class="text-muted">
+                                Please select a dataset to view available columns
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> 
+                    <strong>Note:</strong> The full dataset will be used for training (no sampling)
+                </div>
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-arrow-right me-1"></i> Continue
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Feature Selection -->
+    <div id="featureSelection" class="card" style="display:none;">
+        <div class="card-header">
+            <i class="fas fa-sliders-h"></i> Feature Selection
+        </div>
+        <div class="card-body">
+            <form id="featureForm">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="targetSelect" class="form-label">Target Variable (Fraud Indicator)</label>
+                            <select class="form-select" id="targetSelect" required>
+                                <option value="">-- Select target variable --</option>
+                                <!-- Options will be populated by JavaScript -->
+                            </select>
+                            <small class="text-muted">Select the column to predict. Continuous values will be converted to binary for classification.</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Dataset Statistics</label>
+                            <div id="datasetStats" class="text-muted">
+                                <div>Total Rows: <span id="currentSampleSize">0</span></div>
+                                <div>Fraud Ratio: <span id="fraudRatio">N/A</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Select Features (Recommended: 10-30 features)</label>
+                    <div class="d-flex justify-content-between mb-2">
+                        <button type="button" id="selectAllFeatures" class="btn-outline">Select All</button>
+                        <button type="button" id="deselectAllFeatures" class="btn-outline">Deselect All</button>
+                    </div>
+                    <div id="featureCheckboxes" class="feature-checkbox-container"></div>
+                </div>
+                
+                <div class="d-flex justify-content-between mt-3">
+                    <button type="button" id="backToDataset" class="btn-outline">
+                        <i class="fas fa-arrow-left me-1"></i> Back
+                    </button>
+                    <button type="submit" class="btn-primary">
+                        <i class="fas fa-arrow-right me-1"></i> Continue
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Model Selection -->
+    <div id="modelSelection" class="card" style="display:none;">
+        <div class="card-header">
+            <i class="fas fa-cogs"></i> Model Selection & Configuration
+        </div>
+        <div class="card-body">
+            <form id="modelTrainingForm">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Select Models</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="rfModel" name="model_types[]" value="rf" checked>
+                                <label class="form-check-label" for="rfModel">Random Forest</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="lrModel" name="model_types[]" value="lr">
+                                <label class="form-check-label" for="lrModel">Logistic Regression</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="gbModel" name="model_types[]" value="gb">
+                                <label class="form-check-label" for="gbModel">Gradient Boosting</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="ifModel" name="model_types[]" value="iforest" checked>
+                                <label class="form-check-label" for="ifModel">Isolation Forest (Anomaly Detection)</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="rfTrees" class="form-label">Random Forest Trees</label>
+                            <input type="number" class="form-control" id="rfTrees" value="100" min="10" max="500">
+                            <small class="text-muted">Reduced for faster training with large datasets</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="contamination" class="form-label">Anomaly Contamination</label>
+                            <input type="number" class="form-control" id="contamination" value="0.01" step="0.01" min="0.001" max="0.5">
+                            <small class="text-muted">Fraction of outliers in the dataset (for Isolation Forest)</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Performance Note:</strong> For large datasets, training may take several minutes. 
+                    We automatically optimize features to prevent memory issues.
+                </div>
+                
+                <div class="d-flex justify-content-between mt-3">
+                    <button type="button" id="backToFeatures" class="btn-outline">
+                        <i class="fas fa-arrow-left me-1"></i> Back
+                    </button>
+                    <button type="submit" class="btn-primary" id="trainButton">
+                        <i class="fas fa-play me-1"></i> Train Models
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Results Section -->
+    <div id="resultsSection" {% if not has_results %}style="display: none;"{% endif %}>
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-chart-bar"></i> Model Results
+                {% if has_results %}
+                <span class="badge badge-secondary">
+                    Trained on: {{ results.timestamp|date:"M d, Y H:i" }}
+                </span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if has_results %}
+                    <!-- Results Summary -->
+                    <div class="results-summary">
+                        <h5>Training Summary</h5>
+                        <div class="results-summary-grid">
+                            <div class="summary-item">
+                                <div class="label">Dataset</div>
+                                <div class="value">{{ current_table }}</div>
+                            </div>
+                            <div class="summary-item">
+                                <div class="label">Target Variable</div>
+                                <div class="value">{{ results.original_target }}</div>
+                                {% if results.binary_target_created %}
+                                <small class="text-muted">(converted to binary)</small>
+                                {% endif %}
+                            </div>
+                            <div class="summary-item">
+                                <div class="label">Features Used</div>
+                                <div class="value">{{ results.features|length }}</div>
+                            </div>
+                            <div class="summary-item">
+                                <div class="label">Sample Size</div>
+                                <div class="value">{{ results.sample_size|floatformat:0 }}</div>
+                            </div>
+                            {% if results.fraud_ratio is not None %}
+                            <div class="summary-item">
+                                <div class="label">Fraud Ratio</div>
+                                <div class="value">{{ results.fraud_ratio|floatformat:4 }} ({{ results.fraud_ratio|floatformat:2 }}%)</div>
+                            </div>
+                            {% endif %}
+                            {% if results.training_time %}
+                            <div class="summary-item">
+                                <div class="label">Training Time</div>
+                                <div class="value">{{ results.training_time|floatformat:2 }}s</div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        {% if results.binary_target_created %}
+                        <div class="alert alert-info mt-3">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>Note:</strong> Continuous target "{{ results.original_target }}" was converted to a binary classification problem 
+                            by identifying values above the 95th percentile as potential fraud cases.
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Report Download Options -->
+                        <div class="report-actions">
+                            <a href="{% url 'download_fraud_report' 'pdf' %}" class="btn-primary" target="_blank">
+                                <i class="fas fa-file-pdf me-1"></i> Download PDF Report
+                            </a>
+                            <a href="{% url 'download_fraud_report' 'csv' %}" class="btn-primary">
+                                <i class="fas fa-file-csv me-1"></i> Download CSV Predictions
+                            </a>
+                            <a href="{% url 'download_fraud_report' 'json' %}" class="btn-primary">
+                                <i class="fas fa-file-code me-1"></i> Download JSON Report
+                            </a>
+                            <a href="{% url 'download_fraud_results' %}" class="btn-primary">
+                                <i class="fas fa-download me-1"></i> Download All Results
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Visualizations Section -->
+                    {% if results.visualizations %}
+                    <div class="mb-4">
+                        <h5>Data Visualizations</h5>
+                        <div class="visualization-grid">
+                            {% if results.visualizations.target_dist %}
+                            <div class="visualization-item">
+                                <div class="visualization-card">
+                                    <div class="visualization-header">Target Distribution</div>
+                                    <div class="visualization-body">
+                                        <img src="data:image/png;base64,{{ results.visualizations.target_dist }}" alt="Target Distribution">
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            {% if results.visualizations.correlation_heatmap %}
+                            <div class="visualization-item">
+                                <div class="visualization-card">
+                                    <div class="visualization-header">Feature Correlation</div>
+                                    <div class="visualization-body">
+                                        <img src="data:image/png;base64,{{ results.visualizations.correlation_heatmap }}" alt="Feature Correlation">
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            {% if results.visualizations.model_comparison %}
+                            <div class="visualization-item">
+                                <div class="visualization-card">
+                                    <div class="visualization-header">Model Performance Comparison</div>
+                                    <div class="visualization-body">
+                                        <img src="data:image/png;base64,{{ results.visualizations.model_comparison }}" alt="Model Comparison">
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            {% if results.visualizations.pca_visualization %}
+                            <div class="visualization-item">
+                                <div class="visualization-card">
+                                    <div class="visualization-header">PCA Visualization</div>
+                                    <div class="visualization-body">
+                                        <img src="data:image/png;base64,{{ results.visualizations.pca_visualization }}" alt="PCA Visualization">
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <ul class="nav nav-tabs" id="modelResultsTabs" role="tablist">
+                        {% for model_type, result in results.results.items %}
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link {% if forloop.first %}active{% endif %}" 
+                                    id="{{ model_type }}-tab" data-bs-toggle="tab" 
+                                    data-bs-target="#{{ model_type }}" type="button" role="tab">
+                                {{ model_type|upper }}
+                                {% if result.error %}
+                                <span class="badge badge-danger">Error</span>
+                                {% elif result.is_anomaly_detection %}
+                                <span class="badge badge-info">Anomaly</span>
+                                {% else %}
+                                <span class="badge badge-success">Supervised</span>
+                                {% endif %}
+                            </button>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    
+                    <div class="tab-content">
+                        {% for model_type, result in results.results.items %}
+                        <div class="tab-pane {% if forloop.first %}active{% endif %}" id="{{ model_type }}">
+                            {% if result.error %}
+                                <div class="alert alert-danger">
+                                    <strong>Error in {{ model_type|upper }}:</strong> {{ result.error }}
+                                    {% if "only 1 member" in result.error or "too few" in result.error or "classes" in result.error or "continuous" in result.error or "Memory" in result.error %}
+                                    <div class="mt-2">
+                                        <small>Try using fewer features or selecting a different target variable.</small>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            {% else %}
+                                <div class="row mb-4">
+                                    {% if result.is_anomaly_detection %}
+                                        <!-- Unsupervised model results -->
+                                        <div class="col-md-4">
+                                            <div class="metric-card">
+                                                <h5 class="metric-title">Mean Anomaly Score</h5>
+                                                <div class="metric-value">{{ result.metrics.anomaly_score_mean|floatformat:4 }}</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="metric-card">
+                                                <h5 class="metric-title">Score Std Dev</h5>
+                                                <div class="metric-value">{{ result.metrics.anomaly_score_std|floatformat:4 }}</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="metric-card">
+                                                <h5 class="metric-title">Anomalies Detected</h5>
+                                                <div class="metric-value">{{ result.metrics.n_anomalies|floatformat:0 }}</div>
+                                            </div>
+                                        </div>
+                                    {% else %}
+                                        <!-- Supervised model results -->
+                                        <div class="col-md-3">
+                                            <div class="metric-card">
+                                                <h5 class="metric-title">Accuracy</h5>
+                                                <div class="metric-value">{{ result.metrics.accuracy|floatformat:4 }}</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="metric-card">
+                                                <h5 class="metric-title">Precision</h5>
+                                                <div class="metric-value">{{ result.metrics.precision|floatformat:4 }}</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="metric-card">
+                                                <h5 class="metric-title">Recall</h5>
+                                                <div class="metric-value">{{ result.metrics.recall|floatformat:4 }}</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="metric-card">
+                                                <h5 class="metric-title">F1 Score</h5>
+                                                <div class="metric-value">{{ result.metrics.f1|floatformat:4 }}</div>
+                                            </div>
+                                        </div>
+                                        {% if result.metrics.roc_auc %}
+                                        <div class="col-md-3">
+                                            <div class="metric-card">
+                                                <h5 class="metric-title">ROC AUC</h5>
+                                                <div class="metric-value">{{ result.metrics.roc_auc|floatformat:4 }}</div>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- Feature Importance -->
+                                {% if results.feature_importances and results.feature_importances|get_item:model_type %}
+                                <div class="feature-importance-container">
+                                    <h5>Feature Importance</h5>
+                                    <img src="data:image/png;base64,{{ results.feature_importances|get_item:model_type|get_item:'plot' }}" 
+                                         class="feature-importance-plot" alt="Feature Importance for {{ model_type|upper }}">
+                                </div>
+                                {% endif %}
+                                
+                                <!-- Add target variable information -->
+                                {% if results.target_info %}
+                                <div class="alert alert-info">
+                                    <strong>Target Variable:</strong> {{ results.target }}<br>
+                                    <strong>Type:</strong> {{ results.target_info.dtype }}<br>
+                                    <strong>Unique Values:</strong> {{ results.target_info.unique_values }}<br>
+                                    <strong>Is Binary:</strong> {{ results.target_info.is_binary|yesno:"Yes,No" }}
+                                    {% if results.target_info.class_counts %}
+                                    <br><strong>Class Distribution:</strong>
+                                    {% for class, count in results.target_info.class_counts.items %}
+                                        {{ class }}: {{ count }}{% if not forloop.last %}, {% endif %}
+                                    {% endfor %}
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+                        <h4>No Results Yet</h4>
+                        <p class="text-muted">Train a model to see results</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Indicator -->
+<div class="loading-overlay" id="loadingIndicator">
+    <div class="loading-content">
+        <div class="spinner" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <h4 class="mt-3">Training Models...</h4>
+        <p class="text-muted">This may take several minutes for large datasets</p>
+        <div class="progress">
+            <div class="progress-bar"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+// Custom template filters (for feature importance access)
+function getItem(obj, key) {
+    return obj ? obj[key] : null;
+}
+
+$(document).ready(function () {
+    console.log("=== DEBUG: Document ready - fraud detection script loaded ===");
+
+    // =============================
+    // Session Keep-Alive
+    // =============================
+    function setupSessionKeepalive() {
+        const keepaliveInterval = setInterval(() => {
+            $.ajax({
+                url: '{% url "session_keepalive" %}',
+                method: 'GET',
+                success: (data) => {
+                    if (data.status === 'ok') {
+                        console.debug('DEBUG: Session kept alive:', data.session_key);
+                    }
+                }
+            });
+        }, 120000);
+
+        $(document).on('click keypress scroll', () => {
+            $.get('{% url "session_keepalive" %}');
+        });
+
+        return keepaliveInterval;
+    }
+    const keepaliveTimer = setupSessionKeepalive();
+    $(window).on('beforeunload', () => clearInterval(keepaliveTimer));
+
+    // =============================
+    // Status Messages
+    // =============================
+    function showStatusMessage(message, type='error') {
+        const alertClass = type === 'error' ? 'alert-danger' : 'alert-info';
+        const statusDiv = $('<div>')
+            .addClass(`alert ${alertClass}`)
+            .html(message);
+        $('#statusMessages').append(statusDiv);
+        setTimeout(() => statusDiv.fadeOut(500, () => statusDiv.remove()), 7000);
+    }
+    function clearStatusMessages() { $('#statusMessages').empty(); }
+
+    // =============================
+    // Dataset Selection Form
+    // =============================
+    $('#datasetForm').on('submit', function (e) {
+        e.preventDefault();
+        const dataset = $('#datasetSelect').val();
+        const submitBtn = $(this).find('button[type="submit"]');
+
+        if (!dataset) {
+            showStatusMessage('Please select a dataset');
+            return false;
+        }
+
+        submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Loading...');
+        $('#datasetInfo').html('<i class="fas fa-spinner fa-spin me-2"></i>Loading dataset information...');
+        clearStatusMessages();
+
+        $.ajax({
+            url: '{% url "fetch_table_columns" %}',
+            method: 'GET',
+            data: { table: dataset },
+            dataType: "json",
+            success: function (response) {
+                if (response.error) {
+                    showStatusMessage(response.error);
+                    $('#datasetInfo').html(`<span class="text-danger">${response.error}</span>`);
+                } else {
+                    // Build dataset info
+                    let html = `
+                        <div class="mb-3">
+                            <h5>Dataset Information</h5>
+                            <p><strong>Table:</strong> ${response.table}</p>
+                            <p><strong>Rows:</strong> ${response.row_count.toLocaleString()}</p>
+                            <p><strong>Columns:</strong> ${response.columns.length}</p>
+                    `;
+                    if (response.fraud_ratio !== null) {
+                        html += `<p><strong>Fraud Ratio:</strong> ${(response.fraud_ratio * 100).toFixed(2)}%</p>`;
+                        $('#fraudRatio').text(`${(response.fraud_ratio * 100).toFixed(2)}%`);
+                    }
+                    html += `</div>`;
+
+                    // Data preview
+                    if (response.cleaned_df_preview && response.cleaned_df_preview.length > 0) {
+                        const preview = response.cleaned_df_preview;
+                        const cols = Object.keys(preview[0]);
+                        html += `
+                            <div class="mb-3">
+                                <h5>Data Preview (first 5 rows)</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-bordered data-preview-table">
+                                        <thead><tr>${cols.map(c => `<th>${c}</th>`).join('')}</tr></thead>
+                                        <tbody>
+                                            ${preview.map(row => `<tr>${cols.map(c => `<td>${row[c] ?? 'NULL'}</td>`).join('')}</tr>`).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    $('#datasetInfo').html(html);
+
+                    // Target select
+                    const targetSelect = $('#targetSelect').empty().append('<option value="">-- Select target variable --</option>');
+                    $.each(response.columns, (i, col) => {
+                        targetSelect.append($('<option>', { value: col, text: col }));
+                    });
+
+                    // Features
+                    const featureCheckboxes = $('#featureCheckboxes').empty();
+                    $.each(response.columns, (i, col) => {
+                        const colLower = col.toLowerCase();
+                        const targetPatterns = ['fraud','label','target','is_','flag','status','result','outcome'];
+                        if (!targetPatterns.some(pattern => colLower.includes(pattern))) {
+                            featureCheckboxes.append(`
+                                <div class="feature-checkbox-item">
+                                    <div class="form-check">
+                                        <input class="form-check-input feature-checkbox" type="checkbox" id="feature_${col}" value="${col}" checked>
+                                        <label class="form-check-label" for="feature_${col}">${col}</label>
+                                    </div>
+                                </div>
+                            `);
+                        }
+                    });
+
+                    $('#currentSampleSize').text(response.row_count.toLocaleString());
+                    $('#featureSelection').show();
+                    $('html, body').animate({ scrollTop: $('#featureSelection').offset().top - 20 }, 500);
+                }
+            },
+            error: function () {
+                showStatusMessage('Error loading dataset information');
+                $('#datasetInfo').html('<span class="text-danger">Error loading dataset</span>');
+            },
+            complete: function() {
+                submitBtn.prop('disabled', false).html('<i class="fas fa-arrow-right me-1"></i> Continue');
+            }
+        });
+        return false;
+    });
+
+    // =============================
+    // Navigation
+    // =============================
+    $('#backToDataset').click(function() {
+        $('#featureSelection').hide();
+        $('html, body').animate({ scrollTop: $('#datasetForm').offset().top - 20 }, 500);
+    });
+
+    $('#backToFeatures').click(function() {
+        $('#modelSelection').hide();
+        $('html, body').animate({ scrollTop: $('#featureSelection').offset().top - 20 }, 500);
+    });
+
+    // =============================
+    // Feature Selection
+    // =============================
+    $('#selectAllFeatures').click(() => $('.feature-checkbox:not(:disabled)').prop('checked', true));
+    $('#deselectAllFeatures').click(() => $('.feature-checkbox:not(:disabled)').prop('checked', false));
+
+    $('#featureForm').on('submit', function (e) {
+        e.preventDefault();
+        const selectedFeatures = $('.feature-checkbox:checked').map(function () { return this.value; }).get();
+        const target = $('#targetSelect').val();
+
+        if (selectedFeatures.length === 0) { showStatusMessage('Please select at least one feature'); return false; }
+        if (!target) { showStatusMessage('Please select a target variable'); return false; }
+        if (selectedFeatures.includes(target)) { showStatusMessage('Target variable cannot also be a feature'); return false; }
+
+        // Warn if too many features selected
+        if (selectedFeatures.length > 30) {
+            if (!confirm(`You've selected ${selectedFeatures.length} features. This may cause memory issues. Continue anyway?`)) {
+                return false;
+            }
+        }
+
+        $('#modelSelection').show();
+        $('html, body').animate({ scrollTop: $('#modelSelection').offset().top - 20 }, 500);
+        return false;
+    });
+
+    $('#targetSelect').change(function () {
+        const target = this.value;
+        $('.feature-checkbox').prop('disabled', false);
+        if (target) {
+            $(`.feature-checkbox[value="${target}"]`).prop('disabled', true).prop('checked', false);
+        }
+    });
+
+    // =============================
+    // Model Training
+    // =============================
+    $('#modelTrainingForm').on('submit', function (e) {
+        e.preventDefault();
+        clearStatusMessages();
+
+        const dataset = $('#datasetSelect').val();
+        const target = $('#targetSelect').val();
+        const models = $('input[name="model_types[]"]:checked').map(function () { return this.value; }).get();
+        const features = $('.feature-checkbox:checked').map(function () { return this.value; }).get();
+
+        if (!dataset) { showStatusMessage('Please select a dataset first'); return false; }
+        if (models.length === 0) { showStatusMessage('Please select at least one model'); return false; }
+        if (features.length === 0) { showStatusMessage('Please select at least one feature'); return false; }
+        if (!target) { showStatusMessage('Please select a target variable'); return false; }
+        if (features.includes(target)) { showStatusMessage('Target variable cannot also be a feature'); return false; }
+
+        $('#loadingIndicator').show();
+        const trainBtn = $('#trainButton').prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Training...');
+        const startTime = new Date();
+        showStatusMessage('Training started. This may take several minutes for large datasets...', 'info');
+
+        const postData = {
+            current_table: dataset,
+            target: target,
+            features: features,
+            model_types: models,
+            rf_trees: $('#rfTrees').val() || 100,
+            contamination: $('#contamination').val() || 0.01,
+            csrfmiddlewaretoken: '{{ csrf_token }}'
+        };
+
+        $.ajax({
+            url: '{% url "train_fraud_models" %}',
+            method: 'POST',
+            data: postData,
+            traditional: true,
+            timeout: 600000,
+            success: function (response) {
+                if (response.success && response.redirect_url) {
+                    const endTime = new Date();
+                    const secs = ((endTime - startTime) / 1000).toFixed(2);
+                    let msg = 'Training completed successfully! ';
+                    msg += response.training_time ? 
+                        `Training took ${response.training_time.toFixed(2)} seconds.` : 
+                        `Total time: ${secs} seconds.`;
+                    showStatusMessage(msg, 'success');
+                    
+                    setTimeout(() => { window.location.href = response.redirect_url; }, 1500);
+                } else {
+                    let errorMsg = response.error || 'Training failed with unknown error';
+                    showStatusMessage(errorMsg + '<br><button id="retryTraining" class="btn btn-sm btn-warning mt-2">Retry Training</button>');
+                }
+            },
+            error: function (xhr) {
+                const endTime = new Date();
+                const secs = ((endTime - startTime) / 1000).toFixed(2);
+                let msg = `Server error during training (${secs}s)`;
+                try {
+                    const err = JSON.parse(xhr.responseText);
+                    msg += ` - ${err.error || JSON.stringify(err)}`;
+                } catch {
+                    msg += ` - Status: ${xhr.status} ${xhr.statusText}`;
+                }
+                showStatusMessage(msg + '<br><button id="retryTraining" class="btn btn-sm btn-warning mt-2">Retry Training</button>');
+            },
+            complete: function() {
+                $('#loadingIndicator').hide();
+                trainBtn.prop('disabled', false).html('<i class="fas fa-play me-1"></i> Train Models');
+            }
+        });
+        return false;
+    });
+
+    // Retry button
+    $(document).on('click', '#retryTraining', function () {
+        $('#modelTrainingForm').submit();
+    });
+
+    // =============================
+    // Results Tab Persistence
+    // =============================
+    {% if has_results %}
+    $(document).ready(function() {
+        const lastActiveTab = localStorage.getItem('lastActiveTab');
+        if (lastActiveTab) {
+            const tab = document.getElementById(lastActiveTab);
+            if (tab) {
+                const bsTab = new bootstrap.Tab(tab);
+                bsTab.show();
+            }
+        }
+        
+        $('#modelResultsTabs button').on('click', function() { 
+            localStorage.setItem('lastActiveTab', this.id); 
+        });
+    });
+    {% endif %}
+
+    // Initialize target handling
+    function initializeTargetHandling() {
+        const initialTarget = $('#targetSelect').val();
+        if (initialTarget) {
+            $(`.feature-checkbox[value="${initialTarget}"]`).prop('disabled', true).prop('checked', false);
+        }
+    }
+    initializeTargetHandling();
+});
+</script>
+{% endblock %}

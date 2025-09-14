@@ -1,0 +1,252 @@
+{% extends 'myapp/base.html' %}
+{% load static %}
+{% load custom_filters %}
+{% load humanize %}
+
+{% block title %}Minet Impact Simulation{% endblock %}
+
+{% block content %}
+<div style="width: 100%; margin: 0; padding: 2rem 3rem; padding-top: 30px; background-color: #f8f9fa; min-height: 100vh;">
+  <!-- Header Section -->
+  <div style="text-align: center; margin-bottom: 2.5rem; padding: 2rem; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 75, 135, 0.08);">
+    <h1 style="color: #004b87; font-size: 2.8rem; margin-bottom: 1rem; font-weight: 800; letter-spacing: -0.5px; display: flex; align-items: center; justify-content: center; gap: 1rem;">
+      <span style="color: #e30613;"></span> Claims Intelligence Platform
+    </h1>
+    <p style="color: #666; font-size: 1.2rem; max-width: 800px; margin: 0 auto; line-height: 1.6;">
+      AI-powered predictive analytics for optimized claims management and strategic decision-making
+    </p>
+  </div>
+
+  <!-- Main Content Container -->
+  <div style="background: white; border-radius: 12px; box-shadow: 0 4px 24px rgba(0, 75, 135, 0.1); overflow: hidden;">
+    <!-- Tab Navigation -->
+    <div style="display: flex; overflow-x: auto; gap: 0; margin-bottom: 0; scrollbar-width: none; border-bottom: 1px solid #e0e0e0; background: linear-gradient(to right, #f8f9fa, #f1f3f5);">
+      <a href="{% url 'minet_forecast_volume' %}" 
+         style="flex: 0 0 auto; padding: 1.2rem 2rem; background: {% if request.path == '/minet_forecast_volume/' %}#004b87{% else %}transparent{% endif %}; cursor: pointer; text-decoration: none; color: {% if request.path == '/minet_forecast_volume/' %}white{% else %}#004b87{% endif %}; border-right: 1px solid #e0e0e0; font-weight: 600; transition: all 0.3s ease; display: flex; align-items: center; gap: 0.8rem;">
+        <i class="fas fa-chart-line" style="font-size: 1.1rem;"></i>
+        Forecast Volume
+      </a>
+      
+      <a href="{% url 'minet_confidence_interval' %}" 
+         style="flex: 0 0 auto; padding: 1.2rem 2rem; background: {% if request.path == '/minet_confidence_interval/' %}#004b87{% else %}transparent{% endif %}; cursor: pointer; text-decoration: none; color: {% if request.path == '/minet_confidence_interval/' %}white{% else %}#004b87{% endif %}; border-right: 1px solid #e0e0e0; font-weight: 600; transition: all 0.3s ease; display: flex; align-items: center; gap: 0.8rem;">
+        <i class="fas fa-chart-area" style="font-size: 1.1rem;"></i>
+        Confidence Interval
+      </a>
+      
+      <a href="{% url 'minet_impact_simulation' %}" 
+         style="flex: 0 0 auto; padding: 1.2rem 2rem; background: {% if request.path == '/minet_impact_simulation/' %}#004b87{% else %}transparent{% endif %}; cursor: pointer; text-decoration: none; color: {% if request.path == '/minet_impact_simulation/' %}white{% else %}#004b87{% endif %}; border-right: 1px solid #e0e0e0; font-weight: 600; transition: all 0.3s ease; display: flex; align-items: center; gap: 0.8rem;">
+        <i class="fas fa-cogs" style="font-size: 1.1rem;"></i>
+        Impact Simulation
+      </a>
+      
+      <a href="{% url 'minet_explainability' %}" 
+         style="flex: 0 0 auto; padding: 1.2rem 2rem; background: {% if request.path == '/minet_explainability/' %}#004b87{% else %}transparent{% endif %}; cursor: pointer; text-decoration: none; color: {% if request.path == '/minet_explainability/' %}white{% else %}#004b87{% endif %}; border-right: 1px solid #e0e0e0; font-weight: 600; transition: all 0.3s ease; display: flex; align-items: center; gap: 0.8rem;">
+        <i class="fas fa-lightbulb" style="font-size: 1.1rem;"></i>
+        Explainability
+      </a>
+      
+      <a href="#" style="flex: 0 0 auto; padding: 1.2rem 2rem; background: transparent; cursor: pointer; text-decoration: none; color: #004b87; border-right: 1px solid #e0e0e0; font-weight: 600; transition: all 0.3s ease; display: flex; align-items: center; gap: 0.8rem;">
+        <i class="fas fa-shield-alt" style="font-size: 1.1rem;"></i>
+        Risk Assessment
+      </a>
+    </div>
+
+    <!-- Main Content Area -->
+    <div style="padding: 2.5rem;">
+      <!-- Content Header -->
+      <div style="margin-bottom: 2rem;">
+        <h1 style="color: #004b87; font-size: 1.9rem; margin-bottom: 0.5rem; font-weight: 700; display: flex; align-items: center; gap: 0.8rem;">
+          <i class="fas fa-cogs" style="color: #e30613;"></i>
+          Minet Claim Impact Simulation
+        </h1>
+        <p style="color: #e30613; font-size: 1.15rem; margin: 0; font-weight: 600;">
+          Simulate the financial impact of potential policy changes on Minet claims
+        </p>
+      </div>
+
+      <!-- Two Column Layout -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+        <!-- Left Panel - Inputs -->
+        <div style="background: white; border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); overflow: hidden;">
+          <div style="background-color: #004b87; color: white; padding: 1rem 1.5rem; font-size: 1.25rem; font-weight: 700;">
+            Policy Parameters
+          </div>
+          <div style="padding: 1.5rem;">
+            <form id="simulation-form" autocomplete="off" method="GET" style="margin: 0;">
+              {% csrf_token %}
+              <div style="margin-bottom: 1.5rem;">
+                <label for="copay-change" style="display: block; font-weight: 600; color: #004b87; margin-bottom: 0.5rem;">Co-payment Change (%)</label>
+                <input type="range" id="copay-change" name="copay_change" min="-100" max="100" step="5" 
+                       value="{{ metrics.copay_change|default:0 }}" 
+                       style="width: 100%; height: 8px; border-radius: 10px; background: #fde8ea; -webkit-appearance: none; cursor: pointer;">
+                <div style="text-align: center; font-weight: 700; color: #004b87; margin-top: 0.5rem; font-size: 1.1rem;" id="copay-value">
+                  {{ metrics.copay_change|default:0 }}%
+                </div>
+              </div>
+
+              <div style="margin-bottom: 1.5rem;">
+                <label for="deductible-change" style="display: block; font-weight: 600; color: #004b87; margin-bottom: 0.5rem;">Deductible Change (%)</label>
+                <input type="range" id="deductible-change" name="deductible_change" min="-100" max="100" step="5" 
+                       value="{{ metrics.deductible_change|default:0 }}" 
+                       style="width: 100%; height: 8px; border-radius: 10px; background: #fde8ea; -webkit-appearance: none; cursor: pointer;">
+                <div style="text-align: center; font-weight: 700; color: #004b87; margin-top: 0.5rem; font-size: 1.1rem;" id="deductible-value">
+                  {{ metrics.deductible_change|default:0 }}%
+                </div>
+              </div>
+
+              <div style="margin-bottom: 1.5rem;">
+                <label for="utilization-change" style="display: block; font-weight: 600; color: #004b87; margin-bottom: 0.5rem;">Expected Utilization Change (%)</label>
+                <input type="range" id="utilization-change" name="utilization_change" min="-50" max="50" step="1" 
+                       value="{{ metrics.utilization_change|default:0 }}" 
+                       style="width: 100%; height: 8px; border-radius: 10px; background: #fde8ea; -webkit-appearance: none; cursor: pointer;">
+                <div style="text-align: center; font-weight: 700; color: #004b87; margin-top: 0.5rem; font-size: 1.1rem;" id="utilization-value">
+                  {{ metrics.utilization_change|default:0 }}%
+                </div>
+              </div>
+
+              <button type="submit" style="background: #e30613; color: white; border: none; border-radius: 8px; padding: 12px 25px; font-weight: 700; font-size: 1rem; cursor: pointer; width: 100%; box-shadow: 0 4px 18px rgba(227, 6, 19, 0.3); transition: all 0.3s ease;">
+                <i class="fas fa-calculator"></i> Run Simulation
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Right Panel - Results -->
+        <div style="background: white; border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); overflow: hidden;">
+          <div style="background-color: #004b87; color: white; padding: 1rem 1.5rem; font-size: 1.25rem; font-weight: 700;">
+            Simulation Results
+          </div>
+          <div style="padding: 1.5rem;">
+            {% if error %}
+            <div style="background-color: #f8d7da; color: #842029; padding: 1rem; border-radius: 8px; border: 1px solid #f5c2c7; font-weight: 700; margin-bottom: 1.5rem;">
+              {{ error }}
+            </div>
+            {% else %}
+            <div style="margin-top: 1rem;">
+              <div style="margin-bottom: 1.25rem;">
+                <div style="font-weight: 600; color: #004b87; margin-bottom: 0.5rem; font-size: 1.1rem;">Current Total Claims Cost</div>
+                <div style="font-size: 1.7rem; font-weight: 700; color: #004b87;" id="current-total">
+                  {{ metrics.current_total }}
+                </div>
+              </div>
+
+              <div style="margin-bottom: 1.25rem;">
+                <div style="font-weight: 600; color: #004b87; margin-bottom: 0.5rem; font-size: 1.1rem;">Projected Total Claims Cost</div>
+                <div style="font-size: 1.7rem; font-weight: 700; color: #e30613;" id="projected-total">
+                  {{ metrics.projected_total }}
+                  <span style="background: #fde8ea; color: #004b87; font-weight: 700; border-radius: 8px; padding: 0.25rem 0.7rem; margin-left: 0.5rem; font-size: 1rem;" id="savings-percent">
+                    {{ metrics.savings_percent }}
+                  </span>
+                </div>
+              </div>
+
+              <div style="border-top: 1px solid #e0e0e0; padding-top: 1rem; margin-top: 1rem; color: #004b87;">
+                <h4 style="font-weight: 700; color: #004b87; margin-bottom: 0.8rem; font-size: 1.25rem;">Impact Breakdown</h4>
+                <ul style="list-style-type: none; padding-left: 0;">
+                  <li style="margin-bottom: 0.4rem; font-weight: 600;">Co-payment change: <span id="copay-change-label">{{ metrics.copay_change|default:0 }}%</span></li>
+                  <li style="margin-bottom: 0.4rem; font-weight: 600;">Deductible change: <span id="deductible-change-label">{{ metrics.deductible_change|default:0 }}%</span></li>
+                  <li style="margin-bottom: 0.4rem; font-weight: 600;">Utilization change: <span id="utilization-change-label">{{ metrics.utilization_change|default:0 }}%</span></li>
+                </ul>
+              </div>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Scenario Comparison -->
+      <div style="background: white; border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); margin-top: 2rem; overflow: hidden;">
+        <div style="background-color: #004b87; color: white; padding: 1rem 1.5rem; font-size: 1.25rem; font-weight: 700;">
+          Scenario Comparison
+        </div>
+        <div style="padding: 1.5rem;">
+          <div id="scenario-comparison" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
+            {% for s in metrics.scenarios %}
+            <div style="background: #fde8ea; border: 2px solid #004b87; border-radius: 8px; padding: 15px 20px; text-align: center; transition: all 0.3s ease; cursor: default; {% if forloop.first %}background: #004b87; color: white; font-weight: 700;{% endif %}">
+              <div style="font-size: 1.15rem; margin-bottom: 0.4rem;">{{ s.name }}</div>
+              <div style="font-size: 1.3rem; font-weight: 700; margin-bottom: 0.3rem; color: {% if forloop.first %}white{% else %}#004b87{% endif %};">{{ s.amount }}</div>
+              {% if s.savings != "KES 0.00" %}
+              <div style="font-weight: 600; color: {% if forloop.first %}#fde8ea{% else %}#e30613{% endif %};">Save {{ s.savings }}</div>
+              {% endif %}
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Update slider display values live
+  function bindSlider(id, displayId) {
+    const slider = document.getElementById(id);
+    const display = document.getElementById(displayId);
+    slider.addEventListener("input", () => {
+      display.textContent = slider.value + "%";
+    });
+  }
+  bindSlider("copay-change", "copay-value");
+  bindSlider("deductible-change", "deductible-value");
+  bindSlider("utilization-change", "utilization-value");
+
+  // AJAX form submit for simulation
+  document.getElementById("simulation-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+
+    const copay = document.getElementById("copay-change").value;
+    const deductible = document.getElementById("deductible-change").value;
+    const utilization = document.getElementById("utilization-change").value;
+
+    fetch(
+      "{% url 'minet_impact_simulation' %}?copay_change=" +
+        copay +
+        "&deductible_change=" +
+        deductible +
+        "&utilization_change=" +
+        utilization,
+      {
+        headers: { "X-Requested-With": "XMLHttpRequest" },
+      }
+    )
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.error) {
+          alert(data.error);
+          return;
+        }
+
+        document.getElementById("current-total").textContent = data.current_total;
+
+        const projectedEl = document.getElementById("projected-total");
+        projectedEl.textContent = data.projected_total + " ";
+        const span = document.createElement("span");
+        span.style.background = "#fde8ea";
+        span.style.color = "#004b87";
+        span.style.fontWeight = "700";
+        span.style.borderRadius = "8px";
+        span.style.padding = "0.25rem 0.7rem";
+        span.style.marginLeft = "0.5rem";
+        span.style.fontSize = "1rem";
+        span.textContent = data.savings_percent;
+        projectedEl.appendChild(span);
+
+        document.getElementById("copay-change-label").textContent = data.copay_change + "%";
+        document.getElementById("deductible-change-label").textContent = data.deductible_change + "%";
+        document.getElementById("utilization-change-label").textContent = data.utilization_change + "%";
+
+        let scenarioHTML = "";
+        data.scenarios.forEach((s, idx) => {
+          scenarioHTML += `
+            <div style="background: #fde8ea; border: 2px solid #004b87; border-radius: 8px; padding: 15px 20px; text-align: center; transition: all 0.3s ease; cursor: default; ${idx === 0 ? 'background: #004b87; color: white; font-weight: 700;' : ''}">
+              <div style="font-size: 1.15rem; margin-bottom: 0.4rem;">${s.name}</div>
+              <div style="font-size: 1.3rem; font-weight: 700; margin-bottom: 0.3rem; color: ${idx === 0 ? 'white' : '#004b87'};">${s.amount}</div>
+              ${s.savings !== "KES 0.00" ? `<div style="font-weight: 600; color: ${idx === 0 ? '#fde8ea' : '#e30613'};">Save ${s.savings}</div>` : ''}
+            </div>`;
+        });
+        document.getElementById("scenario-comparison").innerHTML = scenarioHTML;
+      })
+      .catch(console.error);
+  });
+</script>
+{% endblock %}

@@ -3,304 +3,830 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Minet Insurance Dashboard{% endblock %}</title>
-    <link href="https://fonts.googleapis.com/css?family=Roboto:400,700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        :root {
-            --primary: #e30613;
-            --primary-dark: #232323;
-            --primary-light: #f5f5f5;
-            --accent: #e30613;
-            --sidebar-bg: #232323;
-            --sidebar-border: #e3e8ee;
-            --sidebar-shadow: 0 4px 24px rgba(35, 35, 35, 0.08);
-            --card-bg: #fff;
-            --card-shadow: 0 2px 16px rgba(35, 35, 35, 0.08);
-            --text-main: #232323;
-            --text-muted: #888;
-            --text-light: #fff;
-            --border-radius: 14px;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}the Verse{% endblock %}</title>
+  <!-- Favicon -->
+  <link rel="icon" href="{% static 'icons/va_logo.jpg' %}">
 
-        body {
-            margin: 0;
-            font-family: 'Roboto', sans-serif;
-            background: var(--primary-light);
-            min-height: 100vh;
-        }
 
-        .topbar {
-            width: 100%;
-            background: var(--sidebar-bg);
-            color: var(--text-light);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0.7rem 2.5rem;
-            box-shadow: 0 2px 12px rgba(35, 35, 35, 0.10);
-            position: fixed;
-            top: 0;
-            left: 0;
-            z-index: 1000;
-            height: 64px;
-        }
+  <!-- Fonts & Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
-        .topbar .company {
-            font-size: 1.3rem;
-            font-weight: bold;
-            letter-spacing: 1px;
-            display: flex;
-            align-items: center;
-            white-space: nowrap;
-        }
+  <style>
+    :root {
+      /* Minet color scheme */
+      --primary: #E30613; /* Minet red */
+      --primary-dark: #B0000B;
+      --primary-light: #FDEEEF;
+      --accent: #1E3A8A; /* Navy blue */
+      --accent-dark: #0F1F4D;
+      --accent-light: #F0F4FE;
+      --secondary: #3498db; /* Trust blue */
+      --success: #27ae60; /* Green */
+      --warning: #f39c12; /* Orange */
+      --sidebar-bg: #ffffff;
+      --sidebar-hover-bg: #f5f7ff;
+      --sidebar-border: #e2e8f0;
+      --text-main: #1a202c;
+      --text-muted: #4a5568;
+      --text-light: #f8fafc;
+      --border-radius: 10px;
+      --transition-speed: 0.3s;
+      --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      --shadow-accent: rgba(30, 58, 138, 0.15);
+      --card-shadow: 0 6px 20px rgba(0, 0, 0, 0.07);
+      --font-family: 'Poppins', sans-serif;
+    }
 
-        .topbar .company img {
-            height: 48px;
-            border-radius: 12px;
-            background: #fff;
-            box-shadow: 0 2px 12px rgba(35, 35, 35, 0.10);
-            padding: 8px 16px;
-            display: block;
-            margin-right: 14px;
-        }
+    /* Reset & base */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-        .layout {
-            display: flex;
-            margin-top: 64px;
-            min-height: calc(100vh - 64px);
-        }
+    body,
+    html {
+      margin: 0;
+      padding: 0;
+      font-family: var(--font-family);
+      background: linear-gradient(135deg, #f8fbff 0%, #f0f5ff 100%);
+      color: var(--text-main);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      line-height: 1.6;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+    }
 
-        .sidebar {
-            position: fixed;
-            top: 64px;
-            left: 0;
-            width: 270px;
-            height: calc(100vh - 64px);
-            background: var(--sidebar-bg);
-            box-shadow: var(--sidebar-shadow);
-            border-radius: 0 var(--border-radius) var(--border-radius) 0;
-            padding: 0.7rem 0.5rem 1rem 0.2rem;
-            display: flex;
-            flex-direction: column;
-            color: var(--text-light);
-            z-index: 999;
-            justify-content: flex-start;
-            overflow-y: auto;
-        }
+    a {
+      color: inherit;
+      text-decoration: none;
+      transition: all var(--transition-speed) ease;
+    }
 
-        .sidebar .logo {
-            text-align: center;
-            margin-bottom: 2rem;
-        }
+    a:hover,
+    a:focus {
+      color: var(--accent);
+      outline: none;
+    }
 
-        .sidebar .logo img {
-            width: 150px;
-            border-radius: var(--border-radius);
-            background: #fff;
-            box-shadow: 0 2px 16px rgba(35, 35, 35, 0.13);
-            padding: 16px 28px;
-            display: block;
-            margin: 0 auto 12px auto;
-        }
+    /* Topbar - Modern redesign */
+    .topbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 80px;
+      background: linear-gradient(120deg, var(--primary), var(--primary-dark));
+      color: var(--text-light);
+      display: flex;
+      align-items: center;
+      padding: 0 2.5rem;
+      box-shadow: var(--box-shadow);
+      z-index: 1001;
+      transition: all 0.4s ease;
+    }
 
-        .sidebar h3 {
-            color: var(--text-light);
-            margin-bottom: 0.5rem;
-            font-size: 1.1rem;
-            letter-spacing: 0.5px;
-        }
+    .topbar.scrolled {
+      height: 70px;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+    }
 
-        .sidebar .about {
-            font-size: 1rem;
-            color: #e3e8ee;
-            margin-bottom: 2rem;
-        }
+    .topbar .company {
+      display: flex;
+      align-items: center;
+      font-weight: 700;
+      font-size: 1.6rem;
+      letter-spacing: 0.5px;
+      user-select: none;
+      white-space: nowrap;
+    }
 
-        .sidebar .about ul li {
-            color: #fff;
-        }
+    .topbar .company img {
+      height: 46px;
+      width: 46px;
+      object-fit: contain;
+      border-radius: 50%;
+      margin-right: 18px;
+      background: #fff;
+      padding: 6px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
 
-        .sidebar .api-btn {
-            background: var(--accent);
-            color: #fff;
-            border: none;
-            border-radius: 10px;
-            padding: 0.9rem 1.2rem;
-            font-weight: bold;
-            margin-bottom: 2rem;
-            cursor: pointer;
-            font-size: 1.08rem;
-            box-shadow: 0 2px 8px rgba(227, 6, 19, 0.08);
-            transition: background 0.2s, box-shadow 0.2s, transform 0.18s;
-        }
+    .topbar .company span {
+      background: linear-gradient(to right, #fff, #e0e7ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      font-weight: 700;
+    }
 
-        .sidebar .api-btn:hover {
-            background: #b8000b;
-            box-shadow: 0 4px 16px rgba(227, 6, 19, 0.15);
-            transform: scale(1.04);
-        }
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      margin-left: auto;
+      gap: 1.5rem;
+    }
 
-        .sidebar .analysis-mode {
-            margin-bottom: 1.2rem;
-            flex: 1 1 auto;
-            display: flex;
-            flex-direction: column;
-        }
+    .notification-btn, .user-menu {
+      position: relative;
+      cursor: pointer;
+    }
 
-        .sidebar .analysis-mode label {
-            font-weight: bold;
-            color: var(--accent);
-        }
+    .notification-btn i, .user-menu i {
+      font-size: 1.4rem;
+      color: rgba(255, 255, 255, 0.9);
+      transition: all 0.3s ease;
+    }
 
-        .sidebar .mode-list {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-            margin-top: 0.5rem;
-            flex: 1 1 auto;
-            justify-content: flex-start;
-        }
+    .notification-btn:hover i, .user-menu:hover i {
+      color: white;
+      transform: scale(1.1);
+    }
 
-        .sidebar .mode-list li,
-        .sidebar .mode-list li a {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #353535;
-            color: #fff;
-            border-radius: 6px;
-            padding: 0.3rem 0.5rem;
-            font-size: 1.08rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background 0.18s, box-shadow 0.18s, transform 0.13s;
-            box-shadow: 0 2px 8px rgba(35, 35, 35, 0.13);
-            border: none;
-            gap: 0.7rem;
-            letter-spacing: 0.01em;
-            text-decoration: none;
-            min-height: 28px;
-            margin-bottom: 0.7rem;
-            margin-left: 0;
-        }
+    .notification-count {
+      position: absolute;
+      top: -6px;
+      right: -8px;
+      background: var(--accent);
+      color: white;
+      font-size: 0.7rem;
+      font-weight: 700;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
 
-        .sidebar .mode-list li.selected,
-        .sidebar .mode-list li.selected a,
-        .sidebar .mode-list li:hover,
-        .sidebar .mode-list li a:hover {
-            background: var(--accent);
-            box-shadow: 0 4px 16px rgba(227, 6, 19, 0.18);
-            transform: scale(1.03);
-            color: #fff;
-        }
+    /* Layout */
+    .layout {
+      display: flex;
+      padding-top: 80px;
+      min-height: calc(100vh - 80px);
+      flex: 1;
+    }
 
-        .sidebar .mode-list li i,
-        .sidebar .mode-list li a i {
-            font-size: 1.2rem;
-            min-width: 1.5rem;
-        }
+    /* Sidebar - Enhanced design */
+    .sidebar {
+      position: fixed;
+      top: 80px;
+      left: 0;
+      width: 280px;
+      height: calc(100vh - 80px);
+      background-color: var(--sidebar-bg);
+      color: var(--text-main);
+      box-shadow: 3px 0 15px rgba(0, 0, 0, 0.05);
+      padding: 1.8rem 1.2rem 2.5rem 1.2rem;
+      display: flex;
+      flex-direction: column;
+      z-index: 999;
+      overflow-y: auto;
+      scroll-behavior: smooth;
+      border-right: 1px solid var(--sidebar-border);
+      transition: all 0.4s ease;
+    }
 
-        .sidebar .logout {
-            text-align: center;
-            margin-top: auto;
-            margin-bottom: 1rem;
-        }
+    /* Sidebar Logo */
+    .sidebar .logo {
+      text-align: center;
+      margin-bottom: 2rem;
+      padding: 0 1rem;
+      transition: all 0.3s ease;
+    }
 
-        .sidebar .logout-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.7em;
-            background: #353535;
-            color: #fff;
-            border: none;
-            border-radius: 6px;
-            padding: 0.7em 1.5em;
-            font-size: 1.05rem;
-            font-weight: bold;
-            margin-top: 0.5rem;
-            margin-bottom: 0.5rem;
-            cursor: pointer;
-            box-shadow: 0 4px 18px rgba(35, 35, 35, 0.18);
-            transition: background 0.2s, color 0.2s, transform 0.18s, box-shadow 0.2s;
-            min-height: 48px;
-        }
+    .sidebar .logo img {
+      max-width: 200px;
+      border-radius: var(--border-radius);
+      padding: 15px 30px;
+      transition: transform 0.3s ease;
+      background: linear-gradient(135deg, var(--primary-light), white);
+      box-shadow: 0 6px 15px rgba(227, 6, 19, 0.1);
+    }
 
-        .sidebar .logout-btn:hover {
-            background: var(--accent);
-            color: #fff;
-            transform: scale(1.05);
-            box-shadow: 0 8px 24px rgba(227, 6, 19, 0.22);
-        }
+    .sidebar .logo:hover img {
+      transform: scale(1.03);
+    }
 
-        .main {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
-            padding: 3rem 2vw 2rem 2vw;
-            margin-left: 340px;
-            background: linear-gradient(120deg, #f4f7fb 60%, #e3e8ee 100%);
-        }
-    </style>
-    {% block extra_head %}{% endblock %}
+    /* Navigation */
+    .sidebar .mode-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      flex-grow: 1;
+    }
+
+    .sidebar .mode-list li {
+      margin-bottom: 0.6rem;
+      border-radius: var(--border-radius);
+      overflow: hidden;
+      transition: all var(--transition-speed) ease;
+    }
+
+    .sidebar .mode-list li a {
+      display: flex;
+      align-items: center;
+      gap: 1.2rem;
+      padding: 0.9rem 1.4rem;
+      font-weight: 500;
+      font-size: 1.05rem;
+      color: var(--text-main);
+      border-radius: inherit;
+      transition: all var(--transition-speed) ease;
+      user-select: none;
+      cursor: pointer;
+    }
+
+    .sidebar .mode-list li a i {
+      font-size: 1.25rem;
+      width: 26px;
+      text-align: center;
+      color: var(--primary);
+    }
+
+    .sidebar .mode-list li:hover,
+    .sidebar .mode-list li a:hover {
+      background-color: var(--sidebar-hover-bg);
+      transform: translateX(5px);
+    }
+
+    .sidebar .mode-list li.selected,
+    .sidebar .mode-list li.selected a {
+      background: linear-gradient(to right, var(--primary), var(--primary-dark));
+      color: #fff;
+      box-shadow: 0 6px 15px rgba(227, 6, 19, 0.25);
+    }
+
+    .sidebar .mode-list li.selected a i {
+      color: #fff;
+    }
+
+    /* Submenu */
+    .sidebar .has-submenu > a {
+      justify-content: space-between;
+    }
+
+    .sidebar .submenu {
+      list-style: none;
+      margin: 0.6rem 0 0 2.2rem;
+      padding-left: 0;
+      display: none;
+      flex-direction: column;
+      gap: 0.4rem;
+      transition: max-height 0.35s ease;
+    }
+
+    .sidebar .submenu li a {
+      font-weight: 400;
+      font-size: 0.94rem;
+      padding: 0.6rem 1.4rem;
+      color: var(--text-muted);
+      border-radius: 8px;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+
+    .sidebar .submenu li a:hover,
+    .sidebar .submenu li.active a {
+      background-color: var(--accent-light);
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    .sidebar .has-submenu.open > .submenu {
+      display: flex;
+    }
+
+    .sidebar .submenu-arrow {
+      font-size: 0.8rem;
+      transition: transform 0.3s ease;
+      color: var(--text-muted);
+    }
+
+    .sidebar .has-submenu.open > a .submenu-arrow {
+      transform: rotate(180deg);
+      color: var(--accent);
+    }
+
+    /* About Section */
+    .sidebar h3 {
+      font-weight: 600;
+      font-size: 1.15rem;
+      margin: 2rem 0 1rem 0;
+      color: var(--primary);
+      padding-left: 1.2rem;
+      user-select: none;
+      position: relative;
+    }
+
+    .sidebar h3:after {
+      content: '';
+      position: absolute;
+      bottom: -5px;
+      left: 1.2rem;
+      width: 40px;
+      height: 3px;
+      background: var(--accent);
+      border-radius: 2px;
+    }
+
+    .sidebar .about {
+      font-size: 0.94rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin-bottom: 1.8rem;
+      padding: 0 1.2rem;
+      background: var(--primary-light);
+      border-radius: var(--border-radius);
+      padding: 1.2rem;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
+    }
+
+    .sidebar .about ul {
+      list-style: none;
+      padding-left: 0;
+      margin: 1rem 0 0 0;
+    }
+
+    .sidebar .about ul li {
+      margin-bottom: 0.7rem;
+      user-select: none;
+      position: relative;
+      padding-left: 1.8rem;
+      font-weight: 500;
+    }
+
+    .sidebar .about ul li:before {
+      content: "•";
+      color: var(--primary);
+      position: absolute;
+      left: 0;
+      font-size: 1.5rem;
+      line-height: 1;
+    }
+
+    /* API Button */
+    .sidebar .api-btn {
+      background: linear-gradient(to right, var(--primary), var(--primary-dark));
+      border: none;
+      border-radius: var(--border-radius);
+      padding: 1rem 1.8rem;
+      font-weight: 600;
+      font-size: 1.05rem;
+      color: white;
+      cursor: pointer;
+      box-shadow: 0 8px 20px rgba(227, 6, 19, 0.25);
+      transition: all 0.3s ease;
+      margin: 0.5rem 1rem 1.8rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .sidebar .api-btn i {
+      font-size: 1.2rem;
+    }
+
+    .sidebar .api-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 25px rgba(227, 6, 19, 0.3);
+    }
+
+    /* Logout Section */
+    .sidebar .logout {
+      text-align: center;
+      margin-top: auto;
+      margin-bottom: 1.2rem;
+      padding: 0 1.2rem;
+    }
+
+    .sidebar .logout-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.8rem;
+      background: var(--sidebar-hover-bg);
+      color: var(--text-main);
+      border-radius: var(--border-radius);
+      padding: 0.85em 1.8em;
+      font-weight: 500;
+      font-size: 1.05rem;
+      border: 1px solid var(--sidebar-border);
+      cursor: pointer;
+      transition: all 0.25s ease;
+      user-select: none;
+      width: 100%;
+      justify-content: center;
+    }
+
+    .sidebar .logout-btn i {
+      font-size: 1.15rem;
+      color: var(--primary);
+      transition: transform 0.3s ease;
+    }
+
+    .sidebar .logout-btn:hover {
+      background-color: var(--accent-light);
+      color: var(--accent);
+      border-color: var(--accent-light);
+      box-shadow: 0 4px 12px rgba(30, 58, 138, 0.1);
+    }
+
+    .sidebar .logout-btn:hover i {
+      transform: translateX(3px);
+    }
+
+    /* Main Content Area */
+    main.main {
+      margin-left: 280px;
+      flex-grow: 1;
+      padding: 2.8rem 3.5rem;
+      min-height: calc(100vh - 80px);
+      box-sizing: border-box;
+      overflow-x: auto;
+      background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23f0f4fe" opacity="0.2"/><path d="M0 0L100 100M100 0L0 100" stroke="%231e3a8a" stroke-width="0.5" stroke-opacity="0.05"/></svg>');
+      background-size: 400px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Content container for block content */
+    .content-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
+      flex: 1;
+    }
+
+    /* Footer */
+    footer {
+      background: transparent; /* removed gradient background */
+      color: var(--text-light);
+      padding: 1.5rem 3.5rem;
+      margin-left: 280px;
+      text-align: center;
+      font-size: 0.9rem;
+      box-shadow: 0 -4px 12px rgba(221, 219, 219, 0.05);
+      position: relative;
+      z-index: 10;
+    }
+
+    footer p {
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    footer a {
+      color: var(--text-light);
+      text-decoration: underline;
+      transition: all 0.3s ease;
+    }
+
+    footer a:hover {
+      color: white;
+      text-decoration: none;
+    }
+
+    /* Scrollbar styling */
+    .sidebar::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .sidebar::-webkit-scrollbar-track {
+      background: var(--sidebar-bg);
+    }
+
+    .sidebar::-webkit-scrollbar-thumb {
+      background-color: var(--primary);
+      border-radius: 10px;
+    }
+
+    /* Responsive design */
+    @media (max-width: 1200px) {
+      .sidebar {
+        width: 240px;
+        padding: 1.5rem 1rem 2rem 1rem;
+      }
+      
+      main.main {
+        margin-left: 240px;
+        padding: 2.2rem 2.5rem;
+      }
+      
+      footer {
+        margin-left: 240px;
+      }
+    }
+
+    @media (max-width: 992px) {
+      .sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.4s cubic-bezier(0.22, 0.61, 0.36, 1);
+        z-index: 1000;
+        box-shadow: 5px 0 25px rgba(0, 0, 0, 0.1);
+        width: 280px;
+      }
+      
+      .sidebar.open {
+        transform: translateX(0);
+      }
+      
+      main.main {
+        margin-left: 0;
+        padding: 1.8rem;
+      }
+      
+      footer {
+        margin-left: 0;
+      }
+      
+      .topbar {
+        padding: 0 1.8rem;
+      }
+      
+      .menu-toggle {
+        display: block;
+        position: fixed;
+        top: 24px;
+        left: 24px;
+        z-index: 1002;
+        background: linear-gradient(to right, var(--primary), var(--primary-dark));
+        color: white;
+        width: 46px;
+        height: 46px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 6px 15px rgba(227, 6, 19, 0.3);
+        transition: all 0.3s ease;
+      }
+      
+      .menu-toggle:hover {
+        transform: scale(1.05);
+      }
+    }
+    
+    @media (min-width: 993px) {
+      .menu-toggle {
+        display: none;
+      }
+    }
+
+    /* Overlay for mobile menu */
+    .overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 999;
+      display: none;
+      backdrop-filter: blur(3px);
+    }
+    
+    @media (max-width: 992px) {
+      .overlay.active {
+        display: block;
+      }
+    }
+
+
+    /* Sidebar Video Animation */
+  .sidebar-video-container {
+    margin: 2rem 0;
+    padding: 0 1rem;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+    position: relative;
+    max-height: 180px;
+  }
+
+  .sidebar-video {
+    width: 100%;
+    height: auto;
+    border-radius: var(--border-radius);
+    display: block;
+  }
+
+    /* Animation for sidebar items */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .sidebar .mode-list li {
+      animation: fadeIn 0.4s ease forwards;
+      opacity: 0;
+    }
+    
+    .sidebar .mode-list li:nth-child(1) { animation-delay: 0.1s; }
+    .sidebar .mode-list li:nth-child(2) { animation-delay: 0.15s; }
+    .sidebar .mode-list li:nth-child(3) { animation-delay: 0.2s; }
+    .sidebar .mode-list li:nth-child(4) { animation-delay: 0.25s; }
+    .sidebar .mode-list li:nth-child(5) { animation-delay: 0.3s; }
+    .sidebar .mode-list li:nth-child(6) { animation-delay: 0.35s; }
+  </style>
+
+  {% block extra_head %}{% endblock %}
 </head>
 
 <body>
-    <div class="topbar">
-        <div class="company">
-            <img src="{% static 'images/Minet.jpg' %}" alt="Minet Insurance Logo">
-            Minet Insurance 
-        </div>
-    </div>
-    <div class="layout">
-        <aside class="sidebar">
+  <div class="menu-toggle" id="menuToggle">
+    <i class="fas fa-bars"></i>
+  </div>
+  
+  <div class="overlay" id="overlay"></div>
 
-            <div class="analysis-mode">
-                
-                <ul class="mode-list">
-                    <li class="{% if request.path == '/home/' %}selected{% endif %}"><a href="{% url 'home' %}"><i
-                                class="fas fa-chart-bar"></i> Claims upload</a></li>
-                    <li class="{% if request.path == '/claim_prediction/' %}selected{% endif %}"><a
-                            href="{% url 'claim_prediction' %}"><i class="fas fa-cog"></i> advanced analysis</a></li>            
-                    <li class="{% if request.path == '/claim_prediction/' %}selected{% endif %}"><a
-                            href="{% url 'claim_prediction' %}"><i class="fas fa-cog"></i> Claims prediction</a></li>
-                    <li class="{% if request.path == '/fraud_detection/' %}selected{% endif %}"><a
-                            href="{% url 'fraud_detection' %}"><i class="fas fa-shopping-bag"></i> Fraud Detection</a>
-                    </li>
-                    <li class="{% if request.path == '/client_management/' %}selected{% endif %}"><a
-                            href="{% url 'client_management' %}"><i class="fas fa-table"></i> Client Management</a></li>
-                    <li class="{% if request.path == '/reports/' %}selected{% endif %}"><a href="{% url 'reports' %}"><i
-                                class="fas fa-chart-line"></i> Reports</a></li>
-                </ul>
-            </div>
-            <h3 style="margin: 0.7rem 0 0.2rem 0;">About</h3>
-            <div class="about" style="margin-bottom: 0.7rem;">
-                AI-powered claims analytics providing:
-                <ul>
-                    <li>Predictive cost modeling</li>
-                    <li>Fraud pattern detection</li>
-                    <li>Client-specific business intelligence</li>
-                    <li>Scenario simulation engines</li>
-                </ul>
-            </div>
-            <button class="api-btn" style="margin-bottom: 0.7rem;">Launch API Console</button>
-            <div class="logout" style="margin-bottom: 1.5rem;">
-                <form action="{% url 'logout' %}" method="post" style="margin:0;">
-                    {% csrf_token %}
-                    <button type="submit" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
-                </form>
-            </div>
-            <div style="flex:1;"></div>
-        </aside>
-        <main class="main">
-            {% block content %}{% endblock %}
-        </main>
+  <div class="topbar" id="topbar" role="banner">
+    <div class="company" aria-label="Company Logo and Name">
+      <img src="{% static 'images/Minet-Logo.png' %}" alt="Minet Insurance Logo" />
+      <span>Minet Kenya</span>
     </div>
-    {% block extra_body %}{% endblock %}
+    
+    <div class="topbar-actions">
+      <div class="notification-btn">
+        <i class="fas fa-bell"></i>
+        <span class="notification-count">3</span>
+      </div>
+      <div class="user-menu">
+        <i class="fas fa-user-circle"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="layout" role="main">
+    <aside class="sidebar" id="sidebar" role="navigation" aria-label="Primary Sidebar Navigation">
+      <nav aria-label="Main Navigation">
+        <ul class="mode-list">
+          <li class="{% if request.path == '/' %}selected{% endif %}">
+              <a href="{% url 'claims_upload_landing' %}">
+                  <i class="fas fa-home" aria-hidden="true"></i> Home Page
+              </a>
+          </li>
+          <li class="has-submenu {% if '/forecasting/' in request.path or '/ml_claims/' in request.path %}selected open{% endif %}">
+            <a href="javascript:void(0);" class="toggle-submenu" aria-expanded="false" aria-haspopup="true">
+              <i class="fas fa-database"></i> Data Exploration
+              <i class="fas fa-chevron-down submenu-arrow"></i>
+            </a>
+            <ul class="submenu" {% if '/minet-profiling-report/' in request.path or '/ml_claims/' in request.path %}style="display:flex;"{% endif %} role="menu">
+              <li class="{% if request.path == '/minet-profiling-report/' %}active{% endif %}" role="menuitem">
+                <a href="{% url 'minet_profiling_report' %}"><i class="fas fa-chart-line"></i> Data Profiling</a>
+              </li>
+              <li class="{% if request.path == '/claim_prediction/' %}selected{% endif %}">
+                <a href="{% url 'claim_prediction' %}"><i class="fas fa-project-diagram" aria-hidden="true"></i> Advanced Analysis</a>
+              </li>
+            </ul>
+          </li>
+
+
+          <li class="has-submenu {% if '/forecasting/' in request.path or '/ml_claims/' in request.path %}selected open{% endif %}">
+            <a href="javascript:void(0);" class="toggle-submenu" aria-expanded="false" aria-haspopup="true">
+              <i class="fas fa-calculator"></i> Claims Prediction
+              <i class="fas fa-chevron-down submenu-arrow"></i>
+            </a>
+            <ul class="submenu" {% if '/minet-claim-prediction/' in request.path or '/ml_claims/' in request.path %}style="display:flex;"{% endif %} role="menu">
+              <li class="{% if request.path == '/minet_forecast_volume/' %}active{% endif %}" role="menuitem">
+                <a href="{% url 'minet_forecast_volume' %}"><i class="fas fa-chart-line"></i> Forecasting</a>
+              </li>
+              <li class="{% if request.path == '/machine_learning/' %}active{% endif %}" role="menuitem">
+                  <a href="{% url 'machine_learning' %}"><i class="fas fa-robot"></i> Machine Learning</a>
+              </li>
+            </ul>
+          </li>
+
+          <li class="has-submenu {% if '/fraud_rule_based/' in request.path or '/fraud_ml_based/' in request.path %}selected open{% endif %}">
+            <a href="javascript:void(0);" class="toggle-submenu" aria-expanded="false" aria-haspopup="true">
+              <i class="fas fa-shield-alt"></i> Fraud Detection
+              <i class="fas fa-chevron-down submenu-arrow"></i>
+            </a>
+            <ul class="submenu" {% if '/fraud_rule_based/' in request.path or '/fraud_ml_based/' in request.path %}style="display:flex;"{% endif %} role="menu">
+              <li class="{% if request.path == '/fraud_rule_based/' %}active{% endif %}" role="menuitem">
+                <a href="{% url 'fraud_rule_based' %}"><i class="fas fa-list-check"></i> Rule Based</a>
+              </li>
+              <li class="{% if request.path == '/fraud-detection/ml-dashboard/' %}active{% endif %}" role="menuitem">
+                  <a href="{% url 'fraud_ml_dashboard' %}"><i class="fas fa-robot"></i> Machine Learning</a>
+              </li>
+            </ul>
+          </li>
+
+          <li class="{% if request.path == '/client_management/' %}selected{% endif %}">
+            <a href="{% url 'client_management' %}"><i class="fas fa-users-cog"></i> Client Management</a>
+          </li>
+          <li class="{% if request.path == '/reports/' %}selected{% endif %}">
+            <a href="{% url 'reports' %}"><i class="fas fa-file-contract"></i> Reports</a>
+          </li>
+        </ul>
+      </nav>
+
+
+      <!-- Video Animation -->
+    <div class="sidebar-video-container">
+      <video autoplay muted loop playsinline class="sidebar-video">
+        <source src="{% static 'images/animation.mp4' %}" type="video/mp4">
+        Your browser does not support the video tag.
+      </video>
+    </div>
+
+      
+
+      <div class="logout">
+        <form action="{% url 'logout' %}" method="post" style="margin:0;">
+          {% csrf_token %}
+          <button type="submit" class="logout-btn" aria-label="Logout">
+            <i class="fas fa-sign-out-alt" aria-hidden="true"></i> Logout
+          </button>
+        </form>
+      </div>
+    </aside>
+
+    <main class="main" role="main">
+      <div class="content-container">
+        {% block content %}{% endblock %}
+      </div>
+    </main>
+  </div>
+
+  <footer>
+    <p>
+      &copy; {% now "Y" %} Powered by virtual analytics. All rights reserved. 
+      <a href="#">Privacy Policy</a> | 
+      <a href="#">Terms of Service</a>
+    </p>
+  </footer>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Mobile menu toggle
+      const menuToggle = document.getElementById('menuToggle');
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('overlay');
+      
+      menuToggle.addEventListener('click', () => {
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('active');
+        document.body.classList.toggle('no-scroll');
+      });
+      
+      overlay.addEventListener('click', () => {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('active');
+        document.body.classList.remove('no-scroll');
+      });
+      
+      // Submenu toggle
+      document.querySelectorAll('.toggle-submenu').forEach(toggle => {
+        toggle.addEventListener('click', e => {
+          e.preventDefault();
+          const parentLi = toggle.parentElement;
+          parentLi.classList.toggle('open');
+          toggle.setAttribute(
+            'aria-expanded',
+            parentLi.classList.contains('open') ? 'true' : 'false'
+          );
+        });
+      });
+
+      // Open submenu for selected menu on page load
+      document.querySelectorAll('.has-submenu.selected').forEach(li => {
+        li.classList.add('open');
+        li.querySelector('.toggle-submenu').setAttribute('aria-expanded', 'true');
+      });
+      
+      // Add animations on load
+      setTimeout(() => {
+        document.querySelectorAll('.mode-list li').forEach(li => {
+          li.style.opacity = '1';
+        });
+      }, 300);
+      
+      // Topbar scroll effect
+      const topbar = document.getElementById('topbar');
+      window.addEventListener('scroll', () => {
+        if (window.scrollY > 20) {
+          topbar.classList.add('scrolled');
+        } else {
+          topbar.classList.remove('scrolled');
+        }
+      });
+    });
+  </script>
+
+  {% block extra_js %}{% endblock %}
+  {% block extra_body %}{% endblock %}
 </body>
 
 </html>

@@ -1,0 +1,1915 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+{% block title %}the Verse{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* Enhanced CSS styles */
+    :root {
+        --primary: #1e3a8a;
+        --secondary: #e30613;
+        --accent: #0f1f4d;
+        --light: #f8fafc;
+        --dark: #1e293b;
+        --success: #10b981;
+        --warning: #f59e0b;
+        --danger: #ef4444;
+        --gray: #64748b;
+        --light-gray: #e2e8f0;
+    }
+    
+    .content-container {
+        max-width: 1800px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+    
+    .temporal-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-radius: 20px;
+        box-shadow: 0 12px 48px rgba(0, 0, 0, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        padding: 2.5rem;
+        transition: all 0.3s ease;
+    }
+    
+    .dashboard-header {
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-radius: 16px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .tabs-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+        border-bottom: 2px solid var(--light-gray);
+        margin-bottom: 2.5rem;
+        padding-bottom: 0.5rem;
+    }
+    
+    .tab-link {
+        font-size: 1rem;
+        padding: 0.8rem 1.5rem;
+        cursor: pointer;
+        border: none;
+        background: none;
+        font-weight: 500;
+        color: var(--gray);
+        border-bottom: 3px solid transparent;
+        border-radius: 8px 8px 0 0;
+        transition: all 0.25s ease;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .tab-link:hover {
+        background: rgba(30, 58, 138, 0.05);
+        color: var(--primary);
+    }
+    
+    .tab-link.active {
+        font-weight: 700;
+        color: var(--secondary);
+        border-bottom: 3px solid var(--secondary);
+        background: rgba(227, 6, 19, 0.05);
+    }
+    
+    .dataset-form {
+        margin-bottom: 2.5rem;
+        padding: 2rem;
+        background: linear-gradient(135deg, rgba(240, 244, 254, 0.7), rgba(240, 244, 254, 0.4));
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.6);
+    }
+    
+    .form-row {
+        display: flex;
+        gap: 2rem;
+        align-items: center;
+        flex-wrap: wrap;
+        justify-content: space-between;
+    }
+    
+    .dataset-selector {
+        display: flex;
+        gap: 1.5rem;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    
+    .form-label {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--primary);
+        white-space: nowrap;
+    }
+    
+    .form-select {
+        font-size: 1rem;
+        padding: 0.9em 1.2em;
+        border-radius: 12px;
+        border: 1px solid var(--light-gray);
+        background: white;
+        min-width: 300px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        transition: all 0.2s ease;
+    }
+    
+    .form-select:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+    }
+    
+    .submit-btn {
+        background: linear-gradient(135deg, var(--secondary), #b0000b);
+        color: #fff;
+        border: none;
+        border-radius: 12px;
+        padding: 0.9em 2.2em;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 4px 15px rgba(227, 6, 19, 0.25);
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        transition: all 0.2s ease;
+    }
+    
+    .submit-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(227, 6, 19, 0.35);
+    }
+    
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        padding-bottom: 1.2rem;
+        border-bottom: 2px solid rgba(227, 6, 19, 0.15);
+    }
+    
+    .page-title {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+    }
+    
+    .filter-container {
+        display: flex;
+        gap: 1.5rem;
+        align-items: flex-end;
+        flex-wrap: wrap;
+    }
+    
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .filter-label {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--dark);
+    }
+    
+    .filter-input {
+        padding: 0.7em 1em;
+        border-radius: 8px;
+        border: 1px solid var(--light-gray);
+        background: white;
+        min-width: 150px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+    }
+    
+    .filter-actions {
+        display: flex;
+        gap: 0.8rem;
+        align-items: center;
+    }
+    
+    .filter-btn {
+        background: linear-gradient(135deg, var(--primary), var(--accent));
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 0.7em 1.5em;
+        font-weight: 500;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.2s ease;
+    }
+    
+    .filter-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(30, 58, 138, 0.25);
+    }
+    
+    .reset-btn {
+        background: white;
+        color: var(--gray);
+        border: 1px solid var(--light-gray);
+        border-radius: 8px;
+        padding: 0.7em 1.5em;
+        font-weight: 500;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.2s ease;
+    }
+    
+    .reset-btn:hover {
+        background: #f8fafc;
+        color: var(--dark);
+    }
+    
+    .analysis-type-selector {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        padding: 1rem;
+        background: #f8fafc;
+        border-radius: 12px;
+        border: 1px solid var(--light-gray);
+    }
+    
+    .analysis-type-btn {
+        padding: 0.7em 1.5em;
+        border: 2px solid transparent;
+        border-radius: 8px;
+        background: white;
+        color: var(--gray);
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .analysis-type-btn.active {
+        background: var(--primary);
+        color: white;
+        border-color: var(--accent);
+    }
+    
+    .focus-area-selector {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.8rem;
+        margin-bottom: 2rem;
+        padding: 1rem;
+        background: #f1f5f9;
+        border-radius: 12px;
+    }
+    
+    .focus-area-btn {
+        padding: 0.6em 1.2em;
+        border: 2px solid transparent;
+        border-radius: 8px;
+        background: white;
+        color: var(--gray);
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .focus-area-btn.active {
+        background: var(--secondary);
+        color: white;
+        border-color: #b0000b;
+    }
+    
+    .viz-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 2rem;
+        margin-top: 1.5rem;
+    }
+    
+    .viz-card {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+        overflow: hidden;
+        transition: all 0.3s ease;
+        border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+    
+    .viz-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.1);
+    }
+    
+    .viz-card-header {
+        padding: 1.2rem 1.5rem;
+        background: linear-gradient(135deg, var(--primary), var(--accent));
+        color: white;
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        font-weight: 600;
+    }
+    
+    .viz-card-content {
+        padding: 1.5rem;
+        min-height: 400px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    
+    .full-width {
+        grid-column: 1 / -1;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        display: flex;
+        flex-direction: column;
+        gap: 0.8rem;
+        border-left: 4px solid var(--primary);
+    }
+    
+    .stat-card.warning {
+        border-left-color: var(--warning);
+    }
+    
+    .stat-card.danger {
+        border-left-color: var(--danger);
+    }
+    
+    .stat-card.success {
+        border-left-color: var(--success);
+    }
+    
+    .stat-title {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--gray);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .stat-value {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: var(--dark);
+    }
+    
+    .stat-change {
+        font-size: 0.85rem;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+    }
+    
+    .positive {
+        color: var(--success);
+    }
+    
+    .negative {
+        color: var(--danger);
+    }
+    
+    .no-data-placeholder {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 3rem 2rem;
+        text-align: center;
+        background: #f8fafc;
+        border-radius: 12px;
+        border: 2px dashed var(--light-gray);
+    }
+    
+    .no-data-icon {
+        font-size: 3rem;
+        color: var(--light-gray);
+        margin-bottom: 1rem;
+    }
+    
+    .no-data-text {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--gray);
+        margin-bottom: 0.5rem;
+    }
+    
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        font-size: 0.95rem;
+    }
+    
+    .data-table th {
+        background: linear-gradient(135deg, var(--primary), var(--accent));
+        color: #fff;
+        font-weight: 600;
+        padding: 1rem 1.2rem;
+        text-align: left;
+        border-bottom: 2px solid rgba(255, 255, 255, 0.15);
+        position: sticky;
+        top: 0;
+        z-index: 2;
+    }
+    
+    .data-table td {
+        padding: 0.9rem 1.2rem;
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        color: var(--dark);
+        vertical-align: middle;
+    }
+    
+    .data-table tr:nth-child(even) {
+        background-color: #f8fafc;
+    }
+    
+    .data-table tr:hover {
+        background-color: #f1f5f9;
+    }
+    
+    .trend-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        font-weight: 500;
+    }
+    
+    .insights-panel {
+        background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        border-left: 4px solid var(--primary);
+    }
+    
+    .insights-header {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        margin-bottom: 1rem;
+        color: var(--primary);
+        font-weight: 600;
+    }
+    
+    .insights-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+    }
+    
+    .insight-card {
+        background: white;
+        padding: 1rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+    
+    .insight-title {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--gray);
+        margin-bottom: 0.5rem;
+    }
+    
+    .insight-value {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: var(--dark);
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 1200px) {
+        .viz-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .insights-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .content-container {
+            padding: 1rem;
+        }
+        
+        .temporal-card {
+            padding: 1.5rem;
+        }
+        
+        .form-row, .filter-container {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        
+        .dataset-selector {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .analysis-type-selector, .focus-area-selector {
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-container">
+    <!-- Header Section -->
+    <div class="dashboard-header">
+        <h1 style="font-size: 2.2rem; font-weight: 700; color: #1e3a8a; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.8rem;">
+            <i style="color: #e30613; font-size: 1.5rem;" class="fas fa-chart-line"></i>
+            Advanced Temporal Analysis
+        </h1>
+        <p style="color: #64748b; margin: 0; font-size: 1.1rem;">
+            Analyze claims patterns, trends, and seasonality over time with advanced filtering capabilities
+        </p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs-container">
+        <!-- Claim Distribution -->
+        <a href="{% url 'claim_prediction' %}" class="tab-link">
+            <i class="fas fa-chart-pie"></i>
+            Claim Distribution
+        </a>
+
+        <!-- Temporal Analysis -->
+        <a href="{% url 'temporal_analysis' %}" class="tab-link active">
+            <i class="fas fa-chart-line"></i>
+            Temporal Analysis
+        </a>
+
+        <!-- Provider Efficiency -->
+        <a href="{% url 'provider_efficiency' %}" class="tab-link">
+            <i class="fas fa-hospital-user"></i>
+            Provider Efficiency
+        </a>
+
+        <!-- Diagnostic Patterns -->
+        <a href="{% url 'diagnostic-patterns1' %}" class="tab-link">
+            <i class="fas fa-stethoscope"></i>
+            Diagnostic Patterns
+        </a>
+    </div>
+
+    <div class="temporal-card">
+        <!-- Dataset Selection Form -->
+        <form method="get" id="dataset-form" class="dataset-form">
+            <div class="form-row">
+                <div class="dataset-selector">
+                    <span class="form-label">
+                        <i class="fas fa-database"></i>
+                        Select Dataset:
+                    </span>
+                    <select name="dataset_id" id="dataset_id" class="form-select" required>
+                        <option value="">-- Select a dataset --</option>
+                        {% for ds in dataset_ids %}
+                            <option value="{{ ds }}" {% if selected_id == ds %}selected{% endif %}>{{ ds }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="analysis_type" class="filter-label">Analysis Type:</label>
+                    <select name="analysis_type" id="analysis_type" class="filter-input">
+                        <option value="basic" {% if analysis_type == 'basic' %}selected{% endif %}>Basic Analysis</option>
+                        <option value="comprehensive" {% if analysis_type == 'comprehensive' %}selected{% endif %}>Comprehensive Analysis</option>
+                        <option value="advanced" {% if analysis_type == 'advanced' %}selected{% endif %}>Advanced Analysis</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="submit-btn">
+                    <i class="fas fa-cogs"></i> Process Data
+                </button>
+            </div>
+        </form>
+        
+        <div class="page-header">
+    
+            
+            <div class="filter-container">
+                <div class="filter-group">
+                    <label for="startDate" class="filter-label">Start Date</label>
+                    <input type="date" id="startDate" class="filter-input" value="{{ start_date|default:'' }}">
+                </div>
+                <div class="filter-group">
+                    <label for="endDate" class="filter-label">End Date</label>
+                    <input type="date" id="endDate" class="filter-input" value="{{ end_date|default:'' }}">
+                </div>
+                <div class="filter-group">
+                    <label for="timeUnit" class="filter-label">Time Unit</label>
+                    <select id="timeUnit" class="filter-input">
+                        <option value="D" {% if time_unit == 'D' %}selected{% endif %}>Daily</option>
+                        <option value="W" {% if time_unit == 'W' %}selected{% endif %}>Weekly</option>
+                        <option value="M" {% if time_unit == 'M' or not time_unit %}selected{% endif %}>Monthly</option>
+                        <option value="Q" {% if time_unit == 'Q' %}selected{% endif %}>Quarterly</option>
+                        <option value="Y" {% if time_unit == 'Y' %}selected{% endif %}>Yearly</option>
+                    </select>
+                </div>
+                <div class="filter-actions">
+                    <button id="applyDateFilter" class="filter-btn">
+                        <i class="fas fa-filter"></i> Apply Filters
+                    </button>
+                    <button id="resetDateFilter" class="reset-btn">
+                        <i class="fas fa-sync"></i> Reset
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        {% if error %}
+        <div class="no-data-placeholder" style="margin-top: 2rem; background: #fef2f2; border-color: #fecaca;">
+            <i class="fas fa-exclamation-triangle no-data-icon" style="color: #ef4444;"></i>
+            <h3 class="no-data-text">Processing Error</h3>
+            <p style="color: #ef4444; max-width: 600px; margin: 0 auto; font-weight: 500;">{{ error }}</p>
+        </div>
+        
+        {% elif summary_stats and visualizations %}
+        
+        <!-- Focus Area Selector -->
+        <div class="focus-area-selector">
+            <button type="button" class="focus-area-btn {% if focus_area == 'overview' or not focus_area %}active{% endif %}" data-focus="overview">
+                <i class="fas fa-globe"></i> Overview
+            </button>
+            <button type="button" class="focus-area-btn {% if focus_area == 'seasonality' %}active{% endif %}" data-focus="seasonality">
+                <i class="fas fa-calendar-alt"></i> Seasonality
+            </button>
+            <button type="button" class="focus-area-btn {% if focus_area == 'trends' %}active{% endif %}" data-focus="trends">
+                <i class="fas fa-chart-line"></i> Trends
+            </button>
+            <button type="button" class="focus-area-btn {% if focus_area == 'categories' %}active{% endif %}" data-focus="categories">
+                <i class="fas fa-tags"></i> Categories
+            </button>
+            <button type="button" class="focus-area-btn {% if focus_area == 'members' %}active{% endif %}" data-focus="members">
+                <i class="fas fa-users"></i> Members
+            </button>
+            <button type="button" class="focus-area-btn {% if focus_area == 'providers' %}active{% endif %}" data-focus="providers">
+                <i class="fas fa-hospital"></i> Providers
+            </button>
+            <button type="button" class="focus-area-btn {% if focus_area == 'advanced' %}active{% endif %}" data-focus="advanced">
+                <i class="fas fa-project-diagram"></i> Advanced
+            </button>
+            <button type="button" class="focus-area-btn {% if focus_area == 'statistics' %}active{% endif %}" data-focus="statistics">
+                <i class="fas fa-calculator"></i> Statistics
+            </button>
+            <button type="button" class="focus-area-btn {% if focus_area == 'all' %}active{% endif %}" data-focus="all">
+                <i class="fas fa-layer-group"></i> All Views
+            </button>
+        </div>
+        
+        <!-- Temporal Insights Panel -->
+        {% if temporal_insights %}
+        <div class="insights-panel">
+            <div class="insights-header">
+                <i class="fas fa-lightbulb"></i>
+                <h3>Temporal Insights & Patterns</h3>
+            </div>
+            <div class="insights-grid">
+                <div class="insight-card">
+                    <div class="insight-title">Trend Direction</div>
+                    <div class="insight-value" style="color: {% if temporal_insights.trend_direction_amount == 'upward' %}#ef4444{% elif temporal_insights.trend_direction_amount == 'downward' %}#10b981{% else %}#64748b{% endif %};">
+                        {{ temporal_insights.trend_direction_amount|title }}
+                    </div>
+                </div>
+                
+                <div class="insight-card">
+                    <div class="insight-title">Claims Volatility</div>
+                    <div class="insight-value">
+                        {{ temporal_insights.claims_volatility|floatformat:2 }}%
+                    </div>
+                </div>
+                
+                <div class="insight-card">
+                    <div class="insight-title">Amount Volatility</div>
+                    <div class="insight-value">
+                        {{ temporal_insights.amount_volatility|floatformat:2 }}%
+                    </div>
+                </div>
+                
+                {% if temporal_insights.peak_claims.date %}
+                <div class="insight-card">
+                    <div class="insight-title">Peak Claims Day</div>
+                    <div class="insight-value">
+                        {{ temporal_insights.peak_claims.date|date:"M d, Y" }}
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if temporal_insights.is_stationary is not None %}
+                <div class="insight-card">
+                    <div class="insight-title">Data Stationarity</div>
+                    <div class="insight-value" style="color: {% if temporal_insights.is_stationary %}#10b981{% else %}#ef4444{% endif %};">
+                        {% if temporal_insights.is_stationary %}Stationary{% else %}Non-Stationary{% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Summary Statistics -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-title">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                    Total Claims
+                </div>
+                <div class="stat-value">{{ summary_stats.total_claims|intcomma }}</div>
+                <div class="stat-change {% if summary_stats.claims_change >= 0 %}positive{% else %}negative{% endif %}">
+                    <i class="fas {% if summary_stats.claims_change >= 0 %}fa-arrow-up{% else %}fa-arrow-down{% endif %}"></i>
+                    {{ summary_stats.claims_change|floatformat:1 }}% from previous period
+                </div>
+            </div>
+            
+            <div class="stat-card success">
+                <div class="stat-title">
+                    <i class="fas fa-money-bill-wave"></i>
+                    Total Amount
+                </div>
+                <div class="stat-value">KES {{ summary_stats.total_amount|floatformat:0|intcomma }}</div>
+                <div class="stat-change {% if summary_stats.amount_change >= 0 %}positive{% else %}negative{% endif %}">
+                    <i class="fas {% if summary_stats.amount_change >= 0 %}fa-arrow-up{% else %}fa-arrow-down{% endif %}"></i>
+                    {{ summary_stats.amount_change|floatformat:1 }}% from previous period
+                </div>
+            </div>
+            
+            <div class="stat-card warning">
+                <div class="stat-title">
+                    <i class="fas fa-user-friends"></i>
+                    Unique Members
+                </div>
+                <div class="stat-value">{{ summary_stats.unique_members|intcomma }}</div>
+                <div class="stat-change">
+                    <i class="fas fa-info-circle"></i>
+                    {{ summary_stats.claims_per_day|floatformat:1 }}/day
+                </div>
+            </div>
+            
+            <div class="stat-card danger">
+                <div class="stat-title">
+                    <i class="fas fa-money-check-alt"></i>
+                    Average Claim
+                </div>
+                <div class="stat-value">KES {{ summary_stats.avg_claim|floatformat:0|intcomma }}</div>
+                <div class="stat-change">
+                    <i class="fas fa-info-circle"></i>
+                    {{ summary_stats.amount_per_day|floatformat:0 }}/day
+                </div>
+            </div>
+        </div>
+
+        
+        <div class="viz-grid">
+            <!-- Claims Over Time -->
+            {% if visualizations.time_series_combo and focus_area in 'overview,all' %}
+            <div class="viz-card full-width">
+                <div class="viz-card-header">
+                    <i class="fas fa-calendar-alt"></i>
+                      ({{ time_unit }})
+                      Claims $ Amount Trend over Time
+                </div>
+                <div class="viz-card-content">
+                    <div id="timeSeriesCombo">{{ visualizations.time_series_combo|safe }}</div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Amount Over Time 
+            {% if visualizations.amount_trend and focus_area in 'overview,all' %}
+            <div class="viz-card">
+                <div class="viz-card-header">
+                    <i class="fas fa-money-bill-trend-up"></i>
+                      ({{ time_unit }})
+                </div>
+                <div class="viz-card-content">
+                    <div id="amountTrend">{{ visualizations.amount_trend|safe }}</div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!- Count Over Time 
+            {% if visualizations.count_trend and focus_area in 'overview,all' %}
+            <div class="viz-card">
+                <div class="viz-card-header">
+                    <i class="fas fa-chart-bar"></i>
+                      ({{ time_unit }})
+                </div>
+                <div class="viz-card-content">
+                    <div id="countTrend">{{ visualizations.count_trend|safe }}</div>
+                </div>
+            </div>
+            {% endif %} -->
+            
+            <!-- Seasonality Analysis -->
+            {% if visualizations.seasonality_patterns and focus_area in 'seasonality,all' %}
+            <div class="viz-card">
+                <div class="viz-card-header">
+                    <i class="fas fa-calendar-day"></i>
+                    
+                </div>
+                <div class="viz-card-content">
+                    <div id="seasonalityPatterns">{{ visualizations.seasonality_patterns|safe }}</div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Year-over-Year Comparison -->
+            {% if visualizations.yearly_comparison and focus_area in 'seasonality,all' %}
+            <div class="viz-card">
+                <div class="viz-card-header">
+                    <i class="fas fa-calendar-check"></i>
+                    
+                </div>
+                <div class="viz-card-content">
+                    <div id="yearlyComparison">{{ visualizations.yearly_comparison|safe }}</div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Year-Month Heatmap -->
+            {% if visualizations.year_month_heatmap and focus_area in 'seasonality,all' %}
+            <div class="viz-card">
+                <div class="viz-card-header">
+                    <i class="fas fa-th"></i>
+                
+                </div>
+                <div class="viz-card-content">
+                    <div id="yearMonthHeatmap">{{ visualizations.year_month_heatmap|safe }}</div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Moving Average -->
+            {% if visualizations.moving_averages and focus_area in 'trends,all' %}
+            <div class="viz-card">
+                <div class="viz-card-header">
+                    <i class="fas fa-chart-area"></i>
+                    
+                </div>
+                <div class="viz-card-content">
+                    <div id="movingAverages">{{ visualizations.moving_averages|safe }}</div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Exponential Smoothing -->
+            {% if visualizations.exponential_smoothing and focus_area in 'trends,all' %}
+            <div class="viz-card">
+                <div class="viz-card-header">
+                    <i class="fas fa-wave-square"></i>
+                    
+                </div>
+                <div class="viz-card-content">
+                    <div id="exponentialSmoothing">{{ visualizations.exponential_smoothing|safe }}</div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Growth Rate -->
+            {% if visualizations.growth_rate and focus_area in 'trends,all' %}
+            <div class="viz-card">
+                <div class="viz-card-header">
+                    <i class="fas fa-arrow-trend-up"></i>
+                   
+                </div>
+                <div class="viz-card-content">
+                    <div id="growthRate">{{ visualizations.growth_rate|safe }}</div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Category Analysis -->
+            {% if visualizations.category_analysis and focus_area in 'categories,all' %}
+            <div class="viz-card">
+                <div class="viz-card-header">
+                    <i class="fas fa-tags"></i>
+                    
+                </div>
+                <div class="viz-card-content">
+                    <div id="categoryAnalysis">{{ visualizations.category_analysis|safe }}</div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Category Trends -->
+            {% if visualizations.category_trends and focus_area in 'categories,all' %}
+            <div class="viz-card">
+                <div class="viz-card-header">
+                    <i class="fas fa-chart-line"></i>
+                   
+                </div>
+                <div class="viz-card-content">
+                    <div id="categoryTrends">{{ visualizations.category_trends|safe }}</div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Category Hierarchy -->
+            {% if visualizations.category_hierarchy and focus_area in 'categories,all' %}
+            <div class="viz-card">
+                <div class="viz-card-header">
+                    <i class="fas fa-sitemap"></i>
+                    
+                </div>
+                <div class="viz-card-content">
+                    <div id="categoryHierarchy">{{ visualizations.category_hierarchy|safe }}</div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Top Claimants -->
+            {% if visualizations.top_claimants and focus_area in 'members,all' %}
+            <div class="viz-card">
+                <div class="viz-card-header">
+                    <i class="fas fa-user-tie"></i>
+                    
+                </div>
+                <div class="viz-card-content">
+                    <div id="topClaimants">{{ visualizations.top_claimants|safe }}</div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Claim Frequency -->
+            {% if visualizations.claim_frequency and focus_area in 'members,all' %}
+            <div class="viz-card">
+                <div class="viz-card-header">
+                    <i class="fas fa-wave-square"></i>
+                    
+                </div>
+                <div class="viz-card-content">
+                    <div id="claimFrequency">{{ visualizations.claim_frequency|safe }}</div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Member Tenure -->
+            {% if visualizations.member_tenure and focus_area in 'members,all' %}
+            <div class="viz-card">
+                <div class="viz-card-header">
+                    <i class="fas fa-user-clock"></i>
+                    
+                </div>
+                <div class="viz-card-content">
+                    <div id="memberTenure">{{ visualizations.member_tenure|safe }}</div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Top Providers -->
+            {% if visualizations.top_providers and focus_area in 'providers,all' %}
+            <div class="viz-card">
+                <div class="viz-card-header">
+                    <i class="fas fa-hospital-user"></i>
+                    
+                </div>
+                <div class="viz-card-content">
+                    <div id="topProviders">{{ visualizations.top_providers|safe }}</div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Provider Efficiency -->
+            {% if visualizations.provider_efficiency and focus_area in 'providers,all' %}
+            <div class="viz-card">
+                <div class="viz-card-header">
+                    <i class="fas fa-tachometer-alt"></i>
+                   
+                </div>
+                <div class="viz-card-content">
+                    <div id="providerEfficiency">{{ visualizations.provider_efficiency|safe }}</div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Time Series Decomposition -->
+            {% if visualizations.time_decomposition and focus_area in 'advanced,all' %}
+            <div class="viz-card full-width">
+                <div class="viz-card-header">
+                    <i class="fas fa-project-diagram"></i>
+                    
+                </div>
+                <div class="viz-card-content">
+                    <div id="timeDecomposition">{{ visualizations.time_decomposition|safe }}</div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Autocorrelation -->
+            {% if visualizations.autocorrelation and focus_area in 'advanced,all' %}
+            <div class="viz-card full-width">
+                <div class="viz-card-header">
+                    <i class="fas fa-wave-square"></i>
+                    
+                </div>
+                <div class="viz-card-content">
+                    <div id="autocorrelation">{{ visualizations.autocorrelation|safe }}</div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Amount Distribution -->
+            {% if visualizations.amount_distribution and focus_area in 'advanced,all' %}
+            <div class="viz-card">
+                <div class="viz-card-header">
+                    <i class="fas fa-chart-bar"></i>
+                   
+                </div>
+                <div class="viz-card-content">
+                    <div id="amountDistribution">{{ visualizations.amount_distribution|safe }}</div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Cumulative Analysis -->
+            {% if visualizations.cumulative_analysis and focus_area in 'advanced,all' %}
+            <div class="viz-card">
+                <div class="viz-card-header">
+                    <i class="fas fa-chart-line"></i>
+                    
+                </div>
+                <div class="viz-card-content">
+                    <div id="cumulativeAnalysis">{{ visualizations.cumulative_analysis|safe }}</div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Yearly Boxplot -->
+            {% if visualizations.yearly_boxplot and focus_area in 'statistics,all' %}
+            <div class="viz-card">
+                <div class="viz-card-header">
+                    <i class="fas fa-chart-box"></i>
+                    
+                </div>
+                <div class="viz-card-content">
+                    <div id="yearlyBoxplot">{{ visualizations.yearly_boxplot|safe }}</div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Monthly Boxplot -->
+            {% if visualizations.monthly_boxplot and focus_area in 'statistics,all' %}
+            <div class="viz-card">
+                <div class="viz-card-header">
+                    <i class="fas fa-chart-box"></i>
+                    
+                </div>
+                <div class="viz-card-content">
+                    <div id="monthlyBoxplot">{{ visualizations.monthly_boxplot|safe }}</div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Yearly Violin -->
+            {% if visualizations.yearly_violin and focus_area in 'statistics,all' %}
+            <div class="viz-card">
+                <div class="viz-card-header">
+                    <i class="fas fa-violin"></i>
+                   
+                </div>
+                <div class="viz-card-content">
+                    <div id="yearlyViolin">{{ visualizations.yearly_violin|safe }}</div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- QQ Plot -->
+            {% if visualizations.qq_plot and focus_area in 'statistics,all' %}
+            <div class="viz-card">
+                <div class="viz-card-header">
+                    <i class="fas fa-chart-scatter"></i>
+                    
+                </div>
+                <div class="viz-card-content">
+                    <div id="qqPlot">{{ visualizations.qq_plot|safe }}</div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Top Claimants Table -->
+            {% if visualizations.top_claimants_table and focus_area in 'members,all' %}
+            <div class="viz-card full-width">
+                <div class="viz-card-header">
+                    <i class="fas fa-table"></i>
+                    
+                </div>
+                <div class="viz-card-content">
+                    <div style="overflow: auto; max-height: 400px;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Member ID</th>
+                                    <th>Total Amount (KES)</th>
+                                    <th>Claim Count</th>
+                                    <th>Average Claim (KES)</th>
+                                    <th>First Claim</th>
+                                    <th>Last Claim</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for claimant in visualizations.top_claimants_table %}
+                                <tr>
+                                    <td>{{ claimant.claim_me }}</td>
+                                    <td>{{ claimant.total_amount|floatformat:2|intcomma }}</td>
+                                    <td>{{ claimant.claim_count }}</td>
+                                    <td>{{ claimant.avg_amount|floatformat:2|intcomma }}</td>
+                                    <td>{{ claimant.first_claim }}</td>
+                                    <td>{{ claimant.last_claim }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        {% else %}
+        <div class="no-data-placeholder" style="margin-top: 2rem;">
+            <i class="fas fa-chart-bar no-data-icon"></i>
+            <h3 class="no-data-text">No Visualizations Available</h3>
+            <p style="color: #718096; max-width: 600px; margin: 0 auto;">
+                {% if selected_id %}
+                    Select analysis type and click "Process Data" to generate visualizations
+                {% else %}
+                    Select a dataset and click "Process Data" to generate visualizations
+                {% endif %}
+            </p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    // Set active tab
+    function setActiveTab(tab) {
+        document.querySelectorAll(".tab-link").forEach(function(el) {
+            el.classList.remove("active");
+        });
+        tab.classList.add("active");
+    }
+    
+    // Add click event to tabs
+    document.querySelectorAll(".tab-link").forEach(function(tab) {
+        tab.addEventListener("click", function() {
+            setActiveTab(this);
+        });
+    });
+    
+    // Initialize datepickers with default values
+    const startDateElem = document.getElementById('startDate');
+    const endDateElem = document.getElementById('endDate');
+    const timeUnitElem = document.getElementById('timeUnit');
+    const analysisTypeElem = document.getElementById('analysis_type');
+    const focusAreaBtns = document.querySelectorAll('.focus-area-btn');
+    
+    // Set default dates if not already set
+    if (!startDateElem.value) {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        startDateElem.value = thirtyDaysAgo.toISOString().split('T')[0];
+    }
+    
+    if (!endDateElem.value) {
+        const today = new Date();
+        endDateElem.value = today.toISOString().split('T')[0];
+    }
+    
+    // Focus area selection
+    focusAreaBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const focusArea = this.getAttribute('data-focus');
+            
+            // Update URL with focus area parameter
+            const url = new URL(window.location);
+            url.searchParams.set('focus_area', focusArea);
+            window.location.href = url.toString();
+        });
+    });
+    
+    // Function to update the page with new filters
+    function applyFilters() {
+        const start = startDateElem.value;
+        const end = endDateElem.value;
+        const timeUnit = timeUnitElem.value;
+        const analysisType = analysisTypeElem.value;
+        const datasetId = document.getElementById('dataset_id').value;
+        
+        if (!start || !end) { 
+            showToast("Please select both start and end dates", "error");
+            return; 
+        }
+        
+        if (new Date(start) > new Date(end)) {
+            showToast("Start date cannot be after end date", "error");
+            return;
+        }
+        
+        if (!datasetId) {
+            showToast("Please select a dataset first", "error");
+            return;
+        }
+        
+        // Build URL with parameters
+        const params = new URLSearchParams({
+            dataset_id: datasetId,
+            start_date: start,
+            end_date: end,
+            time_unit: timeUnit,
+            analysis_type: analysisType
+        });
+        
+        window.location.href = window.location.pathname + '?' + params.toString();
+    }
+    
+    // Function to update summary statistics via AJAX
+    function updateSummaryStats(start, end, timeUnit) {
+        const datasetId = document.getElementById('dataset_id').value;
+        const formData = new FormData();
+        formData.append('dataset_id', datasetId);
+        formData.append('start_date', start);
+        formData.append('end_date', end);
+        formData.append('time_unit', timeUnit);
+        
+        fetch('/update_temporal_stats/', {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update the stats cards
+                const stats = data.stats;
+                document.querySelectorAll('.stat-value')[0].textContent = stats.total_claims.toLocaleString();
+                document.querySelectorAll('.stat-value')[1].textContent = 'KES ' + stats.total_amount.toLocaleString();
+                document.querySelectorAll('.stat-value')[2].textContent = stats.unique_members.toLocaleString();
+                document.querySelectorAll('.stat-value')[3].textContent = 'KES ' + stats.avg_claim.toLocaleString();
+                
+                // Update the change indicators
+                updateChangeIndicator(0, stats.claims_change);
+                updateChangeIndicator(1, stats.amount_change);
+            }
+        })
+        .catch(error => {
+            console.error('Error updating stats:', error);
+        });
+    }
+    
+    // Helper function to update change indicators
+    function updateChangeIndicator(index, change) {
+        const changeElements = document.querySelectorAll('.stat-change');
+        if (changeElements[index]) {
+            const changeElement = changeElements[index];
+            const icon = changeElement.querySelector('i');
+            
+            changeElement.className = 'stat-change ' + (change >= 0 ? 'positive' : 'negative');
+            icon.className = 'fas ' + (change >= 0 ? 'fa-arrow-up' : 'fa-arrow-down');
+            changeElement.innerHTML = '<i class="' + icon.className + '"></i> ' + 
+                Math.abs(change).toFixed(1) + '% from previous period';
+        }
+    }
+    
+    // Apply date filter handler
+    document.getElementById("applyDateFilter").addEventListener("click", applyFilters);
+
+    // Reset date filter handler
+    document.getElementById("resetDateFilter").addEventListener("click", function () { 
+        // Clear date inputs
+        startDateElem.value = '';
+        endDateElem.value = '';
+        timeUnitElem.value = 'M';
+        analysisTypeElem.value = 'comprehensive';
+        
+        // Reload the page to reset all filters
+        location.reload(); 
+    });
+    
+    // Auto-submit when dataset selection changes
+    document.getElementById('dataset_id').addEventListener('change', function() {
+        if(this.value) {
+            applyFilters();
+        }
+    });
+    
+    // Show toast notification
+    function showToast(message, type) {
+        // Remove any existing toasts
+        document.querySelectorAll('.custom-toast').forEach(toast => toast.remove());
+        
+        const toast = document.createElement('div');
+        const bgColor = type === 'success' ? '#10b981' : 
+                        type === 'error' ? '#ef4444' : 
+                        type === 'info' ? '#3b82f6' : '#64748b';
+        
+        toast.className = 'custom-toast';
+        toast.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            background: ${bgColor};
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 10000;
+            animation: slideIn 0.3s, fadeOut 0.3s 2.5s forwards;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            font-weight: 500;
+        `;
+        
+        const icon = type === 'success' ? 'fa-check-circle' : 
+                    type === 'error' ? 'fa-exclamation-circle' :
+                    type === 'info' ? 'fa-info-circle' : 'fa-bell';
+        
+        toast.innerHTML = `<i class="fas ${icon}"></i> ${message}`;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 3000);
+    }
+    
+    // Add animation for toast
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+    `;
+    document.head.appendChild(style);
+    
+    // Helper function to get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    // Initialize Plotly charts resize handling
+    window.addEventListener('resize', function() {
+        document.querySelectorAll('.js-plotly-plot').forEach(function(chart) {
+            Plotly.Plots.resize(chart);
+        });
+    });
+    
+    // Add export functionality
+    document.addEventListener('keydown', function(e) {
+        // Ctrl+E or Cmd+E to export visualizations
+        if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
+            e.preventDefault();
+            exportVisualizations();
+        }
+    });
+    
+    function exportVisualizations() {
+        // Create a printable version of the dashboard
+        const printContent = document.getElementById('visualization-content').innerHTML;
+        const originalContent = document.body.innerHTML;
+        
+        document.body.innerHTML = `
+            <div style="padding: 20px; font-family: Arial, sans-serif;">
+                <h1 style="text-align: center; color: #1e3a8a;">Temporal Analysis Report</h1>
+                <p style="text-align: center; color: #64748b;">Generated on ${new Date().toLocaleString()}</p>
+                <hr>
+                ${printContent}
+            </div>
+        `;
+        
+        window.print();
+        
+        // Restore original content
+        document.body.innerHTML = originalContent;
+        
+        // Re-initialize event listeners
+        initializeEventListeners();
+    }
+    
+    function initializeEventListeners() {
+        // Re-attach all event listeners after printing
+        document.getElementById("applyDateFilter").addEventListener("click", applyFilters);
+        document.getElementById("resetDateFilter").addEventListener("click", resetFilters);
+        document.getElementById('dataset_id').addEventListener('change', datasetChangeHandler);
+        
+        focusAreaBtns.forEach(btn => {
+            btn.addEventListener('click', focusAreaHandler);
+        });
+    }
+    
+    function datasetChangeHandler() {
+        if(this.value) {
+            applyFilters();
+        }
+    }
+    
+    function focusAreaHandler() {
+        const focusArea = this.getAttribute('data-focus');
+        const url = new URL(window.location);
+        url.searchParams.set('focus_area', focusArea);
+        window.location.href = url.toString();
+    }
+    
+    function resetFilters() {
+        startDateElem.value = '';
+        endDateElem.value = '';
+        timeUnitElem.value = 'M';
+        analysisTypeElem.value = 'comprehensive';
+        location.reload();
+    }
+    
+    // Add data sampling for large datasets
+    function handleLargeDatasetWarning() {
+        const datasetWarning = document.getElementById('dataset-warning');
+        if (datasetWarning) {
+            const sampleBtn = document.createElement('button');
+            sampleBtn.className = 'filter-btn';
+            sampleBtn.innerHTML = '<i class="fas fa-filter"></i> Use Sampled Data';
+            sampleBtn.addEventListener('click', function() {
+                const url = new URL(window.location);
+                url.searchParams.set('sampled', 'true');
+                window.location.href = url.toString();
+            });
+            datasetWarning.appendChild(sampleBtn);
+        }
+    }
+    
+    // Initialize
+    handleLargeDatasetWarning();
+    
+    // Add keyboard shortcuts help
+    const helpBtn = document.createElement('button');
+    helpBtn.className = 'filter-btn';
+    helpBtn.innerHTML = '<i class="fas fa-question-circle"></i> Help';
+    helpBtn.style.marginLeft = 'auto';
+    helpBtn.addEventListener('click', showKeyboardShortcuts);
+    document.querySelector('.filter-actions').appendChild(helpBtn);
+    
+    function showKeyboardShortcuts() {
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+        `;
+        
+        modal.innerHTML = `
+            <div style="background: white; padding: 2rem; border-radius: 12px; max-width: 500px;">
+                <h2 style="color: #1e3a8a; margin-bottom: 1rem;">Keyboard Shortcuts</h2>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div><strong>Ctrl+E</strong></div>
+                    <div>Export Report</div>
+                    <div><strong>Ctrl+F</strong></div>
+                    <div>Focus Search</div>
+                    <div><strong>Esc</strong></div>
+                    <div>Close Modal</div>
+                </div>
+                <button style="margin-top: 1.5rem; padding: 0.5rem 1rem; background: #1e3a8a; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                    Close
+                </button>
+            </div>
+        `;
+        
+        modal.querySelector('button').addEventListener('click', function() {
+            document.body.removeChild(modal);
+        });
+        
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                document.body.removeChild(modal);
+            }
+        });
+        
+        document.addEventListener('keydown', function escHandler(e) {
+            if (e.key === 'Escape') {
+                document.body.removeChild(modal);
+                document.removeEventListener('keydown', escHandler);
+            }
+        });
+        
+        document.body.appendChild(modal);
+    }
+    
+    // Add search functionality
+    const searchContainer = document.createElement('div');
+    searchContainer.style.cssText = `
+        margin-bottom: 1.5rem;
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+    `;
+    
+    const searchInput = document.createElement('input');
+    searchInput.type = 'text';
+    searchInput.placeholder = 'Search visualizations...';
+    searchInput.style.cssText = `
+        padding: 0.7em 1em;
+        border-radius: 8px;
+        border: 1px solid var(--light-gray);
+        flex: 1;
+        min-width: 200px;
+    `;
+    
+    const searchBtn = document.createElement('button');
+    searchBtn.className = 'filter-btn';
+    searchBtn.innerHTML = '<i class="fas fa-search"></i>';
+    
+    searchContainer.appendChild(searchInput);
+    searchContainer.appendChild(searchBtn);
+    
+    // Insert search container after focus area selector
+    const focusAreaSelector = document.querySelector('.focus-area-selector');
+    if (focusAreaSelector) {
+        focusAreaSelector.parentNode.insertBefore(searchContainer, focusAreaSelector.nextSibling);
+    }
+    
+    searchBtn.addEventListener('click', searchVisualizations);
+    searchInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            searchVisualizations();
+        }
+    });
+    
+    function searchVisualizations() {
+        const searchTerm = searchInput.value.toLowerCase();
+        if (!searchTerm) return;
+        
+        const vizCards = document.querySelectorAll('.viz-card');
+        let found = false;
+        
+        vizCards.forEach(card => {
+            const title = card.querySelector('.viz-card-header').textContent.toLowerCase();
+            const content = card.textContent.toLowerCase();
+            
+            if (title.includes(searchTerm) || content.includes(searchTerm)) {
+                card.style.border = '2px solid #e30613';
+                card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                found = true;
+                
+                // Remove highlight after 3 seconds
+                setTimeout(() => {
+                    card.style.border = '1px solid rgba(0, 0, 0, 0.05)';
+                }, 3000);
+            }
+        });
+        
+        if (!found) {
+            showToast('No visualizations found matching your search', 'info');
+        }
+    }
+    
+    // Add visualization download buttons
+    function addDownloadButtons() {
+        const vizCards = document.querySelectorAll('.viz-card');
+        
+        vizCards.forEach(card => {
+            const header = card.querySelector('.viz-card-header');
+            const downloadBtn = document.createElement('button');
+            downloadBtn.className = 'filter-btn';
+            downloadBtn.style.marginLeft = 'auto';
+            downloadBtn.style.padding = '0.3rem 0.6rem';
+            downloadBtn.innerHTML = '<i class="fas fa-download"></i>';
+            downloadBtn.title = 'Download visualization';
+            
+            downloadBtn.addEventListener('click', function() {
+                const plotlyChart = card.querySelector('.js-plotly-plot');
+                if (plotlyChart) {
+                    Plotly.downloadImage(plotlyChart, {
+                        format: 'png',
+                        width: 800,
+                        height: 600,
+                        filename: header.textContent.trim().toLowerCase().replace(/\s+/g, '_')
+                    });
+                } else {
+                    // Fallback for non-plotly content
+                    html2canvas(card).then(canvas => {
+                        const link = document.createElement('a');
+                        link.download = header.textContent.trim().toLowerCase().replace(/\s+/g, '_') + '.png';
+                        link.href = canvas.toDataURL();
+                        link.click();
+                    });
+                }
+            });
+            
+            header.style.display = 'flex';
+            header.style.alignItems = 'center';
+            header.appendChild(downloadBtn);
+        });
+    }
+    
+    // Wait for plots to render before adding download buttons
+    setTimeout(addDownloadButtons, 2000);
+    
+    // Add visualization fullscreen functionality
+    function addFullscreenButtons() {
+        const vizCards = document.querySelectorAll('.viz-card');
+        
+        vizCards.forEach(card => {
+            const header = card.querySelector('.viz-card-header');
+            const fullscreenBtn = document.createElement('button');
+            fullscreenBtn.className = 'filter-btn';
+            fullscreenBtn.style.marginLeft = '0.5rem';
+            fullscreenBtn.style.padding = '0.3rem 0.6rem';
+            fullscreenBtn.innerHTML = '<i class="fas fa-expand"></i>';
+            fullscreenBtn.title = 'View in fullscreen';
+            
+            fullscreenBtn.addEventListener('click', function() {
+                const content = card.querySelector('.viz-card-content');
+                const clone = content.cloneNode(true);
+                
+                const modal = document.createElement('div');
+                modal.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0,0,0,0.9);
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    z-index: 10000;
+                    padding: 2rem;
+                `;
+                
+                const modalContent = document.createElement('div');
+                modalContent.style.cssText = `
+                    background: white;
+                    padding: 1rem;
+                    border-radius: 12px;
+                    max-width: 90%;
+                    max-height: 90%;
+                    overflow: auto;
+                `;
+                
+                const closeBtn = document.createElement('button');
+                closeBtn.innerHTML = '×';
+                closeBtn.style.cssText = `
+                    position: absolute;
+                    top: 1rem;
+                    right: 1rem;
+                    background: #e30613;
+                    color: white;
+                    border: none;
+                    border-radius: 50%;
+                    width: 40px;
+                    height: 40px;
+                    font-size: 1.5rem;
+                    cursor: pointer;
+                    z-index: 10001;
+                `;
+                
+                modalContent.appendChild(clone);
+                modal.appendChild(modalContent);
+                modal.appendChild(closeBtn);
+                
+                closeBtn.addEventListener('click', function() {
+                    document.body.removeChild(modal);
+                });
+                
+                modal.addEventListener('click', function(e) {
+                    if (e.target === modal) {
+                        document.body.removeChild(modal);
+                    }
+                });
+                
+                document.body.appendChild(modal);
+                
+                // Resize plotly charts if any
+                setTimeout(() => {
+                    const plots = modal.querySelectorAll('.js-plotly-plot');
+                    plots.forEach(plot => {
+                        Plotly.Plots.resize(plot);
+                    });
+                }, 100);
+            });
+            
+            header.appendChild(fullscreenBtn);
+        });
+    }
+    
+    // Wait for plots to render before adding fullscreen buttons
+    setTimeout(addFullscreenButtons, 2000);
+    
+    // Add data summary section
+    function addDataSummary() {
+        const summarySection = document.createElement('div');
+        summarySection.className = 'insights-panel';
+        summarySection.innerHTML = `
+            <div class="insights-header">
+                <i class="fas fa-info-circle"></i>
+                <h3>Dataset Summary</h3>
+            </div>
+            <div class="insights-grid">
+                <div class="insight-card">
+                    <div class="insight-title">Date Range</div>
+                    <div class="insight-value">${summary_stats.start_date} to ${summary_stats.end_date}</div>
+                </div>
+                <div class="insight-card">
+                    <div class="insight-title">Time Period</div>
+                    <div class="insight-value">${summary_stats.date_range_days} days</div>
+                </div>
+                <div class="insight-card">
+                    <div class="insight-title">Unique Providers</div>
+                    <div class="insight-value">${summary_stats.unique_providers}</div>
+                </div>
+                <div class="insight-card">
+                    <div class="insight-title">Unique Services</div>
+                    <div class="insight-value">${summary_stats.unique_services}</div>
+                </div>
+            </div>
+        `;
+        
+        // Insert after existing insights panel
+        const existingInsights = document.querySelector('.insights-panel');
+        if (existingInsights) {
+            existingInsights.parentNode.insertBefore(summarySection, existingInsights.nextSibling);
+        }
+    }
+    
+    // Add data summary if summary_stats exists
+    if (typeof summary_stats !== 'undefined') {
+        addDataSummary();
+    }
+    
+    // Add animation to visualization cards on scroll
+    function addScrollAnimations() {
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+        
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+        
+        const vizCards = document.querySelectorAll('.viz-card');
+        vizCards.forEach(card => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            observer.observe(card);
+        });
+    }
+    
+    // Initialize scroll animations
+    addScrollAnimations();
+    
+    // Add theme toggle
+    function addThemeToggle() {
+        const themeBtn = document.createElement('button');
+        themeBtn.className = 'filter-btn';
+        themeBtn.innerHTML = '<i class="fas fa-moon"></i>';
+        themeBtn.title = 'Toggle dark mode';
+        themeBtn.style.marginLeft = '0.5rem';
+        
+        themeBtn.addEventListener('click', function() {
+            document.body.classList.toggle('dark-mode');
+            themeBtn.innerHTML = document.body.classList.contains('dark-mode') ? 
+                '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+            
+            // Save preference to localStorage
+            localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+        });
+        
+        // Check for saved preference
+        if (localStorage.getItem('darkMode') === 'true') {
+            document.body.classList.add('dark-mode');
+            themeBtn.innerHTML = '<i class="fas fa-sun"></i>';
+        }
+        
+        document.querySelector('.filter-actions').appendChild(themeBtn);
+    }
+    
+    // Add dark mode styles
+    const darkModeStyles = `
+        <style>
+            body.dark-mode {
+                --primary: #3b82f6;
+                --secondary: #ef4444;
+                --accent: #1e40af;
+                --light: #1f2937;
+                --dark: #f9fafb;
+                --gray: #9ca3af;
+                --light-gray: #374151;
+            }
+            
+            body.dark-mode .temporal-card,
+            body.dark-mode .dashboard-header,
+            body.dark-mode .dataset-form {
+                background: rgba(31, 41, 55, 0.95);
+                color: #f9fafb;
+                border-color: rgba(255, 255, 255, 0.1);
+            }
+            
+            body.dark-mode .viz-card {
+                background: #1f2937;
+                color: #f9fafb;
+            }
+            
+            body.dark-mode .stat-card,
+            body.dark-mode .insight-card {
+                background: #374151;
+                color: #f9fafb;
+            }
+            
+            body.dark-mode .form-select,
+            body.dark-mode .filter-input {
+                background: #374151;
+                color: #f9fafb;
+                border-color: #4b5563;
+            }
+        </style>
+    `;
+    
+    document.head.insertAdjacentHTML('beforeend', darkModeStyles);
+    addThemeToggle();
+});
+</script>
+{% endblock %}

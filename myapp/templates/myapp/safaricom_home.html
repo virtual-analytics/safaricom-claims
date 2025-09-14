@@ -4,182 +4,257 @@
 
 {% block head %}
 {{ block.super }}
-<!-- Include Plotly JS -->
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
 <style>
-  .dashboard-container {
+:root {
+    --safaricom-green: #1BB64F;
+    --safaricom-dark-green: #00A651;
+    --safaricom-light-green: #E8F5E9;
+    --safaricom-gray: #F8F9FA;
+    --safaricom-dark-gray: #495057;
+    --safaricom-border: #E0E0E0;
+    --safaricom-card-shadow: 0 4px 12px rgba(27, 182, 79, 0.08);
+    --safaricom-hover-shadow: 0 8px 24px rgba(27, 182, 79, 0.12);
+    --transition-speed: 0.3s;
+}
+
+body {
+    font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+    background-color: #f7fdf9;
+    color: #333;
+    line-height: 1.6;
+}
+
+.dashboard-container {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 25px;
     padding: 30px;
-  }
+    max-width: 1800px;
+    margin: 0 auto;
+}
 
-  .dashboard-card {
-    background: #fff;
-    border-radius: 10px;
-    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
-    padding: 20px;
-    min-height: 400px; /* Ensure consistent height */
-  }
-
-  .card-header {
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin-bottom: 15px;
-    color: #1BB64F;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 5px;
-  }
-
-  .table-container {
-    margin-top: 1rem;
-    overflow-x: auto;
-  }
-
-  .data-table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-
-  .data-table th,
-  .data-table td {
-    text-align: left;
-    padding: 10px;
-    border-bottom: 1px solid #ddd;
-    font-size: 0.95rem;
-  }
-
-  .data-table th {
-    background-color: #f4f6f8;
-    font-weight: 600;
-  }
-
-  .stats-container {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: stretch;
-    padding: 0 30px;
-    gap: 20px;
-    margin-bottom: 40px;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-  }
-
-  .stat-card {
-    flex: 1;
-    min-width: 200px;
+.dashboard-card {
     background: #fff;
     border-radius: 12px;
-    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.1);
-    padding: 15px 20px;
-    text-align: center;
-    transition: 0.3s ease;
-  }
-
-  .dashboard-column {
+    box-shadow: var(--safaricom-card-shadow);
+    padding: 24px;
+    transition: all var(--transition-speed);
+    border: 1px solid rgba(27, 182, 79, 0.05);
+    position: relative;
+    overflow: hidden;
+    height: 100%;
     display: flex;
     flex-direction: column;
-    gap: 25px;
-    margin: 30px;
-  }
+}
 
-  .stat-card:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-    transform: translateY(-2px);
-  }
+.dashboard-card:hover {
+    box-shadow: var(--safaricom-hover-shadow);
+    transform: translateY(-3px);
+}
 
-  .stat-label {
+.dashboard-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(to bottom, var(--safaricom-green), var(--safaricom-dark-green));
+}
+
+.card-header {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 20px;
+    color: var(--safaricom-green);
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--safaricom-border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.card-header i {
+    font-size: 1.1rem;
+}
+
+.table-container {
+    margin-top: 1rem;
+    overflow-x: auto;
+    border-radius: 8px;
+    border: 1px solid var(--safaricom-border);
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table th,
+.data-table td {
+    text-align: left;
+    padding: 12px 15px;
+    border-bottom: 1px solid var(--safaricom-border);
+    font-size: 0.95rem;
+}
+
+.data-table th {
+    background-color: #f4f8f6;
+    font-weight: 600;
+    color: var(--safaricom-dark-gray);
+}
+
+.data-table tr:last-child td {
+    border-bottom: none;
+}
+
+.data-table tr:hover {
+    background-color: rgba(27, 182, 79, 0.03);
+}
+
+.stats-container {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    padding: 0 30px;
+    margin-bottom: 30px;
+    max-width: 1800px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.stat-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: var(--safaricom-card-shadow);
+    padding: 20px;
+    text-align: center;
+    transition: all var(--transition-speed);
+    border: 1px solid rgba(27, 182, 79, 0.05);
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card:hover {
+    box-shadow: var(--safaricom-hover-shadow);
+    transform: translateY(-3px);
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(to right, var(--safaricom-green), var(--safaricom-dark-green));
+}
+
+.stat-label {
     font-size: 0.95rem;
     color: #666;
-    margin-bottom: 5px;
+    margin-bottom: 8px;
     font-weight: 500;
-  }
+}
 
-  .stat-value {
-    font-size: 1.6rem;
-    font-weight: bold;
-    color: #1BB64F;
-  }
+.stat-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--safaricom-green);
+    margin-bottom: 5px;
+}
 
-  .chart-container {
-    height: 500px;
+.stat-subtext {
+    font-size: 0.85rem;
+    color: #888;
+}
+
+.chart-container {
+    height: 400px;
     width: 100%;
-  }
+    flex-grow: 1;
+}
 
-  .no-data-message {
+.no-data-message {
     text-align: center;
     padding: 50px 20px;
     color: #777;
     font-style: italic;
-  }
-  .two-column-charts {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 25px;
-    margin-top: 25px;
-    width: 100%;
 }
+
 /* === Date Filter & Export Styling === */
 .date-filter-wrapper {
     display: flex;
     justify-content: space-between;
     align-items: center;
     background: #f4f8f6;
-    padding: 0.8rem 1.2rem;
-    border-radius: 8px;
-    margin-bottom: 1rem;
+    padding: 1rem 1.5rem;
+    border-radius: 12px;
+    margin: 0 30px 25px 30px;
     flex-wrap: wrap;
-    gap: 0.8rem;
+    gap: 1rem;
     box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    border: 1px solid rgba(27, 182, 79, 0.1);
+    max-width: 1800px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .date-filter {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.8rem;
+    flex-wrap: wrap;
 }
 
 .date-filter label {
     font-weight: 500;
     font-size: 0.9rem;
-    color: #1BB64F;
+    color: var(--safaricom-green);
 }
 
 .date-filter input[type="date"] {
-    padding: 0.35rem 0.6rem;
+    padding: 0.5rem 0.8rem;
     border: 1px solid #ccc;
-    border-radius: 6px;
-    font-size: 0.85rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
     outline: none;
     transition: all 0.3s ease;
+    font-family: 'Inter', sans-serif;
 }
 
 .date-filter input[type="date"]:focus {
-    border-color: #1BB64F;
+    border-color: var(--safaricom-green);
     box-shadow: 0 0 5px rgba(27,182,79,0.3);
 }
 
 .btn-apply, .btn-reset, .btn-export {
-    padding: 0.4rem 0.8rem;
-    border-radius: 6px;
-    font-size: 0.85rem;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
     font-weight: 500;
     cursor: pointer;
     border: none;
     transition: all 0.3s ease;
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .btn-apply {
-    background-color: #1BB64F;
+    background-color: var(--safaricom-green);
     color: white;
 }
 
 .btn-apply:hover {
-    background-color: #15963e;
+    background-color: var(--safaricom-dark-green);
+    transform: translateY(-2px);
 }
 
 .btn-reset {
@@ -189,6 +264,7 @@
 
 .btn-reset:hover {
     background-color: #e2e2e2;
+    transform: translateY(-2px);
 }
 
 .btn-export {
@@ -198,209 +274,362 @@
 
 .btn-export:hover {
     background-color: #0069d9;
-}       
+    transform: translateY(-2px);
+}
 
-@media (max-width: 992px) {
-    .two-column-charts {
-        grid-template-columns: 1fr; /* Stack on smaller screens */
+/* Login Message */
+.login-success {
+    background: linear-gradient(90deg, var(--safaricom-green) 0%, var(--safaricom-dark-green) 100%);
+    color: #fff;
+    font-size: 1.15rem;
+    font-weight: 600;
+    padding: 1.1em 1.5em;
+    border-radius: 12px;
+    margin: 0 auto 2.5rem auto;
+    max-width: 500px;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(27,182,79,0.2);
+    letter-spacing: 0.01em;
+}
+
+/* Header */
+.dashboard-header {
+    padding: 1.5rem 2rem;
+    background-color: #ffffff;
+    text-align: center;
+    border-bottom: 1px solid var(--safaricom-border);
+    margin-bottom: 1.5rem;
+}
+
+.dashboard-title {
+    color: var(--safaricom-green);
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.dashboard-subtitle {
+    font-size: 1rem;
+    color: #555;
+    margin: 0.5rem 0 0 0;
+}
+
+/* Data Summary Bar */
+.data-summary-bar {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    background: #f1f3f5;
+    padding: 1rem 1.5rem;
+    margin: 1rem auto;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    color: #444;
+    max-width: 1000px;
+    border: 1px solid rgba(0,0,0,0.05);
+}
+
+.data-summary-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.data-summary-item strong {
+    color: var(--safaricom-green);
+}
+
+footer {
+    background-color: #f8f9fa;
+    color: #333;
+    text-align: center;
+    padding: 1.5rem 0;
+    font-size: 0.9rem;
+    border-top: 1px solid var(--safaricom-border);
+    margin-top: 3rem;
+    width: 100%;
+}
+
+footer a {
+    color: var(--safaricom-green);
+    text-decoration: none;
+    margin: 0 8px;
+    transition: all var(--transition-speed);
+}
+
+footer a:hover {
+    text-decoration: underline;
+    color: var(--safaricom-dark-green);
+}
+
+/* Layout adjustments for 3-column grid */
+.full-width-card {
+    grid-column: 1 / -1;
+}
+
+.two-column-card {
+    grid-column: span 2;
+}
+
+@media (max-width: 1400px) {
+    .dashboard-container {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .two-column-card {
+        grid-column: span 2;
+    }
+    
+    .stats-container {
+        grid-template-columns: repeat(2, 1fr);
     }
 }
 
-
-
-  @media (max-width: 1024px) {
+@media (max-width: 992px) {
     .dashboard-container {
-      grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: 1fr;
+        padding: 20px;
     }
-  }
-
-  @media (max-width: 768px) {
-    .dashboard-container {
-      grid-template-columns: 1fr;
+    
+    .two-column-card {
+        grid-column: 1;
     }
-
+    
     .stats-container {
-      flex-direction: column;
-      align-items: center;
+        grid-template-columns: 1fr;
+        padding: 0 20px;
     }
 
-    .stat-card {
-      width: 100%;
+    .date-filter-wrapper {
+        margin: 0 20px 25px 20px;
+        flex-direction: column;
+        align-items: flex-start;
     }
-  }
+    
+    .data-summary-bar {
+        flex-direction: column;
+        gap: 0.8rem;
+        align-items: flex-start;
+    }
+}
+
+@media (max-width: 576px) {
+    .dashboard-header {
+        padding: 1rem;
+    }
+    
+    .dashboard-title {
+        font-size: 1.5rem;
+    }
+    
+    .stat-value {
+        font-size: 1.5rem;
+    }
+    
+    .date-filter {
+        flex-direction: column;
+        align-items: flex-start;
+        width: 100%;
+    }
+    
+    .date-filter input[type="date"] {
+        width: 100%;
+    }
+}
 </style>
 
 <!-- Login Message -->
-<div class="login-success"
-     style="background:#1BB64F; color:#fff; font-size:1.15rem; font-weight:600; padding:1.1em 1.5em; border-radius:10px; margin:0 auto 2.5rem auto; max-width:500px; text-align:center; box-shadow:0 2px 12px rgba(27,182,79,0.10); letter-spacing:0.01em;">
-    You have successfully logged in, <span style="font-weight:800;">{{ username }}</span>!
+<div class="login-success">
+  Welcome, <span style="font-weight:800;">{{ username }}</span>!
 </div>
 
 <!-- Header -->
-<div style="padding: 1rem 1rem 0.5rem 1rem; background-color: #ffffff; text-align: center; border-bottom: 1px solid #ddd;">
-    <h2 style="color: #1BB64F; font-size: 1.75rem; font-weight: 700; margin: 0;">Claims Analytics Dashboard</h2>
-    <p style="font-size: 0.95rem; color: #555; margin: 0.3rem 0 0.5rem 0;">Overview of claims data and key insights</p>
+<div class="dashboard-header">
+  <h1 class="dashboard-title">Claims Analytics Dashboard</h1>
+  <p class="dashboard-subtitle">Overview of claims data and key insights</p>
 </div>
 
-<!-- Add this below the stats container -->
-<div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; background: #f1f3f5; padding: 0.75rem 1rem; margin: 1rem auto; border-radius: 8px; font-size: 0.9rem; color: #444; max-width: 1000px;">
+<!-- Data Summary Bar -->
+<div class="data-summary-bar">
+  <div class="data-summary-item">
+    <i class="fas fa-chart-bar" style="color: var(--safaricom-green);"></i>
     <div><strong>Total:</strong> {{ visualizations.summary_stats.total_claims }}</div>
+  </div>
+  <div class="data-summary-item">
+    <i class="fas fa-check-circle" style="color: var(--safaricom-green);"></i>
     <div><strong>Cleaned:</strong> {{ visualizations.debug.cleaned_records }}</div>
+  </div>
+  <div class="data-summary-item">
+    <i class="fas fa-calendar-alt" style="color: var(--safaricom-green);"></i>
     <div>
-        <strong>Date Range:</strong>
-        {% if visualizations.debug.min_date and visualizations.debug.max_date %}
-          {{ visualizations.debug.min_date|date:"Y-m-d" }} - {{ visualizations.debug.max_date|date:"Y-m-d" }}
-        {% else %}
-          No valid date range
-        {% endif %}
+      <strong>Date Range:</strong>
+      {% if visualizations.debug.min_date and visualizations.debug.max_date %}
+        {{ visualizations.debug.min_date|date:"Y-m-d" }} - {{ visualizations.debug.max_date|date:"Y-m-d" }}
+      {% else %}
+        No valid date range
+      {% endif %}
     </div>
+  </div>
 </div>
-
 
 <!-- Summary Statistics -->
 <div class="stats-container">
-   <div class="stat-card">
-     <div class="stat-label">Total Claims</div>
-     <div class="stat-value">{{ visualizations.summary_stats.total_claims|intcomma }}</div>
-   </div>
+  <div class="stat-card">
+    <div class="stat-label">Total Claims</div>
+    <div class="stat-value">{{ visualizations.summary_stats.total_claims|intcomma }}</div>
+    <div class="stat-subtext">Unique claim_ce values</div>
+  </div>
 
-    <div class="stat-card">
-        <div class="stat-label">Total Amount</div>
-        <div class="stat-value">KES {{ visualizations.summary_stats.total_amount|floatformat:2|intcomma }}</div>
-    </div>
+  <div class="stat-card">
+    <div class="stat-label">Total Amount</div>
+    <div class="stat-value">KES {{ visualizations.summary_stats.total_amount|floatformat:2|intcomma }}</div>
+    <div class="stat-subtext">Total value of claims</div>
+  </div>
 
-    <div class="stat-card">
-        <div class="stat-label">Average Claim (per Member)</div>
-        <div class="stat-value">KES {{ visualizations.summary_stats.avg_claim|floatformat:2|intcomma }}</div>
-    </div>
+  <div class="stat-card">
+    <div class="stat-label">Average Claim</div>
+    <div class="stat-value">KES {{ visualizations.summary_stats.avg_claim|floatformat:2|intcomma }}</div>
+    <div class="stat-subtext">Per member</div>
+  </div>
 
-    <div class="stat-card">
-        <div class="stat-label">Unique Members</div>
-        <div class="stat-value">{{ visualizations.summary_stats.unique_members|intcomma }}</div>
-    </div>
-
+  <div class="stat-card">
+    <div class="stat-label">Unique Members</div>
+    <div class="stat-value">{{ visualizations.summary_stats.unique_members|intcomma }}</div>
+    <div class="stat-subtext">Members with claims</div>
+  </div>
 </div>
 
 
-<!--###############-->
+<!-- Date Range Filter -->
+<div class="date-filter-wrapper">
+  <div class="date-filter">
+    <label for="startDate">From:</label>
+    <input type="date" id="startDate">
+    <label for="endDate">To:</label>
+    <input type="date" id="endDate">
+    <button id="applyDateFilter" class="btn-apply">
+      <i class="fas fa-filter"></i> Apply
+    </button>
+    <button id="resetDateFilter" class="btn-reset">
+      <i class="fas fa-redo"></i> Reset
+    </button>
+  </div>
+  <button id="exportClaimsData" class="btn-export">
+    <i class="fas fa-download"></i> Export Data
+  </button>
+</div>
+
 <!-- Dashboard Columns -->
-
-
-    <!-- ===== Date Range Filter ===== -->
-    <div class="date-filter-wrapper">
-        <div class="date-filter">
-            <label>From:</label>
-            <input type="date" id="startDate">
-            <label>To:</label>
-            <input type="date" id="endDate">
-            <button id="applyDateFilter" class="btn-apply">Apply</button>
-            <button id="resetDateFilter" class="btn-reset">Reset</button>
-        </div>
-        <button id="exportClaimsData" class="btn-export">⬇ Export Data</button>
+<div class="dashboard-container">
+  <!-- Claims Over Time Chart -->
+  <div class="dashboard-card full-width-card">
+    <div class="card-header">
+      <i class="fas fa-chart-line"></i> Claims Submitted Over Time
     </div>
-
-    <!-- Claims Over Time Chart -->
-    <div class="dashboard-card">
-        <div class="card-header">Claims Submitted Over Time</div>
-        <div class="chart-container">
-            {% if visualizations.claims_time_chart %}
-                <div id="claimsTimeChart">
-                    {{ visualizations.claims_time_chart|safe }}
-                </div>
-            {% else %}
-                <div class="no-data-message">No claims data available</div>
-            {% endif %}
-        </div>
+    <div class="chart-container">
+      {% if visualizations.claims_time_chart %}
+        {{ visualizations.claims_time_chart|safe }}
+      {% else %}
+        <div class="no-data-message">No claims data available</div>
+      {% endif %}
     </div>
+  </div>
 
-<!-- Export button will be added by JS -->
-
-
-    <!-- Two-column container for Benefit and Sunburst -->
-    <div class="two-column-charts" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 25px; margin-top: 25px; width: 100%;">
-        <!-- Benefit Category Chart -->
-        <div class="dashboard-card">
-            <div class="card-header">Claim Amounts by Benefit Category</div>
-            <div class="chart-container">
-                {% if visualizations.category_amounts %}
-                    {{ visualizations.category_amounts|safe }}
-                {% else %}
-                    <div class="no-data-message">No category data available</div>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Sunburst Chart -->
-        <div class="dashboard-card">
-            <div class="card-header">Claim Amounts Breakdown (Sunburst)</div>
-            <div class="chart-container">
-                {% if visualizations.sunburst %}
-                    {{ visualizations.sunburst|safe }}
-                {% else %}
-                    <div class="no-data-message">No sunburst data available</div>
-                {% endif %}
-            </div>
-        </div>
+  <!-- Benefit Category Chart -->
+  <div class="dashboard-card">
+    <div class="card-header">
+      <i class="fas fa-tags"></i> Claim Amounts by Benefit Category
     </div>
-
-    <!-- Top Claimants -->
-    <div class="dashboard-card" style="margin-top: 25px;">
-        <div class="card-header">Top Claimants by Total Amount</div>
-        <div class="chart-container">
-            {% if visualizations.top_claimants %}
-                {{ visualizations.top_claimants|safe }}
-            {% else %}
-                <div class="no-data-message">No claimant data available</div>
-            {% endif %}
-        </div>
-        <div class="table-container">
-            <table class="data-table">
-                <thead>
-                <tr>
-                    <th>Member ID</th>
-                    <th>Total Amount (KES)</th>
-                    <th>Claim Count</th>
-                </tr>
-                </thead>
-                <tbody>
-                {% for claimant in visualizations.top_claimants_table %}
-                <tr>
-                    <td>{{ claimant.claim_me }}</td>
-                    <td>{{ claimant.total_amount|floatformat:2 }}</td>
-                    <td>{{ claimant.claim_count }}</td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="3" style="text-align: center;">No claimant data available</td>
-                </tr>
-                {% endfor %}
-                </tbody>
-            </table>
-        </div>
+    <div class="chart-container">
+      {% if visualizations.category_amounts %}
+        {{ visualizations.category_amounts|safe }}
+      {% else %}
+        <div class="no-data-message">No category data available</div>
+      {% endif %}
     </div>
+  </div>
 
-    <!-- Claim Frequency Distribution -->
-    <div class="dashboard-card" style="width: 100%; max-width: 100%; margin-top: 25px;">
-        <div class="card-header">Claim Frequency Distribution</div>
-        <div class="chart-container" style="width: 100%;">
-            {% if visualizations.claim_freq %}
-                {{ visualizations.claim_freq|safe }}
-            {% else %}
-                <div class="no-data-message">No frequency data available</div>
-            {% endif %}
-        </div>
+  <!-- Sunburst Chart -->
+  <div class="dashboard-card">
+    <div class="card-header">
+      <i class="fas fa-circle-notch"></i> Claim Amounts Breakdown (Sunburst)
     </div>
+    <div class="chart-container">
+      {% if visualizations.sunburst %}
+        {{ visualizations.sunburst|safe }}
+      {% else %}
+        <div class="no-data-message">No sunburst data available</div>
+      {% endif %}
+    </div>
+  </div>
 
+  <!-- Top Providers Chart -->
+  <div class="dashboard-card two-column-card">
+    <div class="card-header">
+      <i class="fas fa-hospital"></i> Top Providers by Total Amount
+    </div>
+    <div class="chart-container">
+      {% if visualizations.top_providers %}
+        {{ visualizations.top_providers|safe }}
+      {% else %}
+        <div class="no-data-message">No provider data available</div>
+      {% endif %}
+    </div>
+  </div>
 
+  <!-- Top Claimants Table (Anonymized IDs) -->
+  <div class="dashboard-card">
+    <div class="card-header">
+      <i class="fas fa-table"></i> Top Claimants Details (Anonymized)
+    </div>
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Member ID</th>
+            <th>Total Amount (KES)</th>
+            <th>Claim Count</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for claimant in visualizations.top_claimants_table %}
+          <tr>
+            <td>{{ claimant.claim_me|slice:":4" }}****</td>
+            <td>{{ claimant.total_amount|floatformat:2|intcomma }}</td>
+            <td>{{ claimant.claim_count }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="3" style="text-align: center;">No claimant data available</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
 
+  <!-- Claim Frequency Distribution -->
+  <div class="dashboard-card full-width-card">
+    <div class="card-header">
+      <i class="fas fa-wave-square"></i> Claim Frequency Distribution
+    </div>
+    <div class="chart-container">
+      {% if visualizations.claim_freq %}
+        {{ visualizations.claim_freq|safe }}
+      {% else %}
+        <div class="no-data-message">No frequency data available</div>
+      {% endif %}
+    </div>
+  </div>
 </div>
 
-<footer style="background-color: #f8f9fa; color: #333; text-align: center; padding: 1rem 0; font-size: 0.9rem; border-top: 1px solid #ddd; margin-top: 2rem; width: 100%;">
-    © 2025 Designed by Virtual Analytics, All Rights Reserved |
-    <a href="#" style="color: #1BB64F; text-decoration: none; margin: 0 8px;">Terms & Conditions</a> |
-    <a href="#" style="color: #1BB64F; text-decoration: none; margin: 0 8px;">Privacy Policy</a>
+<footer>
+  © 2025 Powered by Virtual Analytics, All Rights Reserved |
+  <a href="https://www.virtualanalytics.co.ke/" target="_blank">Virtual Analytics</a> |
+  <a href="">Terms & Conditions</a> |
+  <a href="#">Privacy Policy</a>
 </footer>
-
 
 <script>
 // Smooth number animation
@@ -480,6 +709,49 @@ bindSlider('utilization-change', 'utilization-value');
 
 // Run first simulation on page load
 document.addEventListener("DOMContentLoaded", runSimulation);
+
+// Add interactivity to cards
+document.querySelectorAll('.dashboard-card').forEach(card => {
+  card.addEventListener('mouseenter', () => {
+    card.style.transform = 'translateY(-5px)';
+  });
+  
+  card.addEventListener('mouseleave', () => {
+    card.style.transform = 'translateY(0)';
+  });
+});
+
+// Add animation to stat cards
+document.querySelectorAll('.stat-card').forEach(card => {
+  card.addEventListener('mouseenter', () => {
+    card.style.transform = 'translateY(-5px)';
+  });
+  
+  card.addEventListener('mouseleave', () => {
+    card.style.transform = 'translateY(0)';
+  });
+});
+
+// Date filter functionality
+document.getElementById('applyDateFilter').addEventListener('click', function() {
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    if (startDate && endDate) {
+        alert(`Filtering from ${startDate} to ${endDate}`);
+    } else {
+        alert('Please select both start and end dates');
+    }
+});
+
+document.getElementById('resetDateFilter').addEventListener('click', function() {
+    document.getElementById('startDate').value = '';
+    document.getElementById('endDate').value = '';
+    alert('Filters reset');
+});
+
+document.getElementById('exportClaimsData').addEventListener('click', function() {
+    alert('Exporting data...');
+});
 </script>
 
 {% endblock %}

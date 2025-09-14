@@ -1,0 +1,114 @@
+<style>
+  .minet-features {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 3rem;
+    width: 100%;
+  }
+
+  .feature-card {
+    background: white;
+    padding: 1.5rem 2rem;
+    border-radius: 14px;
+    box-shadow: 0 4px 16px rgba(35, 35, 35, 0.08);
+    text-align: center;
+    transition: transform 0.3s ease;
+    cursor: pointer;
+    flex: 1 1 auto;
+    max-width: 280px;
+    min-width: 220px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .feature-card:hover {
+    transform: translateY(-5px);
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .feature-card i {
+    font-size: 2.5rem;
+    color: #e30613;
+    margin-bottom: 0.5rem;
+  }
+
+  .feature-card h3 {
+    color: #232323;
+    margin-bottom: 0.3rem;
+    font-size: 1.1rem;
+  }
+
+  .feature-card p {
+    color: #666;
+    line-height: 1.4;
+    font-size: 0.9rem;
+  }
+</style>
+
+<div class="minet-features">
+  <a
+    href="{% url 'minet_forecast_volume' %}"
+    class="feature-card"
+    title="Forecast Volume"
+  >
+    <i class="fas fa-chart-line"></i>
+    <h3>Forecast Volume</h3>
+  </a>
+
+  <a
+    href="{% url 'minet_confidence_interval' %}"
+    class="feature-card"
+    title="Confidence Interval"
+  >
+    <i class="fas fa-chart-area"></i>
+    <h3>Confidence Interval</h3>
+  </a>
+
+  <a
+    href="{% url 'minet_impact_simulation' %}"
+    class="feature-card"
+    title="Impact Simulation"
+  >
+    <i class="fas fa-cogs"></i>
+    <h3>Impact Simulation</h3>
+  </a>
+
+  <a
+    href="{% url 'minet_explainability' %}"
+    class="feature-card"
+    title="Explainability"
+  >
+    <i class="fas fa-lightbulb"></i>
+    <h3>Explainability</h3>
+  </a>
+
+  <a
+    href="{% url 'machine_learning' %}"
+    class="feature-card"
+    title="Machine Learning"
+  >
+    <i class="fas fa-robot"></i>
+    <h3>Machine Learning</h3>
+  </a>
+
+  <a href="#" class="feature-card" title="Risk Assessment">
+    <i class="fas fa-shield-alt"></i>
+    <h3>Risk Assessment</h3>
+  </a>
+
+  <a href="#" class="feature-card" title="Trend Analysis">
+    <i class="fas fa-wave-square"></i>
+    <h3>Trend Analysis</h3>
+  </a>
+
+  <a href="#" class="feature-card" title="Custom Reports">
+    <i class="fas fa-file-alt"></i>
+    <h3>Custom Reports</h3>
+  </a>
+</div>

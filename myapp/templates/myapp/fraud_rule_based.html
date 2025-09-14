@@ -1,0 +1,760 @@
+{% extends "base.html" %}
+{% load static %}
+{% load custom_filters %}
+
+{% block extra_head %}
+<link
+  rel="stylesheet"
+  href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css"
+/>
+<link
+  rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/charts.css/dist/charts.min.css"
+/>
+{% endblock extra_head %}
+
+{% block content %}
+<div class="fraud-container">
+  <!-- Alert container for notifications -->
+  <div class="alert-container">
+    {% if error %}
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+      <i class="fas fa-exclamation-circle me-2"></i>
+      {{ error }}
+      <button
+        type="button"
+        class="btn-close"
+        data-bs-dismiss="alert"
+        aria-label="Close"
+      ></button>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+
+
+  <div class="fraud-header">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h2 class="mb-0">
+        <i class="fas fa-shield-alt me-2" style="color: #ff4b2b"></i> Rule-Based
+        Fraud Detection
+      </h2>
+      <div>
+        <button
+          class="btn btn-outline-secondary"
+          data-bs-toggle="modal"
+          data-bs-target="#helpModal"
+          style="padding: 0.25rem 0.5rem; font-size: 0.8rem"
+        >
+          <i class="fas fa-question-circle me-1"></i> Help
+        </button>
+      </div>
+    </div>
+    <p class="lead text-muted">
+      Detect potentially fraudulent insurance claims using advanced rule-based
+      algorithms and risk scoring.
+    </p>
+  </div>
+
+  <!-- Tab Navigation -->
+  <div
+    style="
+      display: flex;
+      overflow-x: auto;
+      gap: 0;
+      margin-bottom: 0;
+      scrollbar-width: none;
+      border-bottom: 1px solid #e0e0e0;
+      background: linear-gradient(to right, #f8f9fa, #f1f3f5);
+    "
+  >
+    <a
+      href=" "
+      style="flex: 0 0 auto; padding: 1.2rem 2rem; background: {% if request.path == '/minet_forecast_volume/' %}#004b87{% else %}transparent{% endif %}; cursor: pointer; text-decoration: none; color: {% if request.path == '/minet_forecast_volume/' %}white{% else %}#004b87{% endif %}; border-right: 1px solid #e0e0e0; font-weight: 600; transition: all 0.3s ease; display: flex; align-items: center; gap: 0.8rem;"
+    >
+      <i class="fas fa-chart-line" style="font-size: 1.1rem"></i>
+      Risk Scores
+    </a>
+
+    <a
+      href="{% url 'minet_suspicious_providers' %}"
+      style="flex: 0 0 auto; padding: 1.2rem 2rem; background: {% if request.path == '/minet_suspicious_providers/' %}#004b87{% else %}transparent{% endif %}; cursor: pointer; text-decoration: none; color: {% if request.path == '/minet_suspicious_providers/' %}white{% else %}#004b87{% endif %}; border-right: 1px solid #e0e0e0; font-weight: 600; transition: all 0.3s ease; display: flex; align-items: center; gap: 0.8rem;"
+    >
+      <i class="fas fa-chart-area" style="font-size: 1.1rem"></i>
+      Suspicious providers
+    </a>
+
+    <a
+      href=""
+      style="flex: 0 0 auto; padding: 1.2rem 2rem; background: {% if request.path == '/minet_impact_simulation/' %}#004b87{% else %}transparent{% endif %}; cursor: pointer; text-decoration: none; color: {% if request.path == '/minet_impact_simulation/' %}white{% else %}#004b87{% endif %}; border-right: 1px solid #e0e0e0; font-weight: 600; transition: all 0.3s ease; display: flex; align-items: center; gap: 0.8rem;"
+    >
+      <i class="fas fa-cogs" style="font-size: 1.1rem"></i>
+      Diagnosis Patterns
+    </a>
+
+    <a
+      href="{% url 'minet_monthly_trends' %}"
+      style="flex: 0 0 auto; padding: 1.2rem 2rem; background: {% if request.path == '/minet_monthly_trends/' %}#004b87{% else %}transparent{% endif %}; cursor: pointer; text-decoration: none; color: {% if request.path == '/minet_monthly_trends/' %}white{% else %}#004b87{% endif %}; border-right: 1px solid #e0e0e0; font-weight: 600; transition: all 0.3s ease; display: flex; align-items: center; gap: 0.8rem;"
+    >
+      <i class="fas fa-lightbulb" style="font-size: 1.1rem"></i>
+      Monthly Trends
+    </a>
+
+    <a
+      href="{% url 'minet_potential_cases' %}"
+      style="flex: 0 0 auto; padding: 1.2rem 2rem; background: {% if request.path == '/minet_potential_cases/' %}#004b87{% else %}transparent{% endif %}; cursor: pointer; text-decoration: none; color: {% if request.path == '/minet_potential_cases/' %}white{% else %}#004b87{% endif %}; border-right: 1px solid #e0e0e0; font-weight: 600; transition: all 0.3s ease; display: flex; align-items: center; gap: 0.8rem;"
+    >
+      <i class="fas fa-lightbulb" style="font-size: 1.1rem"></i>
+      Potential Cases
+    </a>
+
+    <a
+      href="#"
+      style="
+        flex: 0 0 auto;
+        padding: 1.2rem 2rem;
+        background: transparent;
+        cursor: pointer;
+        text-decoration: none;
+        color: #004b87;
+        border-right: 1px solid #e0e0e0;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+      "
+    >
+      <i class="fas fa-shield-alt" style="font-size: 1.1rem"></i>
+      Geospatial Heatmap
+    </a>
+  </div>
+
+  <div class="content-body">
+    <!-- Dataset Selection Card -->
+    <div class="card">
+      <div class="card-header">
+        <h3><i class="fas fa-database"></i> Select Dataset</h3>
+      </div>
+      <div class="card-body">
+        <form method="post" id="analysisForm">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="run_analysis" />
+
+          <div class="form-group">
+            <label for="datasetSelect">Choose Dataset:</label>
+            <select
+              class="form-control"
+              id="datasetSelect"
+              name="dataset"
+              required
+            >
+              <option value="">-- Select a dataset --</option>
+              {% for dataset in available_datasets %}
+              <option value="{{ dataset }}">{{ dataset }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="thresholdSlider"
+              >Risk Threshold:
+              <span id="thresholdValue">{{ default_threshold }}</span></label
+            >
+            <input
+              type="range"
+              class="form-control-range"
+              id="thresholdSlider"
+              name="threshold"
+              min="0.1"
+              max="1.0"
+              step="0.05"
+              value="{{ default_threshold }}"
+            />
+            <small class="form-text text-muted"
+              >Higher values flag only higher risk claims</small
+            >
+          </div>
+
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-play-circle"></i> Run Analysis
+          </button>
+
+          {% if error %}
+          <div class="alert alert-danger mt-3">
+            <i class="fas fa-exclamation-triangle"></i> {{ error }}
+          </div>
+          {% endif %}
+        </form>
+      </div>
+    </div>
+
+    {% if analysis_complete %}
+    <!-- Summary Metrics -->
+    <div class="metrics-grid">
+      <div class="metric-card critical">
+        <div class="metric-icon">
+          <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <div class="metric-content">
+          <div class="metric-value">{{ metrics.fraud_count }}</div>
+          <div class="metric-label">Potential Fraud Cases</div>
+          <div class="metric-change">
+            from {{ metrics.total_claims }} total claims
+          </div>
+        </div>
+      </div>
+
+      <div class="metric-card warning">
+        <div class="metric-icon">
+          <i class="fas fa-chart-pie"></i>
+        </div>
+        <div class="metric-content">
+          <div class="metric-value">{{ metrics.fraud_rate }}</div>
+          <div class="metric-label">Fraud Rate</div>
+          <div class="metric-change">Dataset: {{ dataset_name }}</div>
+        </div>
+      </div>
+
+      <div class="metric-card danger">
+        <div class="metric-icon">
+          <i class="fas fa-money-bill-wave"></i>
+        </div>
+        <div class="metric-content">
+          <div class="metric-value">{{ metrics.fraud_amount }}</div>
+          <div class="metric-label">Amount at Risk</div>
+          <div class="metric-change">Threshold: {{ threshold }}</div>
+        </div>
+      </div>
+
+      <div class="metric-card info">
+        <div class="metric-icon">
+          <i class="fas fa-download"></i>
+        </div>
+        <div class="metric-content">
+          <div class="metric-value">Export</div>
+          <div class="metric-label">Analysis Results</div>
+          <form method="post" class="mt-2">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="download_results" />
+            <button type="submit" class="btn btn-sm btn-light">
+              <i class="fas fa-file-csv"></i> Download CSV
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Risk Distribution Chart -->
+    <div class="card">
+      <div class="card-header">
+        <h3><i class="fas fa-chart-bar"></i> Risk Score Distribution</h3>
+      </div>
+      <div class="card-body">
+        <div id="risk-distribution-chart" style="height: 300px"></div>
+      </div>
+    </div>
+
+    <!-- High Risk Claims Table -->
+    <div class="card">
+      <div class="card-header">
+        <h3>
+          <i class="fas fa-flag"></i> High Risk Claims ({{ high_risk|length }})
+        </h3>
+        <div class="card-actions">
+          <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input
+              type="text"
+              id="claimSearch"
+              placeholder="Search claims..."
+            />
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="data-table" id="fraudTable">
+            <thead>
+              <tr>
+                {% if high_risk and high_risk.0.claim_id %}
+                <th>Claim ID</th>
+                {% endif %} {% if high_risk and high_risk.0.date %}
+                <th>Date</th>
+                {% endif %} {% if high_risk and high_risk.0.amount %}
+                <th>Amount</th>
+                {% endif %} {% if high_risk and high_risk.0.provider_name %}
+                <th>Provider</th>
+                {% endif %} {% if high_risk and high_risk.0.icd10_code %}
+                <th>Diagnosis</th>
+                {% endif %}
+                <th>Risk Score</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for claim in high_risk %}
+              <tr>
+                {% if claim.claim_id %}
+                <td>{{ claim.claim_id }}</td>
+                {% endif %} {% if claim.date %}
+                <td>{{ claim.date }}</td>
+                {% elif claim.claim_prov_date %}
+                <td>{{ claim.claim_prov_date }}</td>
+                {% endif %} {% if claim.amount %}
+                <td>KES {{ claim.amount|floatformat:2 }}</td>
+                {% endif %} {% if claim.provider_name %}
+                <td>{{ claim.provider_name }}</td>
+                {% elif claim.prov_name %}
+                <td>{{ claim.prov_name }}</td>
+                {% endif %} {% if claim.icd10_code %}
+                <td>{{ claim.icd10_code }}</td>
+                {% endif %}
+                <td>
+                  <div
+                    class="risk-score"
+                    style="--score: {{ claim.fraud_score|default:0 }};"
+                  >
+                    {{ claim.fraud_score|floatformat:2 }}
+                  </div>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="6" class="text-center">
+                  No high-risk claims found at this threshold
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Insights Row -->
+    <div class="row">
+      <!-- Suspicious Providers -->
+      {% if suspicious_providers %}
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <h3><i class="fas fa-hospital"></i> Suspicious Providers</h3>
+          </div>
+          <div class="card-body">
+            <div class="insight-list">
+              {% for provider in suspicious_providers %}
+              <div class="insight-item">
+                <div class="insight-main">
+                  <div class="insight-title">{{ provider.provider_name }}</div>
+                  <div class="insight-value">
+                    {{ provider.fraud_count }} fraud cases
+                  </div>
+                </div>
+                <div class="insight-meta">
+                  <div class="insight-stat">
+                    {{ provider.fraud_rate|floatformat:2 }}% rate
+                  </div>
+                  <div class="insight-stat">
+                    KES {{ provider.total_amount|floatformat:2 }}
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Diagnosis Patterns -->
+      {% if diagnosis_patterns %}
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <h3>
+              <i class="fas fa-stethoscope"></i> Suspicious Diagnosis Patterns
+            </h3>
+          </div>
+          <div class="card-body">
+            <div class="insight-list">
+              {% for diagnosis in diagnosis_patterns %}
+              <div class="insight-item">
+                <div class="insight-main">
+                  <div class="insight-title">{{ diagnosis.icd10_code }}</div>
+                  <div class="insight-value">
+                    {{ diagnosis.fraud_count }} fraud cases
+                  </div>
+                </div>
+                <div class="insight-meta">
+                  <div class="insight-stat">
+                    {{ diagnosis.fraud_rate|floatformat:2 }}% rate
+                  </div>
+                  <div class="insight-stat">
+                    {{ diagnosis.total_claims }} total claims
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+  <style>
+    /* Header */
+    .content-header {
+      margin-bottom: 2rem;
+    }
+    .header-content h1 {
+      color: #2c3e50;
+      margin-bottom: 0.5rem;
+      font-size: 1.8rem;
+    }
+    .header-content p {
+      color: #7f8c8d;
+      margin: 0;
+    }
+
+    /* Form Styles */
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+    label {
+      font-weight: 600;
+      color: #2c3e50;
+      margin-bottom: 0.5rem;
+    }
+    .form-control {
+      border: 1px solid #e3e8ee;
+      border-radius: 6px;
+      padding: 0.75rem;
+    }
+    .form-control:focus {
+      border-color: #1bb64f;
+      box-shadow: 0 0 0 0.2rem rgba(27, 182, 79, 0.25);
+    }
+    .form-control-range {
+      width: 100%;
+    }
+    .btn-primary {
+      background-color: #1bb64f;
+      border-color: #1bb64f;
+      padding: 0.75rem 1.5rem;
+      font-weight: 600;
+    }
+    .btn-primary:hover {
+      background-color: #169c44;
+      border-color: #169c44;
+    }
+
+    /* Alert */
+    .alert-danger {
+      background-color: #ffebee;
+      border-color: #ffcdd2;
+      color: #d32f2f;
+    }
+
+    /* Metrics Grid */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .metric-card {
+      background: white;
+      border-radius: 10px;
+      padding: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+      border: 1px solid #e3e8ee;
+      border-top: 4px solid;
+    }
+    .metric-card.critical {
+      border-top-color: #d62728;
+    }
+    .metric-card.warning {
+      border-top-color: #ff7f0e;
+    }
+    .metric-card.danger {
+      border-top-color: #c62828;
+    }
+    .metric-card.info {
+      border-top-color: #1f77b4;
+    }
+    .metric-icon {
+      font-size: 2rem;
+      width: 60px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 10px;
+    }
+    .metric-card.critical .metric-icon {
+      background: #ffebee;
+      color: #d62728;
+    }
+    .metric-card.warning .metric-icon {
+      background: #fff3e0;
+      color: #ff7f0e;
+    }
+    .metric-card.danger .metric-icon {
+      background: #ffebee;
+      color: #c62828;
+    }
+    .metric-card.info .metric-icon {
+      background: #e3f2fd;
+      color: #1f77b4;
+    }
+    .metric-content {
+      flex: 1;
+    }
+    .metric-value {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+    .metric-card.critical .metric-value {
+      color: #d62728;
+    }
+    .metric-card.warning .metric-value {
+      color: #ff7f0e;
+    }
+    .metric-card.danger .metric-value {
+      color: #c62828;
+    }
+    .metric-card.info .metric-value {
+      color: #1f77b4;
+    }
+    .metric-label {
+      color: #666;
+      font-weight: 500;
+      margin-bottom: 0.25rem;
+    }
+    .metric-change {
+      font-size: 0.85rem;
+      color: #7f8c8d;
+    }
+
+    /* Card Styles */
+    .card {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+      margin-bottom: 2rem;
+      border: 1px solid #e3e8ee;
+    }
+    .card-header {
+      padding: 1.25rem;
+      border-bottom: 1px solid #e3e8ee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .card-header h3 {
+      margin: 0;
+      font-size: 1.2rem;
+      color: #2c3e50;
+    }
+    .card-actions {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .search-box {
+      position: relative;
+    }
+    .search-box .fa-search {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #95a5a6;
+    }
+    .search-box input {
+      padding: 0.5rem 1rem 0.5rem 2rem;
+      border: 1px solid #e3e8ee;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      width: 200px;
+    }
+    .card-body {
+      padding: 1.25rem;
+    }
+
+    /* Table Styles */
+    .table-responsive {
+      overflow-x: auto;
+    }
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .data-table th,
+    .data-table td {
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid #e3e8ee;
+    }
+    .data-table th {
+      background: #f7fdf9;
+      font-weight: 600;
+      color: #333;
+      position: sticky;
+      top: 0;
+    }
+    .data-table tr:hover {
+      background: #f0f7f2;
+    }
+
+    /* Risk Score Label */
+    .risk-score {
+      --hue: calc(var(--score) * 120);
+      background: hsl(var(--hue), 80%, 90%);
+      color: hsl(var(--hue), 80%, 30%);
+      padding: 0.3rem 0.5rem;
+      border-radius: 4px;
+      font-weight: 600;
+      display: inline-block;
+      min-width: 50px;
+      text-align: center;
+    }
+
+    /* Insight Lists */
+    .insight-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .insight-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem;
+      border-radius: 6px;
+      background: #f8f9fa;
+      transition: background 0.2s;
+    }
+    .insight-item:hover {
+      background: #e9ecef;
+    }
+    .insight-main {
+      flex: 1;
+    }
+    .insight-title {
+      font-weight: 600;
+      color: #2c3e50;
+      margin-bottom: 0.25rem;
+    }
+    .insight-value {
+      font-size: 0.9rem;
+      color: #6c757d;
+    }
+    .insight-meta {
+      text-align: right;
+    }
+    .insight-stat {
+      font-size: 0.85rem;
+      color: #495057;
+      margin-bottom: 0.25rem;
+    }
+
+    /* Text Utilities */
+    .text-center {
+      text-align: center;
+      color: #6c757d;
+      padding: 1rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .metrics-grid {
+        grid-template-columns: 1fr;
+      }
+      .card-actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .search-box input {
+        width: 100%;
+      }
+    }
+  </style>
+
+  <!-- Vendor libs -->
+  <script
+    src="https://code.jquery.com/jquery-3.7.1.min.js"
+    integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+    crossorigin="anonymous"
+  ></script>
+  <script src="https://cdn.plot.ly/plotly-2.33.0.min.js"></script>
+  <link
+    rel="stylesheet"
+    href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css"
+  />
+  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Update threshold value display
+        const thresholdSlider = document.getElementById('thresholdSlider');
+        const thresholdValue = document.getElementById('thresholdValue');
+
+        if (thresholdSlider && thresholdValue) {
+            thresholdSlider.addEventListener('input', function() {
+                thresholdValue.textContent = this.value;
+            });
+        }
+
+        // Initialize DataTables if table exists
+        const fraudTable = document.getElementById('fraudTable');
+        if (fraudTable) {
+            const dt = $('#fraudTable').DataTable({
+                pageLength: 10,
+                order: [[fraudTable.rows[0].cells.length - 1, 'desc']], // Sort by last column (risk score)
+                dom: 'tip'
+            });
+
+            // Add search functionality
+            const searchInput = document.getElementById('claimSearch');
+            if (searchInput) {
+                searchInput.addEventListener('keyup', function() {
+                    dt.search(this.value).draw();
+                });
+            }
+        }
+
+        // Initialize risk distribution chart if data exists
+        const riskData = {{ risk_distribution_data|safe }};
+        const riskChart = document.getElementById('risk-distribution-chart');
+
+        if (riskData && riskChart) {
+            Plotly.newPlot('risk-distribution-chart', [{
+                x: riskData.bins,
+                y: riskData.counts,
+                type: 'bar',
+                marker: {
+                    color: ['#2ca02c', '#98df8a', '#ffbb78', '#ff7f0e', '#d62728']
+                }
+            }], {
+                title: 'Distribution of Fraud Risk Scores',
+                xaxis: { title: 'Risk Score Range' },
+                yaxis: { title: 'Number of Claims' },
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                paper_bgcolor: 'rgba(0,0,0,0)'
+            });
+        }
+    });
+  </script>
+  {% endblock %}
+</div>

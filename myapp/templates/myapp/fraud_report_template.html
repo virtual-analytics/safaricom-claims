@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Fraud Detection Report</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        h1 { color: #E30613; }
+        h2 { color: #333; border-bottom: 1px solid #ddd; padding-bottom: 10px; }
+        .summary { background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px; }
+        .metric { margin-bottom: 15px; }
+        .metric-label { font-weight: bold; color: #666; }
+        .metric-value { font-size: 18px; color: #E30613; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .footer { margin-top: 40px; font-size: 12px; color: #666; }
+    </style>
+</head>
+<body>
+    <h1>Fraud Detection Analysis Report</h1>
+    <p>Generated on: {{ generated_date }} by {{ user }}</p>
+    
+    <div class="summary">
+        <h2>Summary</h2>
+        <div class="metric">
+            <span class="metric-label">Dataset:</span>
+            <span class="metric-value">{{ results.current_table }}</span>
+        </div>
+        <div class="metric">
+            <span class="metric-label">Target Variable:</span>
+            <span class="metric-value">{{ results.original_target }}</span>
+        </div>
+        <div class="metric">
+            <span class="metric-label">Sample Size:</span>
+            <span class="metric-value">{{ results.sample_size|floatformat:0 }} records</span>
+        </div>
+        <div class="metric">
+            <span class="metric-label">Fraud Ratio:</span>
+            <span class="metric-value">{{ results.fraud_ratio|floatformat:4 }} ({{ results.fraud_ratio|floatformat:2 }}%)</span>
+        </div>
+        <div class="metric">
+            <span class="metric-label">Best Model:</span>
+            <span class="metric-value">{{ best_model|upper }}</span>
+        </div>
+        {% if results.binary_target_created %}
+        <div class="metric">
+            <span class="metric-label">Note:</span>
+            <span>Continuous target "{{ results.original_target }}" was converted to binary classification</span>
+        </div>
+        {% endif %}
+    </div>
+    
+    <h2>Model Performance</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Model</th>
+                <th>Accuracy</th>
+                <th>Precision</th>
+                <th>Recall</th>
+                <th>F1 Score</th>
+                <th>ROC AUC</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for model_type, result in results.results.items %}
+            {% if not result.error and not result.is_anomaly_detection %}
+            <tr>
+                <td>{{ model_type|upper }}</td>
+                <td>{{ result.metrics.accuracy|floatformat:4 }}</td>
+                <td>{{ result.metrics.precision|floatformat:4 }}</td>
+                <td>{{ result.metrics.recall|floatformat:4 }}</td>
+                <td>{{ result.metrics.f1|floatformat:4 }}</td>
+                <td>{{ result.metrics.roc_auc|floatformat:4|default:"N/A" }}</td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <h2>Anomaly Detection Results</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Model</th>
+                <th>Mean Score</th>
+                <th>Std Dev</th>
+                <th>Anomalies Detected</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for model_type, result in results.results.items %}
+            {% if not result.error and result.is_anomaly_detection %}
+            <tr>
+                <td>{{ model_type|upper }}</td>
+                <td>{{ result.metrics.anomaly_score_mean|floatformat:4 }}</td>
+                <td>{{ result.metrics.anomaly_score_std|floatformat:4 }}</td>
+                <td>{{ result.metrics.n_anomalies|floatformat:0 }}</td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <h2>Feature Importance</h2>
+    <p>Top features contributing to fraud detection (from best model):</p>
+    {% if results.feature_importances and results.feature_importances|get_item:best_model %}
+    <table>
+        <thead>
+            <tr>
+                <th>Feature</th>
+                <th>Importance</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for feature, importance in results.feature_importances|get_item:best_model|get_item:"features"|zip:results.feature_importances|get_item:best_model|get_item:"importances" %}
+            <tr>
+                <td>{{ feature }}</td>
+                <td>{{ importance|floatformat:6 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No feature importance data available.</p>
+    {% endif %}
+    
+    <div class="footer">
+        <p>Report generated by Fraud Detection System</p>
+        <p>Confidential - For internal use only</p>
+    </div>
+</body>
+</html>

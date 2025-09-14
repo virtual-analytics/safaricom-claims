@@ -1,0 +1,81 @@
+/* Navigation submenu styles */
+.mode-list li.has-submenu > a {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-right: 1rem;
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.mode-list li.has-submenu > a:hover {
+  background-color: #c70017;
+  color: #fff;
+}
+
+.mode-list li.has-submenu > a .submenu-toggle {
+  transition: transform 0.3s ease;
+  color: #fff;
+  font-size: 0.9rem;
+}
+
+.mode-list li.has-submenu.open > a .submenu-toggle {
+  transform: rotate(180deg);
+}
+
+.mode-list ul.submenu {
+  display: none;
+  flex-direction: column;
+  padding-left: 1rem;
+  margin-top: 0.3rem;
+  background-color: #1f1f1f;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.mode-list li.has-submenu.open > ul.submenu {
+  display: flex;
+}
+
+.mode-list ul.submenu li {
+  background: #2a2a2a;
+  border-radius: 6px;
+  margin-bottom: 0.3rem;
+  transition: background-color 0.3s ease;
+}
+
+.mode-list ul.submenu li a {
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #ddd;
+  display: block;
+  border-radius: 6px;
+  text-decoration: none;
+}
+
+.mode-list ul.submenu li.selected a,
+.mode-list ul.submenu li a:hover {
+  background: #e30613;
+  color: #fff;
+  box-shadow: 0 6px 20px rgba(227, 6, 19, 0.4);
+  transform: scale(1.05);
+}
+
+.mode-list li.selected > a {
+  background-color: #b8000b;
+  color: #fff;
+  box-shadow: 0 6px 20px rgba(184, 0, 11, 0.6);
+}
+
+.mode-list li a {
+  transition: color 0.3s ease;
+}
+
+.mode-list li a:hover {
+  color: #fff;
+}

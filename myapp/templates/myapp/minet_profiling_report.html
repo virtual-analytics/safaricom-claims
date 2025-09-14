@@ -1,0 +1,1521 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Data Profiling - Minet Insurance{% endblock %}
+
+{% block extra_head %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.0.0/chartjs-plugin-datalabels.min.css" rel="stylesheet">
+<style>
+    /* Modern Minet Color Theme */
+    :root {
+        --minet-blue: #0033A0;
+        --minet-blue-light: #1a4ab3;
+        --minet-red: #E30613;
+        --minet-red-dark: #b8000b;
+        --minet-bg: #f8f9fc;
+        --minet-card-bg: #ffffff;
+        --minet-text: #333;
+        --minet-text-light: #666;
+        --minet-border: #e3e8ee;
+        --minet-success: #28a745;
+        --minet-warning: #ffc107;
+        --minet-danger: #dc3545;
+        --minet-purple: #6f42c1;
+        --minet-teal: #20c997;
+        --minet-cyan: #17a2b8;
+        --minet-gray: #6c757d;
+        --minet-light: #f8f9fa;
+        --minet-dark: #343a40;
+    }
+
+    body {
+        background-color: var(--minet-bg);
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: var(--minet-text);
+    }
+
+    .dashboard-container {
+        max-width: 1600px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .section-card {
+        background: var(--minet-card-bg);
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(0, 51, 160, 0.08);
+        padding: 30px;
+        margin-bottom: 30px;
+        transition: all 0.3s ease;
+        border: 1px solid var(--minet-border);
+    }
+
+    .section-card:hover {
+        box-shadow: 0 15px 40px rgba(35, 35, 35, 0.15);
+    }
+
+    .section-title {
+        color: var(--minet-blue);
+        border-bottom: 2px solid var(--minet-red);
+        padding-bottom: 15px;
+        margin-top: 0;
+        margin-bottom: 25px;
+        font-size: 1.8rem;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        font-weight: 700;
+    }
+
+    .section-title i {
+        background: var(--minet-blue);
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.5rem;
+    }
+
+    /* Data Selection Area */
+    .data-selection {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 25px;
+        margin-bottom: 20px;
+    }
+
+    .select-container {
+        margin-bottom: 20px;
+        position: relative;
+    }
+
+    .select-container label {
+        display: block;
+        margin-bottom: 12px;
+        font-weight: 600;
+        color: var(--minet-blue);
+        font-size: 1.1rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .select-container label i {
+        color: var(--minet-red);
+        width: 24px;
+        text-align: center;
+    }
+
+    select {
+        width: 100%;
+        padding: 14px;
+        border-radius: 10px;
+        border: 1px solid var(--minet-border);
+        background: #f9fafb;
+        font-size: 1rem;
+        transition: all 0.3s;
+        appearance: none;
+        background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230033A0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: right 1rem center;
+        background-size: 1em;
+    }
+
+    select:focus {
+        outline: none;
+        border-color: var(--minet-blue);
+        box-shadow: 0 0 0 3px rgba(0, 51, 160, 0.1);
+    }
+
+    .btn-load {
+        background: linear-gradient(135deg, var(--minet-red) 0%, var(--minet-red-dark) 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 14px 30px;
+        font-size: 1.1rem;
+        font-weight: bold;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        transition: all 0.3s ease;
+        box-shadow: 0 6px 20px rgba(227, 6, 19, 0.25);
+        height: 50px;
+        align-self: flex-end;
+    }
+
+    .btn-load:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(227, 6, 19, 0.35);
+    }
+
+    .btn-load:disabled {
+        background: #cccccc;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+
+    /* Summary Stats */
+    .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    .summary-card {
+        background: linear-gradient(135deg, #ffffff 0%, #f9f9f9 100%);
+        border-radius: 14px;
+        padding: 25px;
+        text-align: center;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        border: 1px solid var(--minet-border);
+        transition: all 0.3s;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .summary-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    .summary-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: linear-gradient(90deg, var(--minet-blue), var(--minet-red));
+    }
+
+    .summary-value {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: var(--minet-red);
+        margin: 15px 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+    }
+
+    .summary-label {
+        color: var(--minet-text-light);
+        font-size: 1.1rem;
+        font-weight: 500;
+    }
+
+    .card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+
+    .card-header h3 {
+        margin: 0;
+        color: var(--minet-blue);
+        font-size: 1.4rem;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .card-header h3 i {
+        color: var(--minet-red);
+    }
+
+    /* Tabs */
+    .nav-tabs {
+        border-bottom: 2px solid var(--minet-border);
+        margin-bottom: 20px;
+    }
+
+    .nav-tabs .nav-link {
+        border: none;
+        color: var(--minet-text-light);
+        font-weight: 500;
+        padding: 12px 20px;
+        border-radius: 8px 8px 0 0;
+        transition: all 0.3s;
+    }
+
+    .nav-tabs .nav-link:hover {
+        border-color: transparent;
+        color: var(--minet-blue);
+    }
+
+    .nav-tabs .nav-link.active {
+        color: var(--minet-blue);
+        background-color: transparent;
+        border: none;
+        border-bottom: 3px solid var(--minet-red);
+        font-weight: 600;
+    }
+
+    /* Column Analysis Cards */
+    .column-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        padding: 20px;
+        margin-bottom: 20px;
+        border-left: 4px solid var(--minet-blue);
+        transition: all 0.3s;
+    }
+
+    .column-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+    }
+
+    .column-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--minet-border);
+    }
+
+    .column-name {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--minet-blue);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .column-type {
+        background: var(--minet-blue-light);
+        color: white;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-bottom: 15px;
+    }
+
+    .stat-item {
+        background: #f8fafc;
+        padding: 12px;
+        border-radius: 8px;
+        text-align: center;
+    }
+
+    .stat-value {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: var(--minet-red);
+        margin-bottom: 5px;
+    }
+
+    .stat-label {
+        font-size: 0.9rem;
+        color: var(--minet-text-light);
+    }
+
+    /* Quality Score */
+    .quality-score {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 20px 0;
+    }
+
+    .score-circle {
+        position: relative;
+        width: 120px;
+        height: 120px;
+    }
+
+    .score-value {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 2rem;
+        font-weight: 700;
+    }
+
+    /* Charts */
+    .chart-container {
+        position: relative;
+        height: 300px;
+        margin: 20px 0;
+    }
+
+    .mini-chart {
+        height: 200px;
+        margin: 15px 0;
+    }
+
+    /* Correlation Matrix */
+    .correlation-matrix {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        margin-top: 20px;
+    }
+
+    .correlation-item {
+        background: #f8fafc;
+        padding: 15px;
+        border-radius: 10px;
+        text-align: center;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+    }
+
+    /* Comparison Section */
+    .comparison-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        margin-top: 20px;
+    }
+
+    .comparison-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        border-top: 4px solid var(--minet-purple);
+    }
+
+    /* Loading indicator */
+    .loading-container {
+        display: none;
+        text-align: center;
+        padding: 40px;
+    }
+
+    .spinner {
+        border: 4px solid rgba(227, 6, 19, 0.2);
+        border-radius: 50%;
+        border-top: 4px solid var(--minet-red);
+        width: 50px;
+        height: 50px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 20px;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    /* Profile Report Container */
+    .profile-container {
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+        border: 1px solid var(--minet-border);
+        margin-top: 30px;
+    }
+
+    .profile-header {
+        background: var(--minet-blue);
+        color: white;
+        padding: 20px 30px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .profile-header h2 {
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        font-weight: 600;
+    }
+
+    .profile-content {
+        background: white;
+        padding: 0;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .data-selection {
+            grid-template-columns: 1fr;
+        }
+        
+        .summary-grid {
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        }
+        
+        .section-card {
+            padding: 20px;
+        }
+        
+        .dashboard-container {
+            padding: 15px;
+        }
+        
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* Badges */
+    .badge {
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-weight: 500;
+        font-size: 0.85rem;
+    }
+
+    .badge-success {
+        background-color: rgba(40, 167, 69, 0.15);
+        color: #28a745;
+    }
+
+    .badge-warning {
+        background-color: rgba(255, 193, 7, 0.15);
+        color: #ffc107;
+    }
+
+    .badge-danger {
+        background-color: rgba(220, 53, 69, 0.15);
+        color: #dc3545;
+    }
+
+    .badge-info {
+        background-color: rgba(23, 162, 184, 0.15);
+        color: #17a2b8;
+    }
+
+    /* Progress bars */
+    .progress {
+        height: 10px;
+        border-radius: 5px;
+        background-color: #e9ecef;
+        margin: 10px 0;
+    }
+
+    .progress-bar {
+        border-radius: 5px;
+    }
+
+    /* Tooltips */
+    .tooltip-icon {
+        color: var(--minet-blue-light);
+        cursor: help;
+        margin-left: 5px;
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .fade-in {
+        animation: fadeIn 0.5s ease forwards;
+    }
+
+    /* Search box */
+    .search-box {
+        position: relative;
+        margin-bottom: 20px;
+    }
+
+    .search-box input {
+        width: 100%;
+        padding: 12px 20px 12px 40px;
+        border-radius: 25px;
+        border: 1px solid var(--minet-border);
+        background: #f9fafb;
+        font-size: 1rem;
+        transition: all 0.3s;
+    }
+
+    .search-box input:focus {
+        outline: none;
+        border-color: var(--minet-blue);
+        box-shadow: 0 0 0 3px rgba(0, 51, 160, 0.1);
+    }
+
+    .search-box i {
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--minet-text-light);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="section-card">
+        <h2 class="section-title"><i class="fas fa-chart-bar"></i> Advanced Data Profiling Report</h2>
+        <p style="font-size: 1.1rem; color: var(--minet-text-light); margin-bottom: 30px; line-height: 1.6;">
+            Analyze your dataset with Minet's comprehensive profiling tool. Get detailed insights into data quality, distributions, and patterns to understand your claims data better.
+        </p>
+        
+        <form method="get" id="profiling-form">
+            <div class="data-selection">
+                <div class="select-container">
+                    <label for="dataset-select"><i class="fas fa-database"></i> Select Dataset</label>
+                    <select id="dataset-select" name="dataset_id" class="choices-select">
+                        {% for dataset in dataset_ids %}
+                            <option value="{{ dataset }}" {% if dataset == selected_id %}selected{% endif %}>
+                                {{ dataset }}
+                            </option>
+                        {% empty %}
+                            <option value="">No datasets available</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="select-container">
+                    <label for="compare-select"><i class="fas fa-balance-scale"></i> Compare With (Optional)</label>
+                    <select id="compare-select" name="compare_id" class="choices-select">
+                        <option value="">-- None --</option>
+                        {% for dataset in dataset_ids %}
+                            {% if dataset != selected_id %}
+                                <option value="{{ dataset }}" {% if dataset == compare_id %}selected{% endif %}>
+                                    {{ dataset }}
+                                </option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="select-container" style="display: flex; align-items: flex-end;">
+                    <button type="submit" class="btn-load" id="load-btn">
+                        <i class="fas fa-sync-alt"></i> Generate Report
+                    </button>
+                    
+                    {% if selected_id %}
+                    <a href="?download_pdf=1&dataset_id={{ selected_id }}{% if compare_id %}&compare_id={{ compare_id }}{% endif %}" 
+                       class="btn-load" style="margin-left: 10px; background: var(--minet-blue);">
+                        <i class="fas fa-download"></i> Download PDF
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </form>
+
+        {% if error %}
+            <div class="alert alert-danger mt-4" role="alert">
+                <i class="fas fa-exclamation-circle"></i> {{ error }}
+            </div>
+        {% endif %}
+    </div>
+
+    {% if dataset_name %}
+    <!-- Dataset Overview Section -->
+    <div class="section-card fade-in">
+        <div class="card-header">
+            <h3><i class="fas fa-info-circle"></i> Dataset Overview - {{ dataset_name }}</h3>
+            <div class="quality-score">
+                <div class="score-circle">
+                    <canvas id="qualityChart" width="120" height="120"></canvas>
+                    <div class="score-value">{{ quality_score }}</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="summary-grid">
+            <div class="summary-card">
+                <div class="summary-value">{{ rows }} <i class="fas fa-list-ol"></i></div>
+                <div class="summary-label">Total Rows</div>
+            </div>
+            
+            <div class="summary-card">
+                <div class="summary-value">{{ columns }} <i class="fas fa-columns"></i></div>
+                <div class="summary-label">Total Columns</div>
+            </div>
+            
+            <div class="summary-card">
+                <div class="summary-value">{{ missing_values }} <i class="fas fa-question-circle"></i></div>
+                <div class="summary-label">Missing Values</div>
+            </div>
+            
+            <div class="summary-card">
+                <div class="summary-value">{{ missing_pct }}% <i class="fas fa-percentage"></i></div>
+                <div class="summary-label">Missing Percentage</div>
+            </div>
+            
+            <div class="summary-card">
+                <div class="summary-value">{{ duplicate_rows }} <i class="fas fa-copy"></i></div>
+                <div class="summary-label">Duplicate Rows</div>
+            </div>
+            
+            <div class="summary-card">
+                <div class="summary-value">{{ memory_usage }} MB <i class="fas fa-memory"></i></div>
+                <div class="summary-label">Memory Usage</div>
+            </div>
+        </div>
+
+        <!-- Column Types Breakdown -->
+        <div class="chart-container">
+            <canvas id="columnTypesChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Column Analysis Section -->
+    <div class="section-card fade-in">
+        <div class="card-header">
+            <h3><i class="fas fa-columns"></i> Column Analysis</h3>
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="columnSearch" placeholder="Search columns...">
+            </div>
+        </div>
+
+        <ul class="nav nav-tabs" id="columnTypeTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button" role="tab">All Columns</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="numeric-tab" data-bs-toggle="tab" data-bs-target="#numeric" type="button" role="tab">Numeric</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="categorical-tab" data-bs-toggle="tab" data-bs-target="#categorical" type="button" role="tab">Categorical</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="datetime-tab" data-bs-toggle="tab" data-bs-target="#datetime" type="button" role="tab">Date/Time</button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="columnTypeTabContent">
+            <div class="tab-pane fade show active" id="all" role="tabpanel">
+                <div class="row" id="allColumns">
+                    {% for column in column_analysis %}
+                    <div class="col-md-6 col-lg-4 mb-3 column-item" data-type="{{ column.type|lower }}">
+                        <div class="column-card">
+                            <div class="column-header">
+                                <div class="column-name">
+                                    {{ column.name }}
+                                    <span class="tooltip-icon" data-bs-toggle="tooltip" title="{{ column.type }}">
+                                        <i class="fas fa-info-circle"></i>
+                                    </span>
+                                </div>
+                                <span class="column-type">{{ column.type }}</span>
+                            </div>
+                            
+                            <div class="stats-grid">
+                                <div class="stat-item">
+                                    <div class="stat-value">{{ column.missing_pct }}%</div>
+                                    <div class="stat-label">Missing</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-value">{{ column.unique_count }}</div>
+                                    <div class="stat-label">Unique</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-value">{{ column.unique_pct }}%</div>
+                                    <div class="stat-label">Unique %</div>
+                                </div>
+                            </div>
+                            
+                            {% if column.type == 'numeric' %}
+                            <div class="mini-chart">
+                                <canvas id="distChart-{{ forloop.counter }}"></canvas>
+                            </div>
+                            {% elif column.type == 'categorical' %}
+                            <div class="mini-chart">
+                                <canvas id="catChart-{{ forloop.counter }}"></canvas>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <div class="tab-pane fade" id="numeric" role="tabpanel">
+                <div class="row" id="numericColumns">
+                    {% for column in column_analysis %}
+                    {% if column.type == 'numeric' %}
+                    <div class="col-md-6 col-lg-4 mb-3 column-item">
+                        <div class="column-card">
+                            <div class="column-header">
+                                <div class="column-name">
+                                    {{ column.name }}
+                                    <span class="tooltip-icon" data-bs-toggle="tooltip" title="{{ column.type }}">
+                                        <i class="fas fa-info-circle"></i>
+                                    </span>
+                                </div>
+                                <span class="column-type">{{ column.type }}</span>
+                            </div>
+                            
+                            <div class="stats-grid">
+                                <div class="stat-item">
+                                    <div class="stat-value">{{ column.min|floatformat:2 }}</div>
+                                    <div class="stat-label">Min</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-value">{{ column.max|floatformat:2 }}</div>
+                                    <div class="stat-label">Max</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-value">{{ column.mean|floatformat:2 }}</div>
+                                    <div class="stat-label">Mean</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-value">{{ column.std|floatformat:2 }}</div>
+                                    <div class="stat-label">Std Dev</div>
+                                </div>
+                            </div>
+                            
+                            <div class="mini-chart">
+                                <canvas id="numChart-{{ forloop.counter }}"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <div class="tab-pane fade" id="categorical" role="tabpanel">
+                <div class="row" id="categoricalColumns">
+                    {% for column in column_analysis %}
+                    {% if column.type == 'categorical' %}
+                    <div class="col-md-6 col-lg-4 mb-3 column-item">
+                        <div class="column-card">
+                            <div class="column-header">
+                                <div class="column-name">
+                                    {{ column.name }}
+                                    <span class="tooltip-icon" data-bs-toggle="tooltip" title="{{ column.type }}">
+                                        <i class="fas fa-info-circle"></i>
+                                    </span>
+                                </div>
+                                <span class="column-type">{{ column.type }}</span>
+                            </div>
+                            
+                            <div class="stats-grid">
+                                <div class="stat-item">
+                                    <div class="stat-value">{{ column.top_values.0.value|truncatechars:15 }}</div>
+                                    <div class="stat-label">Top Value</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-value">{{ column.top_values.0.count }}</div>
+                                    <div class="stat-label">Top Count</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-value">{{ column.top_values.0.pct }}%</div>
+                                    <div class="stat-label">Top %</div>
+                                </div>
+                            </div>
+                            
+                            <div class="mini-chart">
+                                <canvas id="catChart-{{ forloop.counter }}"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <div class="tab-pane fade" id="datetime" role="tabpanel">
+                <div class="row" id="datetimeColumns">
+                    {% for column in column_analysis %}
+                    {% if column.type == 'datetime' %}
+                    <div class="col-md-6 col-lg-4 mb-3 column-item">
+                        <div class="column-card">
+                            <div class="column-header">
+                                <div class="column-name">
+                                    {{ column.name }}
+                                    <span class="tooltip-icon" data-bs-toggle="tooltip" title="{{ column.type }}">
+                                        <i class="fas fa-info-circle"></i>
+                                    </span>
+                                </div>
+                                <span class="column-type">{{ column.type }}</span>
+                            </div>
+                            
+                            <div class="stats-grid">
+                                <div class="stat-item">
+                                    <div class="stat-value">{{ column.min_date|date:"Y-m-d" }}</div>
+                                    <div class="stat-label">Earliest</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-value">{{ column.max_date|date:"Y-m-d" }}</div>
+                                    <div class="stat-label">Latest</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-value">{{ column.date_range_days }}</div>
+                                    <div class="stat-label">Days Range</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Correlation Analysis -->
+    {% if correlation_matrix %}
+    <div class="section-card fade-in">
+        <div class="card-header">
+            <h3><i class="fas fa-project-diagram"></i> Correlation Analysis</h3>
+        </div>
+        
+        <div class="chart-container">
+            <canvas id="correlationHeatmap"></canvas>
+        </div>
+        
+        <h4 class="mt-4 mb-3">Top Correlations</h4>
+        <div class="correlation-matrix">
+            {% for correlation in top_correlations %}
+            <div class="correlation-item">
+                <div class="stat-value">{{ correlation.value }}</div>
+                <div class="stat-label">{{ correlation.pair }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Outlier Analysis -->
+    {% if outlier_analysis %}
+    <div class="section-card fade-in">
+        <div class="card-header">
+            <h3><i class="fas fa-exclamation-triangle"></i> Outlier Analysis</h3>
+        </div>
+        
+        <div class="row">
+            {% for column, stats in outlier_analysis.items %}
+            <div class="col-md-6 col-lg-4 mb-3">
+                <div class="column-card">
+                    <div class="column-header">
+                        <div class="column-name">{{ column }}</div>
+                        <span class="badge {% if stats.percentage > 5 %}badge-danger{% elif stats.percentage > 2 %}badge-warning{% else %}badge-success{% endif %}">
+                            {{ stats.percentage }}% outliers
+                        </span>
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-value">{{ stats.count }}</div>
+                            <div class="stat-label">Outlier Count</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">{{ stats.lower_bound|floatformat:2 }}</div>
+                            <div class="stat-label">Lower Bound</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">{{ stats.upper_bound|floatformat:2 }}</div>
+                            <div class="stat-label">Upper Bound</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Missing Values Analysis -->
+    {% if missing_values_top %}
+    <div class="section-card fade-in">
+        <div class="card-header">
+            <h3><i class="fas fa-question-circle"></i> Missing Values Analysis</h3>
+        </div>
+        
+        <div class="chart-container">
+            <canvas id="missingValuesChart"></canvas>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Text Analytics -->
+    {% if text_analytics %}
+    <div class="section-card fade-in">
+        <div class="card-header">
+            <h3><i class="fas fa-font"></i> Text Analytics</h3>
+        </div>
+        
+        <div class="row">
+            {% for column, analytics in text_analytics.items %}
+            {% if analytics %}
+            <div class="col-md-6 mb-4">
+                <div class="column-card">
+                    <div class="column-header">
+                        <div class="column-name">{{ column }}</div>
+                        <span class="badge badge-info">Text Analysis</span>
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-value">{{ analytics.total_words }}</div>
+                            <div class="stat-label">Total Words</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">{{ analytics.unique_words }}</div>
+                            <div class="stat-label">Unique Words</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">{{ analytics.sentiment.polarity }}</div>
+                            <div class="stat-label">Sentiment Score</div>
+                        </div>
+                    </div>
+                    
+                    <h5 class="mt-3">Top Words</h5>
+                    <div class="d-flex flex-wrap gap-2 mt-2">
+                        {% for word, count in analytics.top_words|slice:":10" %}
+                        <span class="badge badge-primary">{{ word }} ({{ count }})</span>
+                        {% endfor %}
+                    </div>
+                    
+                    {% if analytics.wordcloud %}
+                    <div class="mt-3 text-center">
+                        <img src="data:image/png;base64,{{ analytics.wordcloud }}" alt="Word Cloud for {{ column }}" class="img-fluid" style="max-height: 200px;">
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Dataset Comparison -->
+    {% if comparison_stats %}
+    <div class="section-card fade-in">
+        <div class="card-header">
+            <h3><i class="fas fa-balance-scale"></i> Dataset Comparison: {{ selected_id }} vs {{ compare_id }}</h3>
+        </div>
+        
+        <div class="comparison-grid">
+            <div class="comparison-card">
+                <div class="stat-value {% if comparison_stats.row_count_diff > 0 %}text-success{% elif comparison_stats.row_count_diff < 0 %}text-danger{% endif %}">
+                    {% if comparison_stats.row_count_diff > 0 %}+{% endif %}{{ comparison_stats.row_count_diff }}
+                </div>
+                <div class="stat-label">Row Count Difference</div>
+            </div>
+            
+            <div class="comparison-card">
+                <div class="stat-value {% if comparison_stats.col_count_diff > 0 %}text-success{% elif comparison_stats.col_count_diff < 0 %}text-danger{% endif %}">
+                    {% if comparison_stats.col_count_diff > 0 %}+{% endif %}{{ comparison_stats.col_count_diff }}
+                </div>
+                <div class="stat-label">Column Count Difference</div>
+            </div>
+            
+            <div class="comparison-card">
+                <div class="stat-value">{{ comparison_stats.common_columns|length }}</div>
+                <div class="stat-label">Common Columns</div>
+            </div>
+        </div>
+        
+        {% if comparison_stats.schema_comparison %}
+        <h4 class="mt-4 mb-3">Schema Comparison</h4>
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Column</th>
+                        <th>In {{ selected_id }}</th>
+                        <th>In {{ compare_id }}</th>
+                        <th>Type Match</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in comparison_stats.schema_comparison %}
+                    <tr>
+                        <td>{{ item.column }}</td>
+                        <td>
+                            {% if item.in_first %}
+                                <span class="badge badge-success">Yes</span>
+                            {% else %}
+                                <span class="badge badge-danger">No</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.in_second %}
+                                <span class="badge badge-success">Yes</span>
+                            {% else %}
+                                <span class="badge badge-danger">No</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.type_match %}
+                                <span class="badge badge-success">Match</span>
+                            {% else %}
+                                <span class="badge badge-warning">Different</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+        
+        {% if comparison_stats.numeric_comparison %}
+        <h4 class="mt-4 mb-3">Numeric Columns Comparison</h4>
+        <div class="row">
+            {% for column, stats in comparison_stats.numeric_comparison.items %}
+            <div class="col-md-6 col-lg-4 mb-3">
+                <div class="column-card">
+                    <div class="column-header">
+                        <div class="column-name">{{ column }}</div>
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-value">{{ stats.mean_diff|floatformat:2 }}</div>
+                            <div class="stat-label">Mean Difference</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">{{ stats.std_diff|floatformat:2 }}</div>
+                            <div class="stat-label">Std Dev Difference</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Data Sample -->
+    <div class="section-card fade-in">
+        <div class="card-header">
+            <h3><i class="fas fa-table"></i> Data Sample</h3>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        {% for col in sample_data.0.keys %}
+                        <th>{{ col }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in sample_data %}
+                    <tr>
+                        {% for value in row.values %}
+                        <td>{{ value }}</td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Full Pandas Profile Report -->
+    {% if profile_html %}
+    <div class="section-card">
+        <div class="card-header">
+            <h3><i class="fas fa-file-medical-alt"></i> Comprehensive Data Profile</h3>
+        </div>
+        
+        <div class="profile-container">
+            <div class="profile-header">
+                <h2><i class="fas fa-chart-pie"></i> {{ selected_id }} Dataset Analysis</h2>
+            </div>
+            <div class="profile-content">
+                {{ profile_html|safe }}
+            </div>
+        </div>
+    </div>
+    {% elif dataset_ids and not error and not dataset_name %}
+    <div class="section-card">
+        <div class="alert alert-info" style="text-align: center; padding: 40px; border-radius: 14px; background: #f0f7ff; border: 1px solid #c5d9f1;">
+            <i class="fas fa-info-circle" style="font-size: 3rem; color: var(--minet-blue); margin-bottom: 20px;"></i>
+            <h3 style="color: var(--minet-blue);">No Profile Generated</h3>
+            <p style="font-size: 1.1rem; color: var(--minet-text-light);">
+                Select a dataset and click "Generate Report" to create a comprehensive data profile.
+            </p>
+        </div>
+    </div>
+    {% endif %}
+    
+    <div class="loading-container" id="loading-indicator">
+        <div class="spinner"></div>
+        <p style="font-size: 1.2rem; color: var(--minet-blue); font-weight: 500;">
+            Generating data profile. This may take a moment...
+        </p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_body %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.0.0/chartjs-plugin-datalabels.min.js"></script>
+<script>
+$(document).ready(function() {
+    // Show loading indicator when form is submitted
+    $('#profiling-form').on('submit', function() {
+        $('#loading-indicator').show();
+        $('html, body').animate({ scrollTop: 0 }, 'fast');
+    });
+    
+    // Handle dataset change
+    $('#dataset-select, #compare-select').change(function() {
+        if ($('#dataset-select').val()) {
+            $('#load-btn').prop('disabled', false);
+        } else {
+            $('#load-btn').prop('disabled', true);
+        }
+    });
+    
+    // Initialize button state
+    if ($('#dataset-select').val()) {
+        $('#load-btn').prop('disabled', false);
+    } else {
+        $('#load-btn').prop('disabled', true);
+    }
+    
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
+    
+    // Column search functionality
+    $('#columnSearch').on('keyup', function() {
+        var value = $(this).val().toLowerCase();
+        $('.column-item').filter(function() {
+            $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+        });
+    });
+    
+    // If there's an error, scroll to it
+    {% if error %}
+    $('html, body').animate({
+        scrollTop: $(".alert-danger").offset().top - 100
+    }, 500);
+    {% endif %}
+});
+
+// Chart initialization
+document.addEventListener('DOMContentLoaded', function() {
+    {% if dataset_name %}
+    // Quality Score Chart
+    var qualityCtx = document.getElementById('qualityChart').getContext('2d');
+    var qualityChart = new Chart(qualityCtx, {
+        type: 'doughnut',
+        data: {
+            datasets: [{
+                data: [{{ quality_score }}, 100 - {{ quality_score }}],
+                backgroundColor: [
+                    {% if quality_score >= 80 %}
+                    '#28a745',
+                    {% elif quality_score >= 60 %}
+                    '#ffc107',
+                    {% else %}
+                    '#dc3545',
+                    {% endif %}
+                    '#e9ecef'
+                ],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            cutout: '70%',
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    enabled: false
+                }
+            }
+        }
+    });
+    
+    // Column Types Chart
+    var columnTypesCtx = document.getElementById('columnTypesChart').getContext('2d');
+    var columnTypesChart = new Chart(columnTypesCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Numeric', 'Categorical', 'Date/Time', 'Boolean', 'Other'],
+            datasets: [{
+                label: 'Column Count',
+                data: [
+                    {{ column_types.Numeric }},
+                    {{ column_types.Categorical }},
+                    {{ column_types.Date_Time }},
+                    {{ column_types.Boolean }},
+                    {{ column_types.Other }}
+                ],
+                backgroundColor: [
+                    '#0033A0',
+                    '#E30613',
+                    '#28a745',
+                    '#ffc107',
+                    '#6c757d'
+                ],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                title: {
+                    display: true,
+                    text: 'Column Types Distribution'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+    
+    // Missing Values Chart
+    {% if missing_values_top %}
+    var missingValuesCtx = document.getElementById('missingValuesChart').getContext('2d');
+    var missingValuesChart = new Chart(missingValuesCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ missing_values_top.columns|safe }},
+            datasets: [{
+                label: 'Missing Values Count',
+                data: {{ missing_values_top.counts }},
+                backgroundColor: '#E30613',
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Top Columns with Missing Values'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+    {% endif %}
+    
+    // Correlation Heatmap
+    {% if correlation_matrix %}
+    var correlationCtx = document.getElementById('correlationHeatmap').getContext('2d');
+    
+    // Prepare data for the heatmap
+    var correlationData = {
+        labels: {{ correlation_matrix.columns|safe }},
+        datasets: [{
+            label: 'Correlation Matrix',
+            data: {{ correlation_matrix.data }},
+            backgroundColor: function(context) {
+                var value = context.dataset.data[context.dataIndex];
+                var alpha = Math.abs(value);
+                return value < 0 ? 
+                    `rgba(220, 53, 69, ${alpha})` : 
+                    `rgba(40, 167, 69, ${alpha})`;
+            }
+        }]
+    };
+    
+    var correlationChart = new Chart(correlationCtx, {
+        type: 'bar',
+        data: correlationData,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                title: {
+                    display: true,
+                    text: 'Correlation Matrix'
+                }
+            },
+            scales: {
+                x: {
+                    ticks: {
+                        maxRotation: 45
+                    }
+                }
+            }
+        }
+    });
+    {% endif %}
+    
+    // Sample charts for column analysis (simplified for this example)
+    {% for column in column_analysis %}
+    {% if column.type == 'numeric' %}
+    var distCtx = document.getElementById('distChart-{{ forloop.counter }}').getContext('2d');
+    var distChart = new Chart(distCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Q1', 'Median', 'Q3'],
+            datasets: [{
+                label: 'Distribution',
+                data: [{{ column.q1 }}, {{ column.median }}, {{ column.q3 }}],
+                backgroundColor: '#0033A0',
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: false
+                }
+            }
+        }
+    });
+    {% elif column.type == 'categorical' %}
+    var catCtx = document.getElementById('catChart-{{ forloop.counter }}').getContext('2d');
+    var catChart = new Chart(catCtx, {
+        type: 'doughnut',
+        data: {
+            labels: [
+                {% for value in column.top_values|slice:":3" %}
+                '{{ value.value }}',
+                {% endfor %}
+                'Others'
+            ],
+            datasets: [{
+                data: [
+                    {% for value in column.top_values|slice:":3" %}
+                    {{ value.count }},
+                    {% endfor %}
+                    {{ column.total_count }} - {{ column.top_values.0.count }} - {{ column.top_values.1.count }} - {{ column.top_values.2.count }}
+                ],
+                backgroundColor: [
+                    '#0033A0',
+                    '#E30613',
+                    '#28a745',
+                    '#6c757d'
+                ],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+    {% endif %}
+    {% endfor %}
+    {% endif %}
+});
+</script>
+
+<!-- Pandas Profiling CSS Overrides -->
+<style>
+    /* Custom styling for profile report */
+    .profile-content .container {
+        max-width: 100% !important;
+        padding: 0 !important;
+    }
+    
+    .profile-content .row {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+    
+    .profile-content .var-name {
+        color: var(--minet-blue) !important;
+    }
+    
+    .profile-content .alert {
+        border-radius: 10px !important;
+    }
+    
+    .profile-content .progress {
+        border-radius: 4px !important;
+        height: 10px !important;
+    }
+    
+    .profile-content .progress-bar {
+        background-color: var(--minet-red) !important;
+    }
+    
+    .profile-content .table {
+        border-radius: 10px !important;
+        overflow: hidden !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important;
+    }
+    
+    .profile-content .table th {
+        background-color: var(--minet-blue) !important;
+        color: white !important;
+    }
+    
+    .profile-content .table-striped tbody tr:nth-of-type(odd) {
+        background-color: #f8fafd !important;
+    }
+    
+    .profile-content .btn {
+        background-color: var(--minet-blue) !important;
+        border-color: var(--minet-blue) !important;
+        border-radius: 8px !important;
+        padding: 8px 16px !important;
+    }
+    
+    .profile-content .btn:hover {
+        background-color: var(--minet-blue-light) !important;
+    }
+    
+    .profile-content .nav-pills .nav-link.active {
+        background-color: var(--minet-red) !important;
+    }
+    
+    .profile-content .nav-pills .nav-link {
+        color: var(--minet-blue) !important;
+        border-radius: 8px !important;
+        margin-right: 5px !important;
+        margin-bottom: 5px !important;
+    }
+</style>
+{% endblock %}

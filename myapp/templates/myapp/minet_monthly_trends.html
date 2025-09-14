@@ -1,0 +1,334 @@
+{% extends "base.html" %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}Monthly Fraud Trends - Safaricom Portal{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
+<style>
+    .trends-container { max-width: 1400px; margin: 0 auto; padding: 2rem; }
+    .alert-container { margin-bottom: 1.5rem; }
+    .trends-header { margin-bottom: 2rem; }
+    .content-body { margin-top: 2rem; }
+    
+    /* Card Styles */
+    .card { background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 2rem; border: 1px solid #e3e8ee; }
+    .card-header { padding: 1.25rem; border-bottom: 1px solid #e3e8ee; display: flex; justify-content: space-between; align-items: center; }
+    .card-header h3 { margin: 0; font-size: 1.2rem; color: #2c3e50; }
+    .card-body { padding: 1.25rem; }
+    
+    /* Form Styles */
+    .form-group { margin-bottom: 1.5rem; }
+    label { font-weight: 600; color: #2c3e50; margin-bottom: 0.5rem; display: block; }
+    .form-control { border: 1px solid #e3e8ee; border-radius: 6px; padding: 0.75rem; width: 100%; }
+    .btn-primary { background-color: #d62728; border-color: #d62728; padding: 0.75rem 1.5rem; font-weight: 600; }
+    .btn-primary:hover { background-color: #b21f1f; border-color: #b21f1f; }
+    
+    /* Metrics Grid */
+    .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+    .metric-card { background: white; border-radius: 10px; padding: 1.5rem; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border: 1px solid #e3e8ee; }
+    .metric-value { font-size: 2rem; font-weight: 700; color: #d62728; margin-bottom: 0.5rem; }
+    .metric-label { color: #666; font-size: 0.9rem; }
+    
+    /* Chart containers */
+    .chart-container { margin-bottom: 2rem; }
+    .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem; }
+    
+    /* Table styles */
+    .table-responsive { overflow-x: auto; }
+    .trend-table { width: 100%; border-collapse: collapse; }
+    .trend-table th, .trend-table td { padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid #e3e8ee; }
+    .trend-table th { background: #f7fdf9; font-weight: 600; color: #333; position: sticky; top: 0; }
+    .trend-table tr:hover { background: #f0f7f2; }
+    
+    @media (max-width: 992px) {
+        .chart-row { grid-template-columns: 1fr; }
+    }
+    
+    @media (max-width: 768px) {
+        .trends-container { padding: 1rem; }
+        .metrics-grid { grid-template-columns: 1fr 1fr; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="fraud-container">
+  <!-- Alert container for notifications -->
+  <div class="alert-container">
+    {% if error %}
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+      <i class="fas fa-exclamation-circle me-2"></i>
+      {{ error }}
+      <button
+        type="button"
+        class="btn-close"
+        data-bs-dismiss="alert"
+        aria-label="Close"
+      ></button>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+
+
+  <div class="fraud-header">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h2 class="mb-0">
+        <i class="fas fa-shield-alt me-2" style="color: #ff4b2b"></i> Rule-Based
+        Fraud Detection
+      </h2>
+      <div>
+        <button
+          class="btn btn-outline-secondary"
+          data-bs-toggle="modal"
+          data-bs-target="#helpModal"
+          style="padding: 0.25rem 0.5rem; font-size: 0.8rem"
+        >
+          <i class="fas fa-question-circle me-1"></i> Help
+        </button>
+      </div>
+    </div>
+    <p class="lead text-muted">
+      Detect potentially fraudulent insurance claims using advanced rule-based
+      algorithms and risk scoring.
+    </p>
+  </div>
+
+  <!-- Tab Navigation -->
+  <div
+    style="
+      display: flex;
+      overflow-x: auto;
+      gap: 0;
+      margin-bottom: 0;
+      scrollbar-width: none;
+      border-bottom: 1px solid #e0e0e0;
+      background: linear-gradient(to right, #f8f9fa, #f1f3f5);
+    "
+  >
+    <a
+      href=" "
+      style="flex: 0 0 auto; padding: 1.2rem 2rem; background: {% if request.path == '/minet_forecast_volume/' %}#004b87{% else %}transparent{% endif %}; cursor: pointer; text-decoration: none; color: {% if request.path == '/minet_forecast_volume/' %}white{% else %}#004b87{% endif %}; border-right: 1px solid #e0e0e0; font-weight: 600; transition: all 0.3s ease; display: flex; align-items: center; gap: 0.8rem;"
+    >
+      <i class="fas fa-chart-line" style="font-size: 1.1rem"></i>
+      Risk Scores
+    </a>
+
+    <a
+      href="{% url 'minet_suspicious_providers' %}"
+      style="flex: 0 0 auto; padding: 1.2rem 2rem; background: {% if request.path == '/minet_suspicious_providers/' %}#004b87{% else %}transparent{% endif %}; cursor: pointer; text-decoration: none; color: {% if request.path == '/minet_suspicious_providers/' %}white{% else %}#004b87{% endif %}; border-right: 1px solid #e0e0e0; font-weight: 600; transition: all 0.3s ease; display: flex; align-items: center; gap: 0.8rem;"
+    >
+      <i class="fas fa-chart-area" style="font-size: 1.1rem"></i>
+      Suspicious providers
+    </a>
+
+    <a
+      href=""
+      style="flex: 0 0 auto; padding: 1.2rem 2rem; background: {% if request.path == '/minet_impact_simulation/' %}#004b87{% else %}transparent{% endif %}; cursor: pointer; text-decoration: none; color: {% if request.path == '/minet_impact_simulation/' %}white{% else %}#004b87{% endif %}; border-right: 1px solid #e0e0e0; font-weight: 600; transition: all 0.3s ease; display: flex; align-items: center; gap: 0.8rem;"
+    >
+      <i class="fas fa-cogs" style="font-size: 1.1rem"></i>
+      Diagnosis Patterns
+    </a>
+
+    <a
+      href="{% url 'minet_monthly_trends' %}"
+      style="flex: 0 0 auto; padding: 1.2rem 2rem; background: {% if request.path == '/minet_monthly_trends/' %}#004b87{% else %}transparent{% endif %}; cursor: pointer; text-decoration: none; color: {% if request.path == '/minet_monthly_trends/' %}white{% else %}#004b87{% endif %}; border-right: 1px solid #e0e0e0; font-weight: 600; transition: all 0.3s ease; display: flex; align-items: center; gap: 0.8rem;"
+    >
+      <i class="fas fa-lightbulb" style="font-size: 1.1rem"></i>
+      Monthly Trends
+    </a>
+
+    <a
+      href="{% url 'minet_potential_cases' %}"
+      style="flex: 0 0 auto; padding: 1.2rem 2rem; background: {% if request.path == '/minet_potential_cases/' %}#004b87{% else %}transparent{% endif %}; cursor: pointer; text-decoration: none; color: {% if request.path == '/minet_potential_cases/' %}white{% else %}#004b87{% endif %}; border-right: 1px solid #e0e0e0; font-weight: 600; transition: all 0.3s ease; display: flex; align-items: center; gap: 0.8rem;"
+    >
+      <i class="fas fa-lightbulb" style="font-size: 1.1rem"></i>
+      Potential Cases
+    </a>
+
+    <a
+      href="#"
+      style="
+        flex: 0 0 auto;
+        padding: 1.2rem 2rem;
+        background: transparent;
+        cursor: pointer;
+        text-decoration: none;
+        color: #004b87;
+        border-right: 1px solid #e0e0e0;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+      "
+    >
+      <i class="fas fa-shield-alt" style="font-size: 1.1rem"></i>
+      Geospatial Heatmap
+    </a>
+  </div>
+
+
+
+    
+
+    <div class="content-body">
+        <!-- Dataset Selection Card -->
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fas fa-database"></i> Select Dataset</h3>
+            </div>
+            <div class="card-body">
+                <form method="post" id="analysisForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="run_analysis">
+                    
+                    <div class="form-group">
+                        <label for="datasetSelect">Choose Dataset:</label>
+                        <select class="form-control" id="datasetSelect" name="dataset" required>
+                            <option value="">-- Select a dataset --</option>
+                            {% for dataset in available_datasets %}
+                            <option value="{{ dataset }}" {% if dataset_name == dataset %}selected{% endif %}>{{ dataset }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-chart-line"></i> Analyze Trends
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        {% if analysis_complete %}
+        <!-- Summary Metrics -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-value">{{ metrics.total_claims }}</div>
+                <div class="metric-label">Total Claims</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">{{ metrics.total_fraud }}</div>
+                <div class="metric-label">Total Fraud Cases</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">{{ metrics.fraud_rate }}%</div>
+                <div class="metric-label">Overall Fraud Rate</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">{{ metrics.analysis_period }}</div>
+                <div class="metric-label">Analysis Period</div>
+            </div>
+        </div>
+
+        <!-- Visualizations -->
+        <div class="chart-row">
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-line-chart"></i> Monthly Fraud Trends - {{ dataset_name }}</h3>
+                </div>
+                <div class="card-body">
+                    {% if visualizations.trends %}
+                        {{ visualizations.trends|safe }}
+                    {% else %}
+                        <div class="alert alert-warning">No trend data available</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-bar-chart"></i> Monthly Fraud Comparison - {{ dataset_name }}</h3>
+                </div>
+                <div class="card-body">
+                    {% if visualizations.bar_chart %}
+                        {{ visualizations.bar_chart|safe }}
+                    {% else %}
+                        <div class="alert alert-warning">No comparison data available</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Monthly Data Table -->
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fas fa-table"></i> Monthly Fraud Data - {{ dataset_name }}</h3>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="trend-table">
+                        <thead>
+                            <tr>
+                                <th>Month</th>
+                                <th>Fraud Cases</th>
+                                <th>Year</th>
+                                <th>Month Name</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in trend_data %}
+                            <tr>
+                                <td>{{ row.date|date:"Y-m" }}</td>
+                                <td><strong>{{ row.fraud_flag }}</strong></td>
+                                <td>{{ row.date|date:"Y" }}</td>
+                                <td>{{ row.date|date:"F" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center">No trend data available</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Help Modal -->
+<div class="modal fade" id="helpModal" tabindex="-1" aria-labelledby="helpModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="helpModalLabel">
+                    <i class="fas fa-question-circle me-2"></i>Monthly Trends Analysis Help
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>This tool helps you analyze monthly patterns in fraudulent claims across different datasets.</p>
+                <ul>
+                    <li><strong>Select a dataset</strong> from the dropdown to analyze</li>
+                    <li><strong>View line charts</strong> showing fraud trends over time</li>
+                    <li><strong>Compare monthly patterns</strong> using the bar chart visualization</li>
+                    <li><strong>Review detailed monthly data</strong> in the table below</li>
+                </ul>
+                <p class="mb-0">The analysis helps identify seasonal patterns, spikes in fraud activity, and long-term trends.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+<script>
+$(document).ready(function() {
+    // Initialize DataTables if table exists
+    $('.trend-table').DataTable({
+        pageLength: 12,
+        order: [[0, 'desc']], // Sort by date descending
+        dom: 'lftip'
+    });
+});
+</script>
+{% endblock %}

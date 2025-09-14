@@ -1,254 +1,957 @@
 {% extends 'myapp/base.html' %}
-{% block title %}Diagnostic Patterns Dashboard - Minet Insurance{% endblock %}
+{% block title %}Advanced Diagnostic Patterns - Minet Insurance{% endblock %}
 
 {% block extra_head %}
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <style>
-    /* Main Container */
-    .main-area {
-        width: 100%;
-        background: #fff;
-        padding: 20px;
-        border-radius: 8px;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    :root {
+        --primary: #1e3a8a;
+        --secondary: #e30613;
+        --accent: #0f1f4d;
+        --light: #f8fafc;
+        --gray: #64748b;
+        --success: #10b981;
+        --warning: #f59e0b;
+        --danger: #ef4444;
     }
-    .main-area h1 {
-        font-size: 2.2rem;
-        font-weight: 700;
-        color: #232323;
-        margin-bottom: 10px;
+    
+    .content-container {
+        max-width: 1800px;
+        margin: 0 auto;
+        padding: 2rem;
     }
-    .main-area h2 {
-        font-size: 1.35rem;
-        font-weight: 700;
-        color: #e30613;
-        margin-bottom: 25px;
+    
+    .dashboard-header {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-radius: 16px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        padding: 2rem;
+        margin-bottom: 2rem;
     }
-
-    /* Filters */
-    .filter-bar {
+    
+    .nav-tabs {
         display: flex;
         flex-wrap: wrap;
-        gap: 15px;
-        margin-bottom: 30px;
-        background: #fafafa;
-        padding: 15px;
-        border-radius: 6px;
-        border: 1px solid #e3e8ee;
+        gap: 1rem;
+        border-bottom: 2px solid #e2e8f0;
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
     }
+    
+    .nav-tab {
+        font-size: 1rem;
+        padding: 0.8rem 1.5rem;
+        cursor: pointer;
+        border: none;
+        background: none;
+        font-weight: 500;
+        color: var(--gray);
+        border-bottom: 3px solid transparent;
+        border-radius: 8px 8px 0 0;
+        transition: all 0.25s ease;
+        text-decoration: none;
+    }
+    
+    .nav-tab:hover {
+        background: rgba(30, 58, 138, 0.05);
+    }
+    
+    .nav-tab.active {
+        font-weight: 700;
+        color: var(--secondary);
+        border-bottom: 3px solid var(--secondary);
+        background: rgba(227, 6, 19, 0.05);
+    }
+    
+    .dataset-selector {
+        background: rgba(240, 244, 254, 0.7);
+        border-radius: 16px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    }
+    
+    .filter-panel {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    }
+    
+    .filter-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
     .filter-group {
         display: flex;
         flex-direction: column;
-        flex: 1;
-        min-width: 200px;
+        gap: 0.5rem;
     }
+    
     .filter-group label {
-        font-size: 0.85rem;
-        font-weight: 500;
-        color: #555;
-        margin-bottom: 5px;
-    }
-    .filter-group select, 
-    .filter-group input {
-        padding: 8px 10px;
-        border-radius: 5px;
-        border: 1px solid #ddd;
-        font-size: 0.95rem;
-    }
-    .filter-bar button {
-        background: #e30613;
-        color: #fff;
-        border: none;
-        border-radius: 5px;
-        padding: 10px 15px;
-        cursor: pointer;
         font-weight: 600;
-        transition: background 0.2s ease;
-        margin-top: 23px;
-    }
-    .filter-bar button:hover {
-        background: #c00511;
-    }
-
-    /* Charts Layout */
-    .chart-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
-        gap: 25px;
-    }
-    .chart-card {
-        background: #fff;
-        border-radius: 8px;
-        box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-        padding: 15px;
-        border-left: 4px solid #e30613;
-    }
-    .chart-card h3 {
-        font-size: 1.05rem;
-        font-weight: 600;
-        color: #e30613;
-        margin-bottom: 10px;
-        border-bottom: 1px solid #eee;
-        padding-bottom: 5px;
-    }
-    .chart-content {
-        min-height: 400px;
-        overflow-x: auto;
-    }
-    .no-data {
-        color: #888;
-        font-style: italic;
+        color: var(--primary);
         font-size: 0.9rem;
     }
-</style>
-
-<script>
-    // Auto-submit filters on change
-    document.addEventListener("DOMContentLoaded", function() {
-        const filterForm = document.getElementById("filterForm");
-        const inputs = filterForm.querySelectorAll("select, input[type='date']");
+    
+    .filter-control {
+        padding: 0.8rem 1rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        background: white;
+        font-size: 1rem;
+    }
+    
+    .filter-actions {
+        display: flex;
+        gap: 1rem;
+        justify-content: flex-end;
+        padding-top: 1rem;
+        border-top: 1px solid #e2e8f0;
+    }
+    
+    .btn {
+        padding: 0.8rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.2s ease;
+        border: none;
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, var(--secondary), #b0000b);
+        color: white;
+        box-shadow: 0 4px 15px rgba(227, 6, 19, 0.25);
+    }
+    
+    .btn-primary:hover {
+        box-shadow: 0 6px 20px rgba(227, 6, 19, 0.4);
+        transform: translateY(-2px);
+    }
+    
+    .btn-secondary {
+        background: white;
+        color: var(--gray);
+        border: 1px solid #e2e8f0;
+    }
+    
+    .btn-secondary:hover {
+        background: #f8fafc;
+    }
+    
+    .viz-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .viz-card {
+        background: white;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s ease;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .viz-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+    }
+    
+    .viz-card-header {
+        padding: 1.2rem 1.5rem;
+        background: linear-gradient(135deg, var(--primary), var(--accent));
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .viz-card-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .viz-card-content {
+        padding: 1.5rem;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .chart-container {
+        flex-grow: 1;
+        min-height: 300px;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        text-align: center;
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--primary);
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-label {
+        color: var(--gray);
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+    
+    .stat-trend {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.3rem;
+        font-size: 0.85rem;
+        margin-top: 0.5rem;
+    }
+    
+    .trend-up {
+        color: var(--success);
+    }
+    
+    .trend-down {
+        color: var(--danger);
+    }
+    
+    .no-data-placeholder {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 3rem 2rem;
+        text-align: center;
+        color: var(--gray);
+        flex-grow: 1;
+    }
+    
+    .no-data-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+    
+    .no-data-text {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: var(--gray);
+    }
+    
+    .loading-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255, 255, 255, 0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+        border-radius: 16px;
+    }
+    
+    .spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid rgba(30, 58, 138, 0.1);
+        border-radius: 50%;
+        border-top: 4px solid var(--primary);
+        animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    .toast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 12px 20px;
+        background: var(--success);
+        color: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 10000;
+        animation: slideIn 0.3s, fadeOut 0.3s 2.5s forwards;
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+    }
+    
+    .toast.error {
+        background: var(--danger);
+    }
+    
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    
+    @keyframes fadeOut {
+        from { opacity: 1; }
+        to { opacity: 0; }
+    }
+    
+    .diagnosis-search {
+        position: relative;
+    }
+    
+    .diagnosis-search-results {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 0 0 8px 8px;
+        max-height: 200px;
+        overflow-y: auto;
+        z-index: 100;
+        display: none;
+    }
+    
+    .diagnosis-search-results div {
+        padding: 0.5rem 1rem;
+        cursor: pointer;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    
+    .diagnosis-search-results div:hover {
+        background: #f1f5f9;
+    }
+    
+    .icd-code {
+        font-size: 0.8rem;
+        color: var(--gray);
+        margin-left: 0.5rem;
+    }
+    
+    @media (max-width: 1024px) {
+        .viz-grid {
+            grid-template-columns: 1fr;
+        }
         
-        inputs.forEach(input => {
-            input.addEventListener("change", function() {
-                filterForm.submit();
-            });
-        });
-    });
-</script>
+        .filter-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="main-area">
-    <h1>Diagnostic Patterns Dashboard</h1>
-    <h2>Claims Analysis by Diagnosis</h2>
+<div class="content-container">
+    <!-- Header Section -->
+    <div class="dashboard-header">
+        <h1 style="font-size: 2.2rem; font-weight: 700; color: #1e3a8a; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.8rem;">
+            <i style="color: #e30613; font-size: 1.5rem;" class="fas fa-stethoscope"></i>
+            Diagnostic Patterns 
+        </h1>
+        <p style="color: #64748b; margin: 0;">Analyze disease patterns, diagnosis trends, and medical claim insights</p>
+    </div>
 
-    <!-- Filters -->
-    <form method="GET" action="" class="filter-bar" id="filterForm">
-        <div class="filter-group">
-            <label>Select Dataset:</label>
-            <select name="dataset_id" required>
-                <option value="">-- Choose --</option>
-                {% for table in dataset_ids %}
-                    <option value="{{ table }}" {% if table == selected_id %}selected{% endif %}>{{ table }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="filter-group">
-            <label>Benefit Type:</label>
-            <select name="benefit_type">
-                <option value="all" {% if benefit_type == 'all' %}selected{% endif %}>All</option>
-                <option value="inpatient" {% if benefit_type == 'inpatient' %}selected{% endif %}>Inpatient</option>
-                <option value="outpatient" {% if benefit_type == 'outpatient' %}selected{% endif %}>Outpatient</option>
-                <option value="dental" {% if benefit_type == 'dental' %}selected{% endif %}>Dental</option>
-                <option value="optical" {% if benefit_type == 'optical' %}selected{% endif %}>Optical</option>
-            </select>
-        </div>
-        <div class="filter-group">
-            <label>Start Date:</label>
-            <input type="date" name="start_date" value="{{ start_date|default:'' }}">
-        </div>
-        <div class="filter-group">
-            <label>End Date:</label>
-            <input type="date" name="end_date" value="{{ end_date|default:'' }}">
-        </div>
-        <div class="filter-group">
-            <label>Diagnosis:</label>
-            <select name="diagnosis">
-                <option value="">-- All Diagnoses --</option>
-                {% for diag in diagnosis_list %}
-                    <option value="{{ diag }}" {% if diag == diagnosis_filter %}selected{% endif %}>{{ diag }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="filter-group">
-            <label>Gender:</label>
-            <select name="gender">
-                <option value="">-- All --</option>
-                {% for gen in gender_list %}
-                    <option value="{{ gen }}" {% if gen == gender_filter %}selected{% endif %}>{{ gen }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="filter-group" style="flex: 0 0 auto;">
-            <button type="submit">Apply</button>
-        </div>
-    </form>
+    <!-- Navigation Tabs -->
+    <div class="nav-tabs">
+        <a href="{% url 'claim_prediction' %}" class="nav-tab">
+            Claim Distribution
+        </a>
+        <a href="{% url 'temporal_analysis' %}" class="nav-tab">
+            Temporal Analysis
+        </a>
+        <a href="{% url 'provider_efficiency' %}" class="nav-tab">
+            Provider Efficiency
+        </a>
+        <a href="{% url 'diagnostic-patterns1' %}" class="nav-tab active">
+            Diagnostic Patterns
+        </a>
+    </div>
 
-    <!-- Charts: 2 per row -->
-    <div class="chart-grid">
-        <div class="chart-card">
-            <h3>1. Top 15 Diagnoses by Claim Amount</h3>
-            <div class="chart-content">
-                {% if chart1_top_diagnoses %}
-                    {{ chart1_top_diagnoses|safe }}
-                {% else %}
-                    <p class="no-data">No data available.</p>
-                {% endif %}
+    <!-- Dataset Selection -->
+    <div class="dataset-selector">
+        <form method="get" id="dataset-form">
+            <div style="display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap; justify-content: space-between;">
+                <div style="display: flex; gap: 1.5rem; align-items: center;">
+                    <span style="font-size: 1.1rem; font-weight: 500; color: #1e3a8a; white-space: nowrap;">Select Dataset:</span>
+                    <select name="dataset_id" id="dataset_id" class="filter-control" style="min-width: 300px;" required>
+                        <option value="">-- Select a dataset --</option>
+                        {% for ds in dataset_ids %}
+                            <option value="{{ ds }}" {% if selected_id == ds %}selected{% endif %}>{{ ds }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-cogs"></i> Load Dataset
+                </button>
             </div>
-        </div>
-        <div class="chart-card">
-            <h3>2. Age Distribution of Claimants</h3>
-            <div class="chart-content">
-                {% if chart2_age_distribution %}
-                    {{ chart2_age_distribution|safe }}
-                {% else %}
-                    <p class="no-data">No data available.</p>
-                {% endif %}
-            </div>
-        </div>
+        </form>
+    </div>
 
-        <div class="chart-card">
-            <h3>3. Diagnosis Co-occurrence Network</h3>
-            <div class="chart-content">
-                {% if chart3_diag_network %}
-                    {{ chart3_diag_network|safe }}
-                {% else %}
-                    <p class="no-data">No data available.</p>
-                {% endif %}
+    {% if selected_id %}
+    <!-- Filters Panel -->
+    <div class="filter-panel">
+        <h2 style="font-size: 1.5rem; font-weight: 600; color: #1e3a8a; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.8rem;">
+            <i class="fas fa-filter"></i> Diagnostic Filters
+        </h2>
+        
+        <form id="filter-form" method="get">
+            <input type="hidden" name="dataset_id" value="{{ selected_id }}">
+            
+            <div class="filter-grid">
+                <div class="filter-group">
+                    <label for="startDate">Start Date</label>
+                    <input type="date" id="startDate" name="start_date" value="{{ start_date }}" class="filter-control">
+                </div>
+                
+                <div class="filter-group">
+                    <label for="endDate">End Date</label>
+                    <input type="date" id="endDate" name="end_date" value="{{ end_date }}" class="filter-control">
+                </div>
+                
+                <div class="filter-group">
+                    <label for="benefitType">Benefit Type</label>
+                    <select id="benefitType" name="benefit_type" class="filter-control">
+                        <option value="all" {% if benefit_type == 'all' %}selected{% endif %}>All Types</option>
+                        {% for benefit in benefit_types %}
+                            <option value="{{ benefit }}" {% if benefit_type == benefit %}selected{% endif %}>{{ benefit }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="filter-group diagnosis-search">
+                    <label for="diagnosisFilter">Diagnosis</label>
+                    <input type="text" id="diagnosisFilter" name="diagnosis" value="{{ diagnosis_filter }}" class="filter-control" placeholder="Search diagnoses..." autocomplete="off">
+                    <div class="diagnosis-search-results" id="diagnosisResults">
+                        {% for diag in diagnosis_list %}
+                            <div data-value="{{ diag }}">{{ diag }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="genderFilter">Gender</label>
+                    <select id="genderFilter" name="gender" class="filter-control">
+                        <option value="">All Genders</option>
+                        {% for gen in gender_list %}
+                            <option value="{{ gen }}" {% if gender_filter == gen %}selected{% endif %}>{{ gen }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="minAmount">Minimum Amount (KES)</label>
+                    <input type="number" id="minAmount" name="min_amount" value="{{ min_amount }}" class="filter-control" placeholder="0">
+                </div>
+                
+                <div class="filter-group">
+                    <label for="maxAmount">Maximum Amount (KES)</label>
+                    <input type="number" id="maxAmount" name="max_amount" value="{{ max_amount }}" class="filter-control" placeholder="No limit">
+                </div>
+                
+                <div class="filter-group">
+                    <label for="ageRange">Age Range</label>
+                    <select id="ageRange" name="age_range" class="filter-control">
+                        <option value="">All Ages</option>
+                        <option value="0-18" {% if age_range == "0-18" %}selected{% endif %}>0-18 (Children)</option>
+                        <option value="19-35" {% if age_range == "19-35" %}selected{% endif %}>19-35 (Young Adults)</option>
+                        <option value="36-50" {% if age_range == "36-50" %}selected{% endif %}>36-50 (Adults)</option>
+                        <option value="51-65" {% if age_range == "51-65" %}selected{% endif %}>51-65 (Senior Adults)</option>
+                        <option value="65+" {% if age_range == "65+" %}selected{% endif %}>65+ (Elderly)</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="dependentType">Dependent Type</label>
+                    <select id="dependentType" name="dependent_type" class="filter-control">
+                        <option value="">All Types</option>
+                        {% for dep in dependent_types %}
+                            <option value="{{ dep }}" {% if dependent_type == dep %}selected{% endif %}>{{ dep }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
             </div>
-        </div>
-        <div class="chart-card">
-            <h3>4. Gender × Diagnosis Heatmap</h3>
-            <div class="chart-content">
-                {% if chart4_gender_diag_heatmap %}
-                    {{ chart4_gender_diag_heatmap|safe }}
-                {% else %}
-                    <p class="no-data">No data available.</p>
-                {% endif %}
+            
+            <div class="filter-actions">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-filter"></i> Apply Filters
+                </button>
+                <button type="button" id="resetFilters" class="btn btn-secondary">
+                    <i class="fas fa-sync"></i> Reset Filters
+                </button>
+                <button type="submit" name="export" value="true" class="btn btn-secondary">
+                    <i class="fas fa-download"></i> Export Data
+                </button>
             </div>
-        </div>
+        </form>
+    </div>
 
-        <div class="chart-card">
-            <h3>5. Average Claim Amount by Age Group</h3>
-            <div class="chart-content">
-                {% if chart5_avg_amount_age_group %}
-                    {{ chart5_avg_amount_age_group|safe }}
-                {% else %}
-                    <p class="no-data">No data available.</p>
-                {% endif %}
-            </div>
+    <!-- Summary Statistics -->
+    {% if summary_stats %}
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-value">{{ summary_stats.total_claims|floatformat:0 }}</div>
+            <div class="stat-label">Total Claims</div>
         </div>
-        <div class="chart-card">
-            <h3>6. Diagnosis Seasonality</h3>
-            <div class="chart-content">
-                {% if chart6_diag_seasonality %}
-                    {{ chart6_diag_seasonality|safe }}
-                {% else %}
-                    <p class="no-data">No data available.</p>
-                {% endif %}
-            </div>
+        
+        <div class="stat-card">
+            <div class="stat-value">KES {{ summary_stats.total_amount|floatformat:0 }}</div>
+            <div class="stat-label">Total Amount</div>
         </div>
+        
+        <div class="stat-card">
+            <div class="stat-value">{{ summary_stats.unique_diagnoses }}</div>
+            <div class="stat-label">Unique Diagnoses</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-value">{{ summary_stats.avg_claim|floatformat:2 }}</div>
+            <div class="stat-label">Average Claim (KES)</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-value">{{ summary_stats.top_diagnosis }}</div>
+            <div class="stat-label">Most Common Diagnosis</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-value">{{ summary_stats.avg_age|floatformat:1 }}</div>
+            <div class="stat-label">Average Age</div>
+        </div>
+    </div>
+    {% endif %}
 
-        <div class="chart-card" style="grid-column: span 2;">
-            <h3>7. Claim Distribution by Dependent Type & Diagnosis</h3>
-            <div class="chart-content">
-                {% if chart7_claim_dist_by_dependents %}
-                    {{ chart7_claim_dist_by_dependents|safe }}
+    <!-- 🔥 PRIORITY: Diagnosis-Treatment Patterns (FULL WIDTH, FIRST POSITION) -->
+    <div class="viz-card" style="grid-column: span 2;">
+        <div class="viz-card-header">
+            <div class="viz-card-title">
+                <i class="fas fa-th-large"></i>
+                Diagnosis-Treatment Patterns
+            </div>
+        </div>
+        <div class="viz-card-content">
+            <div class="chart-container">
+                {% if chart_diagnosis_treatment_patterns %}
+                    {{ chart_diagnosis_treatment_patterns|safe }}
                 {% else %}
-                    <p class="no-data">No data available.</p>
+                    <div class="no-data-placeholder">
+                        <i class="fas fa-th-large no-data-icon"></i>
+                        <h3 class="no-data-text">No Diagnosis-Treatment Pattern Data Available</h3>
+                        <p style="color: #64748b; margin-top: 0.5rem;">
+                            Treatment/procedure data is required to generate this visualization.
+                        </p>
+                    </div>
                 {% endif %}
             </div>
         </div>
     </div>
+    
+    <!-- Visualizations Grid -->
+    <div class="viz-grid">
+        <!-- Top Diagnoses by Claim Amount -->
+        <div class="viz-card">
+            <div class="viz-card-header">
+                <div class="viz-card-title">
+                    <i class="fas fa-list-ol"></i>
+                    Top Diagnoses by Claim Amount
+                </div>
+            </div>
+            <div class="viz-card-content">
+                <div class="chart-container">
+                    {% if chart1_top_diagnoses %}
+                        {{ chart1_top_diagnoses|safe }}
+                    {% else %}
+                        <div class="no-data-placeholder">
+                            <i class="fas fa-chart-bar no-data-icon"></i>
+                            <h3 class="no-data-text">No Diagnosis Data Available</h3>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Age Distribution -->
+        <div class="viz-card">
+            <div class="viz-card-header">
+                <div class="viz-card-title">
+                    <i class="fas fa-user-friends"></i>
+                    Age Distribution of Claimants
+                </div>
+            </div>
+            <div class="viz-card-content">
+                <div class="chart-container">
+                    {% if chart2_age_distribution %}
+                        {{ chart2_age_distribution|safe }}
+                    {% else %}
+                        <div class="no-data-placeholder">
+                            <i class="fas fa-chart-bar no-data-icon"></i>
+                            <h3 class="no-data-text">No Age Data Available</h3>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Diagnosis Co-occurrence Network -->
+        <div class="viz-card">
+            <div class="viz-card-header">
+                <div class="viz-card-title">
+                    <i class="fas fa-project-diagram"></i>
+                    Diagnosis Co-occurrence Network
+                </div>
+            </div>
+            <div class="viz-card-content">
+                <div class="chart-container">
+                    {% if chart3_diag_network %}
+                        {{ chart3_diag_network|safe }}
+                    {% else %}
+                        <div class="no-data-placeholder">
+                            <i class="fas fa-network-wired no-data-icon"></i>
+                            <h3 class="no-data-text">No Co-occurrence Data Available</h3>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Gender × Diagnosis Heatmap -->
+        <div class="viz-card">
+            <div class="viz-card-header">
+                <div class="viz-card-title">
+                    <i class="fas fa-venus-mars"></i>
+                    Gender × Diagnosis Heatmap
+                </div>
+            </div>
+            <div class="viz-card-content">
+                <div class="chart-container">
+                    {% if chart4_gender_diag_heatmap %}
+                        {{ chart4_gender_diag_heatmap|safe }}
+                    {% else %}
+                        <div class="no-data-placeholder">
+                            <i class="fas fa-th no-data-icon"></i>
+                            <h3 class="no-data-text">No Gender/Diagnosis Data Available</h3>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Average Claim Amount by Age Group -->
+        <div class="viz-card">
+            <div class="viz-card-header">
+                <div class="viz-card-title">
+                    <i class="fas fa-money-bill-wave"></i>
+                    Average Claim by Age Group
+                </div>
+            </div>
+            <div class="viz-card-content">
+                <div class="chart-container">
+                    {% if chart5_avg_amount_age_group %}
+                        {{ chart5_avg_amount_age_group|safe }}
+                    {% else %}
+                        <div class="no-data-placeholder">
+                            <i class="fas fa-chart-line no-data-icon"></i>
+                            <h3 class="no-data-text">No Age/Amount Data Available</h3>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Diagnosis Seasonality -->
+        <div class="viz-card">
+            <div class="viz-card-header">
+                <div class="viz-card-title">
+                    <i class="fas fa-calendar-alt"></i>
+                    Diagnosis Seasonality
+                </div>
+            </div>
+            <div class="viz-card-content">
+                <div class="chart-container">
+                    {% if chart6_diag_seasonality %}
+                        {{ chart6_diag_seasonality|safe }}
+                    {% else %}
+                        <div class="no-data-placeholder">
+                            <i class="fas fa-chart-line no-data-icon"></i>
+                            <h3 class="no-data-text">No Seasonal Data Available</h3>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Claim Distribution by Dependent Type -->
+        <div class="viz-card" style="grid-column: span 2;">
+            <div class="viz-card-header">
+                <div class="viz-card-title">
+                    <i class="fas fa-users"></i>
+                    Claim Distribution by Dependent Type & Diagnosis
+                </div>
+            </div>
+            <div class="viz-card-content">
+                <div class="chart-container">
+                    {% if chart7_claim_dist_by_dependents %}
+                        {{ chart7_claim_dist_by_dependents|safe }}
+                    {% else %}
+                        <div class="no-data-placeholder">
+                            <i class="fas fa-chart-pie no-data-icon"></i>
+                            <h3 class="no-data-text">No Dependent Data Available</h3>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Diagnosis by Provider Type -->
+        <div class="viz-card">
+            <div class="viz-card-header">
+                <div class="viz-card-title">
+                    <i class="fas fa-hospital"></i>
+                    Diagnosis by Provider Type
+                </div>
+            </div>
+            <div class="viz-card-content">
+                <div class="chart-container">
+                    {% if chart8_diag_by_provider %}
+                        {{ chart8_diag_by_provider|safe }}
+                    {% else %}
+                        <div class="no-data-placeholder">
+                            <i class="fas fa-clinic-medical no-data-icon"></i>
+                            <h3 class="no-data-text">No Provider Data Available</h3>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Chronic vs Acute Conditions -->
+        <div class="viz-card">
+            <div class="viz-card-header">
+                <div class="viz-card-title">
+                    <i class="fas fa-heartbeat"></i>
+                    Chronic vs Acute Conditions
+                </div>
+            </div>
+            <div class="viz-card-content">
+                <div class="chart-container">
+                    {% if chart9_chronic_acute %}
+                        {{ chart9_chronic_acute|safe }}
+                    {% else %}
+                        <div class="no-data-placeholder">
+                            <i class="fas fa-balance-scale no-data-icon"></i>
+                            <h3 class="no-data-text">No Condition Type Data Available</h3>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Diagnosis Cost Outliers -->
+        <div class="viz-card">
+            <div class="viz-card-header">
+                <div class="viz-card-title">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Diagnosis Cost Outliers
+                </div>
+            </div>
+            <div class="viz-card-content">
+                <div class="chart-container">
+                    {% if chart10_cost_outliers %}
+                        {{ chart10_cost_outliers|safe }}
+                    {% else %}
+                        <div class="no-data-placeholder">
+                            <i class="fas fa-chart-box no-data-icon"></i>
+                            <h3 class="no-data-text">No Outlier Data Available</h3>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Diagnosis Trend Over Time -->
+        <div class="viz-card" style="grid-column: span 2;">
+            <div class="viz-card-header">
+                <div class="viz-card-title">
+                    <i class="fas fa-chart-line"></i>
+                    Diagnosis Trends Over Time
+                </div>
+            </div>
+            <div class="viz-card-content">
+                <div class="chart-container">
+                    {% if chart11_diag_trends %}
+                        {{ chart11_diag_trends|safe }}
+                    {% else %}
+                        <div class="no-data-placeholder">
+                            <i class="fas fa-chart-line no-data-icon"></i>
+                            <h3 class="no-data-text">No Trend Data Available</h3>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Top Diagnoses Table -->
+    <div class="viz-card">
+        <div class="viz-card-header">
+            <div class="viz-card-title">
+                <i class="fas fa-table"></i>
+                Top Diagnoses Details
+            </div>
+        </div>
+        <div class="viz-card-content">
+            {% if top_diagnoses_table %}
+                <div style="overflow: auto; max-height: 400px;">
+                    <table style="width: 100%; border-collapse: collapse; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); font-size: 0.95rem;">
+                        <thead>
+                            <tr>
+                                <th style="background: linear-gradient(135deg, #1e3a8a, #0f1f4d); color: #fff; font-weight: 600; padding: 1rem 1.2rem; text-align: left; border-bottom: 2px solid rgba(255, 255, 255, 0.15); position: sticky; top: 0; z-index: 2;">Diagnosis</th>
+                                <th style="background: linear-gradient(135deg, #1e3a8a, #0f1f4d); color: #fff; font-weight: 600; padding: 1rem 1.2rem; text-align: left; border-bottom: 2px solid rgba(255, 255, 255, 0.15); position: sticky; top: 0; z-index: 2;">Total Amount (KES)</th>
+                                <th style="background: linear-gradient(135deg, #1e3a8a, #0f1f4d); color: #fff; font-weight: 600; padding: 1rem 1.2rem; text-align: left; border-bottom: 2px solid rgba(255, 255, 255, 0.15); position: sticky; top: 0; z-index: 2;">Claim Count</th>
+                                <th style="background: linear-gradient(135deg, #1e3a8a, #0f1f4d); color: #fff; font-weight: 600; padding: 1rem 1.2rem; text-align: left; border-bottom: 2px solid rgba(255, 255, 255, 0.15); position: sticky; top: 0; z-index: 2;">Average Claim (KES)</th>
+                                <th style="background: linear-gradient(135deg, #1e3a8a, #0f1f4d); color: #fff; font-weight: 600; padding: 1rem 1.2rem; text-align: left; border-bottom: 2px solid rgba(255, 255, 255, 0.15); position: sticky; top: 0; z-index: 2;">% of Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for diag in top_diagnoses_table %}
+                            <tr>
+                                <td style="padding: 0.9rem 1.2rem; border: 1px solid rgba(0, 0, 0, 0.05); color: #2d3748; vertical-align: middle;">{{ diag.diagnosis }}</td>
+                                <td style="padding: 0.9rem 1.2rem; border: 1px solid rgba(0, 0, 0, 0.05); color: #2d3748; vertical-align: middle;">{{ diag.total_amount|floatformat:2 }}</td>
+                                <td style="padding: 0.9rem 1.2rem; border: 1px solid rgba(0, 0, 0, 0.05); color: #2d3748; vertical-align: middle;">{{ diag.claim_count }}</td>
+                                <td style="padding: 0.9rem 1.2rem; border: 1px solid rgba(0, 0, 0, 0.05); color: #2d3748; vertical-align: middle;">{{ diag.avg_amount|floatformat:2 }}</td>
+                                <td style="padding: 0.9rem 1.2rem; border: 1px solid rgba(0, 0, 0, 0.05); color: #2d3748; vertical-align: middle;">{{ diag.percentage|floatformat:2 }}%</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="no-data-placeholder">
+                    <i class="fas fa-table no-data-icon"></i>
+                    <h3 class="no-data-text">No Diagnosis Details Available</h3>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <!-- Placeholder when no dataset is selected -->
+    <div class="no-data-placeholder" style="margin-top: 2rem; background: white; border-radius: 16px; padding: 3rem;">
+        <i class="fas fa-database no-data-icon" style="font-size: 4rem;"></i>
+        <h2 class="no-data-text">Select a Dataset to Begin Analysis</h2>
+        <p style="color: #64748b; max-width: 600px; margin: 0 auto;">
+            Choose a dataset from the dropdown above to start exploring diagnostic patterns in your claims data.
+        </p>
+    </div>
+    {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // Set active tab
+    function setActiveTab() {
+        const currentPath = window.location.pathname;
+        document.querySelectorAll('.nav-tab').forEach(tab => {
+            if (tab.getAttribute('href') === currentPath) {
+                tab.classList.add('active');
+            } else {
+                tab.classList.remove('active');
+            }
+        });
+    }
+    setActiveTab();
+    
+    // Reset filters
+    document.getElementById('resetFilters')?.addEventListener('click', function() {
+        window.location.href = "{% url 'diagnostic-patterns1' %}?dataset_id={{ selected_id }}";
+    });
+    
+    // Diagnosis search functionality
+    const diagnosisInput = document.getElementById('diagnosisFilter');
+    const diagnosisResults = document.getElementById('diagnosisResults');
+    
+    if (diagnosisInput && diagnosisResults) {
+        diagnosisInput.addEventListener('focus', function() {
+            diagnosisResults.style.display = 'block';
+        });
+        
+        diagnosisInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const items = diagnosisResults.querySelectorAll('div');
+            let hasMatches = false;
+            
+            items.forEach(item => {
+                const text = item.textContent.toLowerCase();
+                if (text.includes(searchTerm)) {
+                    item.style.display = 'block';
+                    hasMatches = true;
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+            
+            diagnosisResults.style.display = hasMatches ? 'block' : 'none';
+        });
+        
+        diagnosisResults.addEventListener('click', function(e) {
+            if (e.target.tagName === 'DIV') {
+                diagnosisInput.value = e.target.getAttribute('data-value');
+                diagnosisResults.style.display = 'none';
+            }
+        });
+        
+        document.addEventListener('click', function(e) {
+            if (!diagnosisInput.contains(e.target) && !diagnosisResults.contains(e.target)) {
+                diagnosisResults.style.display = 'none';
+            }
+        });
+    }
+    
+    // Show loading state when filters are applied
+    const filterForm = document.getElementById('filter-form');
+    if (filterForm) {
+        filterForm.addEventListener('submit', function() {
+            const overlay = document.createElement('div');
+            overlay.className = 'loading-overlay';
+            overlay.innerHTML = '<div class="spinner"></div>';
+            document.querySelector('.content-container').appendChild(overlay);
+        });
+    }
+});
+</script>
 {% endblock %}

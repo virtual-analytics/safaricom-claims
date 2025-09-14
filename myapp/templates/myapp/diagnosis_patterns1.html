@@ -1,227 +1,637 @@
 {% extends "base1.html" %}
 {% load static %}
-
+{% load humanize %}
 {% block title %}Diagnosis Patterns - Safaricom Portal{% endblock %}
 
+{% block head %}
+  <!-- jQuery (required by Select2 & some UI interactions) -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+  <!-- Select2 for nice selects -->
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+  <!-- Plotly for charts -->
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+  <!-- Tiny icon set for small UI accents (Font Awesome CDN) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-p6O+...==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+{% endblock %}
+
 {% block content %}
-<div class="content-header">
-    <h1><i class="fas fa-stethoscope"></i> Diagnosis Patterns</h1>
-    <p>Identification of diagnoses with unusual claim patterns</p>
-</div>
-
-<div class="content-body">
-    <div class="card">
-        <div class="card-header">
-            <h3>Diagnoses with Highest Fraud Rates</h3>
-            <div class="card-actions">
-                <input type="number" id="min-claims" class="form-input"
-                       placeholder="Min claims"
-                       value="{{ min_claims }}"
-                       min="1">
-            </div>
-        </div>
-        <div class="card-body">
-            {% if visualizations.diagnosis %}
-                {{ visualizations.diagnosis|safe }}
-            {% else %}
-                <div class="alert alert-warning">No diagnosis data available</div>
-            {% endif %}
-        </div>
-    </div>
-
-    <div class="row">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h3>Diagnosis Details</h3>
-                </div>
-                <div class="card-body">
-                    {% if diagnosis_data %}
-                        <div class="diagnosis-details">
-                            <h4>{{ diagnosis_data.0.Diagnosis }}</h4>
-                            <div class="diagnosis-stats">
-                                <div class="stat">
-                                    <span class="stat-value">{{ diagnosis_data.0.Fraud_Rate|floatformat:1 }}%</span>
-                                    <span class="stat-label">Fraud Rate</span>
-                                </div>
-                                <div class="stat">
-                                    <span class="stat-value">{{ diagnosis_data.0.Fraud_Count }}</span>
-                                    <span class="stat-label">Fraud Cases</span>
-                                </div>
-                                <div class="stat">
-                                    <span class="stat-value">{{ diagnosis_data.0.Total_Claims }}</span>
-                                    <span class="stat-label">Total Claims</span>
-                                </div>
-                            </div>
-                            <div class="diagnosis-description">
-                                <h5>Common Fraud Patterns:</h5>
-                                <ul>
-                                    <li>Upcoding to higher-cost diagnosis</li>
-                                    <li>Unnecessary treatments billed</li>
-                                    <li>Duplicate claims for same service</li>
-                                </ul>
-                            </div>
-                        </div>
-                    {% else %}
-                        <div class="no-diagnosis">
-                            Select a diagnosis to view details
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h3>Diagnosis Over Time</h3>
-                </div>
-                <div class="card-body">
-                    <div id="diagnosis-trend-chart"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+<!-- ======================================================
+     Diagnosis Patterns Dashboard (full template)
+     Renders visualizations produced by diagnosis_patterns view.
+     Keeps the original fraud section intact.
+     ====================================================== -->
 
 <style>
-    .content-header {
-        margin-bottom: 2rem;
-    }
-    
-    .content-header h1 {
-        color: #d62728;
-        margin-bottom: 0.5rem;
-    }
-    
-    .content-header p {
-        color: #666;
-    }
-    
-    .card {
-        background: white;
-        border-radius: 10px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        margin-bottom: 2rem;
-        border: 1px solid #e3e8ee;
-    }
-    
-    .card-header {
-        padding: 1.5rem;
-        border-bottom: 1px solid #e3e8ee;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    
-    .card-header h3 {
-        margin: 0;
-        font-size: 1.2rem;
-    }
-    
-    .card-body {
-        padding: 1.5rem;
-    }
-    
-    .form-input {
-        padding: 0.5rem 1rem;
-        border-radius: 6px;
-        border: 1px solid #ddd;
-        background-color: #f9f9f9;
-        width: 120px;
-    }
-    
-    .diagnosis-details {
-        height: 100%;
-    }
-    
-    .diagnosis-details h4 {
-        color: #333;
-        margin-bottom: 1rem;
-    }
-    
-    .diagnosis-stats {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 1rem;
-        margin-bottom: 1.5rem;
-    }
-    
-    .stat {
-        text-align: center;
-        background: #f7fdf9;
-        padding: 1rem;
-        border-radius: 6px;
-    }
-    
-    .stat-value {
-        font-size: 1.2rem;
-        font-weight: 700;
-        display: block;
-        color: #d62728;
-    }
-    
-    .stat-label {
-        font-size: 0.8rem;
-        color: #666;
-        display: block;
-    }
-    
-    .diagnosis-description h5 {
-        color: #333;
-        margin-bottom: 0.5rem;
-    }
-    
-    .diagnosis-description ul {
-        padding-left: 1.5rem;
-        color: #666;
-    }
-    
-    .diagnosis-description li {
-        margin-bottom: 0.3rem;
-    }
-    
-    .no-diagnosis {
-        text-align: center;
-        color: #666;
-        padding: 2rem 0;
-    }
-    
-    #diagnosis-trend-chart {
-        height: 250px;
-    }
+  :root{
+    --accent:#d62728;
+    --accent-2:#1BB64F;
+    --card-bg:#ffffff;
+    --muted:#6b7280;
+    --border:#e6e9ef;
+    --glass: rgba(255,255,255,0.6);
+    --shadow: 0 6px 18px rgba(22,28,37,0.06);
+    --radius:12px;
+    --maxwidth:1400px;
+  }
+
+  /* Page layout */
+  .page-wrap {
+    max-width: var(--maxwidth);
+    margin: 24px auto;
+    padding: 0 16px 80px;
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    color:#111827;
+  }
+
+  .header {
+    display:flex;
+    align-items:center;
+    gap:16px;
+    margin-bottom:18px;
+  }
+
+  .header .title {
+    font-size:26px;
+    font-weight:800;
+    color:var(--accent);
+  }
+
+  .header .subtitle {
+    color:var(--muted);
+    margin-top:4px;
+    font-size:14px;
+  }
+
+  /* Controls */
+  .controls {
+    display:flex;
+    gap:12px;
+    align-items:center;
+    margin-bottom:18px;
+    flex-wrap:wrap;
+  }
+  .control {
+    background:var(--card-bg);
+    border:1px solid var(--border);
+    padding:10px;
+    border-radius:8px;
+    display:flex;
+    gap:8px;
+    align-items:center;
+  }
+  .control label { font-size:13px; color:var(--muted); margin-right:6px; font-weight:600; }
+  .control input[type="number"], .control select {
+    padding:8px 10px;
+    border-radius:6px;
+    border:1px solid #dfe6ef;
+    min-width:120px;
+  }
+  .control .small { font-size:12px; color:var(--muted); }
+
+  .btn {
+    background:var(--accent);
+    color:#fff;
+    border:none;
+    padding:10px 14px;
+    border-radius:8px;
+    cursor:pointer;
+    font-weight:700;
+  }
+  .btn.secondary { background: #1BB64F; }
+  .btn.ghost { background:transparent; color:var(--accent); border:1px solid var(--border); }
+
+  /* Summary cards */
+  .summary-row { display:flex; gap:12px; margin-bottom:18px; flex-wrap:wrap; }
+  .summary-card {
+    background: linear-gradient(180deg, #fff, #fcfcfd);
+    border:1px solid var(--border);
+    box-shadow:var(--shadow);
+    padding:14px;
+    border-radius:10px;
+    min-width:170px;
+    flex:1 1 160px;
+  }
+  .summary-card .label { font-size:12px; color:var(--muted); margin-bottom:6px; }
+  .summary-card .value { font-size:18px; font-weight:800; color:var(--accent); }
+
+  /* Grid of cards */
+  .grid {
+    display:grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap:18px;
+    margin-bottom:18px;
+  }
+  .grid.full { grid-template-columns: 1fr; }
+  .card {
+    background:var(--card-bg);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    overflow:hidden;
+  }
+  .card .card-head {
+    padding:14px 16px;
+    border-bottom:1px solid #f3f6f9;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+  }
+  .card .card-body {
+    padding:12px 16px;
+    min-height:160px;
+  }
+  .card .card-title { font-weight:700; color:#111827; }
+  .card .card-sub { color:var(--muted); font-size:13px; }
+
+  /* Chart containers (Plotly inject full HTML) */
+  .plotly-container { width:100%; height:420px; }
+
+  /* Responsive */
+  @media(max-width:980px){
+    .grid { grid-template-columns: 1fr; }
+    .plotly-container { height: 360px; }
+  }
+
+  /* Tables */
+  .data-table { width:100%; border-collapse:collapse; font-size:13px; margin-top:8px; }
+  .data-table th, .data-table td { padding:8px 10px; border-bottom:1px solid #f0f3f7; text-align:left; }
+  .data-table thead th { background:#fbfdff; position:sticky; top:0; z-index:2; }
+
+  /* small helpers */
+  .muted { color:var(--muted); font-size:13px; }
+  .tag { background:#f3f7fb; padding:6px 8px; border-radius:6px; font-weight:700; color:#1f2937; }
+  .controls-right { margin-left:auto; display:flex; gap:8px; align-items:center; }
+  .kpi { display:flex; gap:10px; align-items:center; }
+  .kpi strong { color:var(--accent); font-size:15px; }
+
+  /* export & search */
+  .toolbar { display:flex; gap:12px; align-items:center; margin-top:8px; }
+  .search-input { padding:8px 12px; border-radius:8px; border:1px solid var(--border); min-width:220px; }
+
+  /* alerts */
+  .alert { padding:12px; border-radius:8px; background:#fff7ed; color:#b45309; border:1px solid #fde6c7; }
+
 </style>
 
-<script>
-    // Reload on min claims change
-    document.getElementById('min-claims').addEventListener('change', function() {
-        const minClaims = this.value;
-        window.location.href = "?min_claims=" + minClaims;
-    });
+<div class="page-wrap">
 
-    // Placeholder trend chart (can be replaced with backend data)
-    document.addEventListener('DOMContentLoaded', function() {
-        const trace1 = {
-            x: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-            y: [5, 8, 12, 7, 9, 15],
-            name: 'Fraud Cases',
-            type: 'bar',
-            marker: { color: '#d62728' }
-        };
-        const trace2 = {
-            x: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-            y: [45, 42, 38, 43, 41, 35],
-            name: 'Normal Cases',
-            type: 'bar',
-            marker: { color: '#1BB64F' }
-        };
-        Plotly.newPlot('diagnosis-trend-chart', [trace1, trace2], {
-            title: 'Monthly Claim Breakdown',
-            barmode: 'stack',
-            xaxis: { title: 'Month' },
-            yaxis: { title: 'Number of Claims' },
-            plot_bgcolor: 'rgba(0,0,0,0)',
-            paper_bgcolor: 'rgba(0,0,0,0)'
-        });
+  <!-- header -->
+  <div class="header">
+    <div>
+      <div class="title"><i class="fas fa-stethoscope"></i> Diagnosis Patterns</div>
+      <div class="subtitle">Deep descriptive analysis — counts, cost contribution, temporal trends, provider & demographic breakdowns.</div>
+    </div>
+    <div class="controls-right" style="margin-left:auto">
+      <div class="muted" style="font-size:13px;">Logged in as: <strong>{{ username }}</strong></div>
+    </div>
+  </div>
+
+  <!-- controls -->
+  <div class="controls">
+    <div class="control">
+      <label for="min-claims">Min claims</label>
+      <input id="min-claims" type="number" min="1" value="{{ request.GET.min_claims|default:5 }}" />
+      <div class="small muted">applies to fraud view</div>
+    </div>
+
+    <div class="control">
+      <label for="top-n">Top N for charts</label>
+      <select id="top-n">
+        <option>5</option><option selected>8</option><option>10</option><option>15</option>
+      </select>
+    </div>
+
+    <div class="control">
+      <label for="diagnosis-search">Filter Diagnosis</label>
+      <input id="diagnosis-search" class="search-input" placeholder="Search diagnoses (table/chart)..." />
+    </div>
+
+    <div class="controls-right">
+      <button class="btn" id="apply-filters"><i class="fa fa-filter"></i>&nbsp;Apply</button>
+      <button class="btn ghost" id="export-csv"><i class="fa fa-file-csv"></i>&nbsp;Export Table</button>
+      <button class="btn secondary" id="toggle-tables"><i class="fa fa-table"></i>&nbsp;Toggle Tables</button>
+    </div>
+  </div>
+
+  <!-- summary row -->
+  <div class="summary-row">
+    <div class="summary-card">
+      <div class="label">Total Claims</div>
+      <div class="value">{{ deep_summary.total_claims|default:"—" }}</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">Total Amount (KES)</div>
+      <div class="value">KES {{ deep_summary.total_amount|floatformat:2|intcomma }}</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">Unique Diagnoses</div>
+      <div class="value">{{ deep_summary.unique_diagnoses|default:"—" }}</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">Avg Claim (KES)</div>
+      <div class="value">KES {{ deep_summary.avg_claim|floatformat:2|intcomma }}</div>
+    </div>
+  </div>
+
+  <!-- FRAUD CHART - original (kept intact) -->
+  <div class="card" style="margin-bottom:18px;">
+    <div class="card-head">
+      <div class="card-title">Diagnoses with Highest Fraud Rates <span class="card-sub"> (original fraud logic — unchanged)</span></div>
+      <div class="card-actions muted">Min claims: <strong>{{ request.GET.min_claims|default:5 }}</strong></div>
+    </div>
+    <div class="card-body">
+      {% if visualizations.diagnosis %}
+        <div class="plotly-container">{{ visualizations.diagnosis|safe }}</div>
+      {% else %}
+        <div class="alert">No diagnosis fraud data available.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- two-column grid: top-by-count & top-by-amount -->
+  <div class="grid">
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Top Diagnoses by Claim Count</div>
+          <div class="card-sub">Counts with shading by total amount</div>
+        </div>
+        <div class="kpi"><strong>Top</strong>&nbsp;{{ deep_tables.top_by_count|length|default:"N/A" }}</div>
+      </div>
+      <div class="card-body">
+        {% if visualizations.top_by_count %}
+          <div class="plotly-container">{{ visualizations.top_by_count|safe }}</div>
+        {% else %}
+          <div class="alert">No chart available.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Top Diagnoses by Total Amount</div>
+          <div class="card-sub">Which diagnoses drive cost</div>
+        </div>
+        <div class="kpi"><strong>Amount</strong></div>
+      </div>
+      <div class="card-body">
+        {% if visualizations.top_by_amount %}
+          <div class="plotly-container">{{ visualizations.top_by_amount|safe }}</div>
+        {% else %}
+          <div class="alert">No chart available.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- boxplot -->
+  <div class="card" style="margin-bottom:18px;">
+    <div class="card-head">
+      <div>
+        <div class="card-title">Claim Amount Distribution for Top Diagnoses</div>
+        <div class="card-sub">Boxplots show spread and outliers per diagnosis</div>
+      </div>
+      <div class="card-actions muted">Tip: use table search to focus on diagnosis</div>
+    </div>
+    <div class="card-body">
+      {% if visualizations.box_by_diagnosis %}
+        <div class="plotly-container">{{ visualizations.box_by_diagnosis|safe }}</div>
+      {% else %}
+        <div class="alert">No boxplot available.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- monthly trends and seasonality heatmap -->
+  <div class="grid">
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Monthly Diagnosis Trends (Top)</div>
+          <div class="card-sub">Multi-line view for top diagnoses over time</div>
+        </div>
+      </div>
+      <div class="card-body">
+        {% if visualizations.monthly_trends_top %}
+          <div class="plotly-container">{{ visualizations.monthly_trends_top|safe }}</div>
+        {% else %}
+          <div class="alert">Monthly trends not available.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Seasonality Heatmap (Month × Year)</div>
+          <div class="card-sub">Total amounts by month and year highlight seasonal cycles</div>
+        </div>
+      </div>
+      <div class="card-body">
+        {% if visualizations.seasonality_heatmap %}
+          <div class="plotly-container">{{ visualizations.seasonality_heatmap|safe }}</div>
+        {% else %}
+          <div class="alert">Seasonality heatmap not available.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- provider breakdown and severity -->
+  <div class="grid">
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Diagnosis Breakdown for Top Providers</div>
+          <div class="card-sub">Which providers contribute to which diagnoses</div>
+        </div>
+      </div>
+      <div class="card-body">
+        {% if visualizations.provider_diagnosis %}
+          <div class="plotly-container">{{ visualizations.provider_diagnosis|safe }}</div>
+        {% else %}
+          <div class="alert">Provider-by-diagnosis chart not available.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Severity Bucket Distribution (Top Diagnoses)</div>
+          <div class="card-sub">Claims binned into severity buckets by amount</div>
+        </div>
+      </div>
+      <div class="card-body">
+        {% if visualizations.severity_buckets_top %}
+          <div class="plotly-container">{{ visualizations.severity_buckets_top|safe }}</div>
+        {% else %}
+          <div class="alert">Severity bucket chart not available.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- demographics -->
+  <div class="grid">
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">Gender Split for Top Diagnoses</div>
+        <div class="card-sub">Compare male/female claim volumes by diagnosis</div>
+      </div>
+      <div class="card-body">
+        {% if visualizations.gender_split_top %}
+          <div class="plotly-container">{{ visualizations.gender_split_top|safe }}</div>
+        {% else %}
+          <div class="alert">Gender split chart not available.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">Age Distribution for Top Diagnoses</div>
+        <div class="card-sub">Boxplot of claimant ages per diagnosis</div>
+      </div>
+      <div class="card-body">
+        {% if visualizations.age_distribution_top %}
+          <div class="plotly-container">{{ visualizations.age_distribution_top|safe }}</div>
+        {% else %}
+          <div class="alert">Age distribution chart not available.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- repeat claimants & volatility -->
+  <div class="grid">
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">Repeat-Claimant Summary</div>
+        <div class="card-sub">Members with multiple claims by diagnosis (top)</div>
+      </div>
+      <div class="card-body">
+        {% if visualizations.repeat_claimants %}
+          <div class="plotly-container">{{ visualizations.repeat_claimants|safe }}</div>
+        {% elif deep_tables.repeat_claimants_summary %}
+          <div style="overflow:auto;">
+            <table class="data-table">
+              <thead><tr><th>Diagnosis</th><th>Members w/Multiple Claims</th><th>Avg Claims/Member</th><th>Max Claims</th></tr></thead>
+              <tbody>
+                {% for r in deep_tables.repeat_claimants_summary %}
+                <tr>
+                  <td>{{ r.Diagnosis }}</td>
+                  <td>{{ r.members_with_multiple_claims }}</td>
+                  <td>{{ r.avg_claims_per_member|floatformat:2 }}</td>
+                  <td>{{ r.max_claims_by_member }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="alert">Repeat-claimant data not available.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">Top Volatile Diagnoses (CV)</div>
+        <div class="card-sub">Diagnoses with high coefficient of variation</div>
+      </div>
+      <div class="card-body">
+        {% if visualizations.volatility_top %}
+          <div class="plotly-container">{{ visualizations.volatility_top|safe }}</div>
+        {% else %}
+          <div class="alert">Volatility chart not available.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- large diagnosis summary table -->
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <div class="card-title">Diagnosis Summary Table</div>
+        <div class="card-sub">Counts, amounts, quantiles, IQR, CV — full table</div>
+      </div>
+      <div>
+        <div class="toolbar">
+          <input type="text" id="table-search" class="search-input" placeholder="Search table (diagnosis)..." />
+          <button id="download-table" class="btn ghost"><i class="fa fa-download"></i>&nbsp;Download CSV</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-body" id="table-wrapper" style="overflow:auto; max-height:540px;">
+      {% if deep_tables.diag_stats_full %}
+        <table class="data-table" id="diag-table">
+          <thead>
+            <tr>
+              <th>Diagnosis</th>
+              <th>Total Claims</th>
+              <th>Total Amount</th>
+              <th>Mean</th>
+              <th>Median</th>
+              <th>Std</th>
+              <th>Q25</th>
+              <th>Q50</th>
+              <th>Q75</th>
+              <th>Q90</th>
+              <th>%Claims</th>
+              <th>%Amount</th>
+              <th>IQR</th>
+              <th>CV</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in deep_tables.diag_stats_full %}
+            <tr>
+              <td class="diag-name">{{ r.Diagnosis }}</td>
+              <td>{{ r.Total_Claims }}</td>
+              <td>KES {{ r.Total_Amount|floatformat:2|intcomma }}</td>
+              <td>KES {{ r.Mean_Amount|floatformat:2|intcomma }}</td>
+              <td>KES {{ r.Median_Amount|floatformat:2|intcomma }}</td>
+              <td>KES {{ r.Std_Amount|floatformat:2|intcomma }}</td>
+              <td>KES {{ r.q25|floatformat:2|intcomma }}</td>
+              <td>KES {{ r.q50|floatformat:2|intcomma }}</td>
+              <td>KES {{ r.q75|floatformat:2|intcomma }}</td>
+              <td>KES {{ r.q90|floatformat:2|intcomma }}</td>
+              <td>{{ r.Pct_of_Claims|floatformat:2 }}%</td>
+              <td>{{ r.Pct_of_Amount|floatformat:2 }}%</td>
+              <td>KES {{ r.IQR|floatformat:2|intcomma }}</td>
+              <td>{% if r.CV %}{{ r.CV|floatformat:2 }}{% else %}-{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <div class="alert">Diagnosis summary table not available.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <footer style="margin-top:28px; color:var(--muted); font-size:13px;">
+    © 2025 Virtual Analytics • <a href="https://www.virtualanalytics.co.ke/" target="_blank">virtualanalytics.co.ke</a> • Data is descriptive & exploratory only
+  </footer>
+</div>
+
+<!-- ===========================
+     Scripts: interactions & exports
+     =========================== -->
+<script>
+(function(){
+  // Helper: convert HTML table to CSV string
+  function tableToCSV(tableEl) {
+    const rows = Array.from(tableEl.querySelectorAll('tr'));
+    return rows.map(row => {
+      const cols = Array.from(row.querySelectorAll('th,td'));
+      return cols.map(col => {
+        // escape quotes
+        let text = col.innerText.replace(/"/g, '""').trim();
+        // wrap in quotes
+        return `"${text}"`;
+      }).join(',');
+    }).join('\\n');
+  }
+
+  // Export CSV button
+  document.getElementById('download-table').addEventListener('click', function(e){
+    e.preventDefault();
+    const table = document.getElementById('diag-table');
+    if(!table){ alert('Table not available to export'); return; }
+    const csv = tableToCSV(table);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'diagnosis_summary.csv';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  });
+
+  // Apply filters (reload preserving other GET params)
+  document.getElementById('apply-filters').addEventListener('click', function(){
+    const minClaims = document.getElementById('min-claims').value || '5';
+    const topN = document.getElementById('top-n').value || '8';
+    // keep other params in URL
+    const url = new URL(window.location.href);
+    url.searchParams.set('min_claims', minClaims);
+    // NOTE: top_n is cosmetic unless backend uses it
+    url.searchParams.set('top_n', topN);
+    window.location.href = url.toString();
+  });
+
+  // Toggle tables visibility
+  const toggleBtn = document.getElementById('toggle-tables');
+  let tablesVisible = true;
+  toggleBtn.addEventListener('click', function(){
+    tablesVisible = !tablesVisible;
+    const tableWrap = document.getElementById('table-wrapper');
+    if(tableWrap) tableWrap.style.display = tablesVisible ? 'block' : 'none';
+  });
+
+  // Search box filters table rows & filters charts (client-side, simple)
+  const tableSearch = document.getElementById('table-search');
+  if(tableSearch){
+    tableSearch.addEventListener('input', function(){
+      const q = this.value.trim().toLowerCase();
+      const rows = document.querySelectorAll('#diag-table tbody tr');
+      rows.forEach(r => {
+        const name = r.querySelector('.diag-name')?.innerText.toLowerCase() || '';
+        r.style.display = name.includes(q) ? '' : 'none';
+      });
     });
+  }
+
+  // Diagnosis-search: filter both table and charts by diagnosis text (client-side)
+  const diagnosisSearch = document.getElementById('diagnosis-search');
+  if(diagnosisSearch){
+    diagnosisSearch.addEventListener('input', function(){
+      const q = this.value.trim().toLowerCase();
+      // filter table rows
+      const rows = document.querySelectorAll('#diag-table tbody tr');
+      rows.forEach(r => {
+        const name = r.querySelector('.diag-name')?.innerText.toLowerCase() || '';
+        r.style.display = name.includes(q) ? '' : 'none';
+      });
+      // note: for charts (svg/plotly), client-side filtering is complex.
+      // For full-chart filtering, re-run server request with query param (not implemented).
+    });
+  }
+
+  // Initialize Select2 for controls if available
+  if (typeof $ !== 'undefined' && $.fn.select2) {
+    $('#top-n').select2({ minimumResultsForSearch: Infinity, width: '120px' });
+  }
+
+  // Small UX: pressing Enter in min-claims triggers apply
+  document.getElementById('min-claims').addEventListener('keydown', function(e){
+    if(e.key === 'Enter'){ e.preventDefault(); document.getElementById('apply-filters').click(); }
+  });
+
+  // Make Plotly charts responsive: re-render on window resize
+  window.addEventListener('resize', function(){
+    // Plotly automatically resizes containers loaded with plotly; however,
+    // sometimes re-layout helps:
+    if(typeof Plotly !== 'undefined'){
+      const plots = document.querySelectorAll('.plotly-graph-div');
+      plots.forEach(p => {
+        try { Plotly.Plots.resize(p); } catch (err) { /* ignore */ }
+      });
+    }
+  });
+})();
 </script>
+
 {% endblock %}

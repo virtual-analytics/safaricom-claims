@@ -1,0 +1,86 @@
+{% extends 'myapp/base.html' %}
+
+{% block title %}Minet Claims Forecasting{% endblock %}
+
+{% block content %}
+<div style="width: 100%; margin: 0; padding: 2rem 3rem; padding-top: 30px;">
+  <div style="text-align: center; margin-bottom: 2.5rem;">
+    <h1 style="color: #e30613; font-size: 2.8rem; margin-bottom: 1rem; font-weight: 800; letter-spacing: -0.5px;">Minet Claims Prediction</h1>
+    <p style="color: #666; font-size: 1.3rem; max-width: 800px; margin: 0 auto; line-height: 1.5;">
+      Advanced AI-powered claims analytics for Minet Insurance with
+      comprehensive forecasting and simulation capabilities
+    </p>
+  </div>
+
+  <!-- Tabbed Navigation -->
+  <div style="display: flex; overflow-x: auto; gap: 0.5rem; margin-bottom: 3rem; padding-bottom: 0.5rem; scrollbar-width: none;">
+    <a
+      href="{% url 'minet_forecast_volume' %}"
+      style="flex: 0 0 auto; padding: 1rem 1.5rem; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(35, 35, 35, 0.08); cursor: pointer; display: flex; align-items: center; gap: 0.8rem; text-decoration: none; color: #232323; border: 1px solid rgba(227, 6, 19, 0.1); transition: all 0.3s ease; white-space: nowrap; position: relative; {% if request.path == '/minet_forecast_volume/' %}background: #e30613; color: white; box-shadow: 0 4px 16px rgba(227, 6, 19, 0.2);{% endif %}"
+    >
+      <i class="fas fa-chart-line" style="font-size: 1.2rem; color: {% if request.path == '/minet_forecast_volume/' %}white{% else %}#e30613{% endif %}; transition: all 0.3s ease;"></i>
+      <h3 style="font-size: 1rem; font-weight: 600; margin: 0;">Forecast Volume</h3>
+      <div style="position: absolute; bottom: -0.5rem; left: 50%; transform: translateX(-50%); width: {% if request.path == '/minet_forecast_volume/' %}80%{% else %}0{% endif %}; height: 3px; background: {% if request.path == '/minet_forecast_volume/' %}white{% else %}#e30613{% endif %}; transition: all 0.3s ease;"></div>
+    </a>
+
+    <a
+      href="{% url 'minet_confidence_interval' %}"
+      style="flex: 0 0 auto; padding: 1rem 1.5rem; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(35, 35, 35, 0.08); cursor: pointer; display: flex; align-items: center; gap: 0.8rem; text-decoration: none; color: #232323; border: 1px solid rgba(227, 6, 19, 0.1); transition: all 0.3s ease; white-space: nowrap; position: relative; {% if request.path == '/minet_confidence_interval/' %}background: #e30613; color: white; box-shadow: 0 4px 16px rgba(227, 6, 19, 0.2);{% endif %}"
+    >
+      <i class="fas fa-chart-area" style="font-size: 1.2rem; color: {% if request.path == '/minet_confidence_interval/' %}white{% else %}#e30613{% endif %}; transition: all 0.3s ease;"></i>
+      <h3 style="font-size: 1rem; font-weight: 600; margin: 0;">Confidence Interval</h3>
+      <div style="position: absolute; bottom: -0.5rem; left: 50%; transform: translateX(-50%); width: {% if request.path == '/minet_confidence_interval/' %}80%{% else %}0{% endif %}; height: 3px; background: {% if request.path == '/minet_confidence_interval/' %}white{% else %}#e30613{% endif %}; transition: all 0.3s ease;"></div>
+    </a>
+
+    <a
+      href="{% url 'minet_impact_simulation' %}"
+      style="flex: 0 0 auto; padding: 1rem 1.5rem; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(35, 35, 35, 0.08); cursor: pointer; display: flex; align-items: center; gap: 0.8rem; text-decoration: none; color: #232323; border: 1px solid rgba(227, 6, 19, 0.1); transition: all 0.3s ease; white-space: nowrap; position: relative; {% if request.path == '/minet_impact_simulation/' %}background: #e30613; color: white; box-shadow: 0 4px 16px rgba(227, 6, 19, 0.2);{% endif %}"
+    >
+      <i class="fas fa-cogs" style="font-size: 1.2rem; color: {% if request.path == '/minet_impact_simulation/' %}white{% else %}#e30613{% endif %}; transition: all 0.3s ease;"></i>
+      <h3 style="font-size: 1rem; font-weight: 600; margin: 0;">Impact Simulation</h3>
+      <div style="position: absolute; bottom: -0.5rem; left: 50%; transform: translateX(-50%); width: {% if request.path == '/minet_impact_simulation/' %}80%{% else %}0{% endif %}; height: 3px; background: {% if request.path == '/minet_impact_simulation/' %}white{% else %}#e30613{% endif %}; transition: all 0.3s ease;"></div>
+    </a>
+
+    <a
+      href="{% url 'minet_explainability' %}"
+      style="flex: 0 0 auto; padding: 1rem 1.5rem; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(35, 35, 35, 0.08); cursor: pointer; display: flex; align-items: center; gap: 0.8rem; text-decoration: none; color: #232323; border: 1px solid rgba(227, 6, 19, 0.1); transition: all 0.3s ease; white-space: nowrap; position: relative; {% if request.path == '/minet_explainability/' %}background: #e30613; color: white; box-shadow: 0 4px 16px rgba(227, 6, 19, 0.2);{% endif %}"
+    >
+      <i class="fas fa-lightbulb" style="font-size: 1.2rem; color: {% if request.path == '/minet_explainability/' %}white{% else %}#e30613{% endif %}; transition: all 0.3s ease;"></i>
+      <h3 style="font-size: 1rem; font-weight: 600; margin: 0;">Explainability</h3>
+      <div style="position: absolute; bottom: -0.5rem; left: 50%; transform: translateX(-50%); width: {% if request.path == '/minet_explainability/' %}80%{% else %}0{% endif %}; height: 3px; background: {% if request.path == '/minet_explainability/' %}white{% else %}#e30613{% endif %}; transition: all 0.3s ease;"></div>
+    </a>
+
+    <a href="#" style="flex: 0 0 auto; padding: 1rem 1.5rem; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(35, 35, 35, 0.08); cursor: pointer; display: flex; align-items: center; gap: 0.8rem; text-decoration: none; color: #232323; border: 1px solid rgba(227, 6, 19, 0.1); transition: all 0.3s ease; white-space: nowrap; position: relative;">
+      <i class="fas fa-shield-alt" style="font-size: 1.2rem; color: #e30613; transition: all 0.3s ease;"></i>
+      <h3 style="font-size: 1rem; font-weight: 600; margin: 0;">Risk Assessment</h3>
+      <div style="position: absolute; bottom: -0.5rem; left: 50%; transform: translateX(-50%); width: 0; height: 3px; background: #e30613; transition: all 0.3s ease;"></div>
+    </a>
+
+    <a href="#" style="flex: 0 0 auto; padding: 1rem 1.5rem; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(35, 35, 35, 0.08); cursor: pointer; display: flex; align-items: center; gap: 0.8rem; text-decoration: none; color: #232323; border: 1px solid rgba(227, 6, 19, 0.1); transition: all 0.3s ease; white-space: nowrap; position: relative;">
+      <i class="fas fa-wave-square" style="font-size: 1.2rem; color: #e30613; transition: all 0.3s ease;"></i>
+      <h3 style="font-size: 1rem; font-weight: 600; margin: 0;">Trend Analysis</h3>
+      <div style="position: absolute; bottom: -0.5rem; left: 50%; transform: translateX(-50%); width: 0; height: 3px; background: #e30613; transition: all 0.3s ease;"></div>
+    </a>
+
+    <a href="#" style="flex: 0 0 auto; padding: 1rem 1.5rem; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(35, 35, 35, 0.08); cursor: pointer; display: flex; align-items: center; gap: 0.8rem; text-decoration: none; color: #232323; border: 1px solid rgba(227, 6, 19, 0.1); transition: all 0.3s ease; white-space: nowrap; position: relative;">
+      <i class="fas fa-file-alt" style="font-size: 1.2rem; color: #e30613; transition: all 0.3s ease;"></i>
+      <h3 style="font-size: 1rem; font-weight: 600; margin: 0;">Custom Reports</h3>
+      <div style="position: absolute; bottom: -0.5rem; left: 50%; transform: translateX(-50%); width: 0; height: 3px; background: #e30613; transition: all 0.3s ease;"></div>
+    </a>
+  </div>
+</div>
+
+<script>
+  // Add active class to current tab based on URL
+  document.addEventListener("DOMContentLoaded", function () {
+    const currentPath = window.location.pathname;
+    const tabs = document.querySelectorAll(".tab-item");
+
+    tabs.forEach((tab) => {
+      if (tab.getAttribute("href") === currentPath) {
+        tab.classList.add("active");
+      }
+    });
+  });
+</script>
+{% endblock %}

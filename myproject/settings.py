@@ -11,6 +11,11 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -43,6 +48,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -69,17 +75,40 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'myproject.wsgi.application'
-
+DB_LIVE = os.getenv('DB_LIVE')
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+
+if DB_LIVE in ['False', False]:
+
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
     }
-}
+    
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('DB_NAME'),
+            'USER': os.getenv('DB_USER'),
+            'PASSWORD': os.getenv('DB_PASSWORD'),
+            'HOST': os.getenv('DB_HOST'),
+            'PORT': os.getenv('DB_PORT'),
+        }
+    }
+
+
+
+
+
+
+
+
 
 
 # Password validation
@@ -121,6 +150,8 @@ STATICFILES_DIRS = [
     BASE_DIR / "myapp" / "static",
 ]
 
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
@@ -130,3 +161,14 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_URL = 'login'              # Named URL for login page
 LOGIN_REDIRECT_URL = 'home'      # Default page after login
 LOGOUT_REDIRECT_URL = 'landing'  # After logout, go to landing page
+
+
+# Add these settings to your Django settings file
+# Memory optimization for large datasets
+DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
+
+# Session settings for long-running processes
+SESSION_COOKIE_AGE = 3600  # 1 hour
+SESSION_SAVE_EVERY_REQUEST = True
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False

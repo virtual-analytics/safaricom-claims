@@ -1,453 +1,1511 @@
 {% extends 'myapp/base.html' %}
-{% block title %}Claims Prediction Engine - Minet Insurance{% endblock %}
+{% load humanize %}
+{% block title %}the Verse{% endblock %}
 {% block extra_head %}
-<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
     :root {
-        --primary: #E30613;
-        --primary-dark: #C10510;
-        --secondary: #232323;
-        --light-bg: #F5F5F5;
-        --border: #E3E8EE;
-        --text-muted: #888;
+        --primary: #e30613;
+        --primary-light: rgba(227, 6, 19, 0.1);
+        --secondary: #1e3a8a;
+        --text: #333;
+        --text-light: #6c757d;
+        --bg-light: #f8f9fa;
+        --border: #dee2e6;
         --card-shadow: 0 4px 16px rgba(0,0,0,0.08);
+        --hover-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        --success: #28a745;
+        --warning: #ffc107;
+        --info: #17a2b8;
+        --gradient-primary: linear-gradient(135deg, #e30613 0%, #ff5252 100%);
+        --gradient-secondary: linear-gradient(135deg, #1e3a8a 0%, #3b5998 100%);
     }
-
-    * {
-        box-sizing: border-box;
-    }
-
+    
     body {
-        font-family: "Segoe UI", Tahoma, sans-serif;
-        font-size: 16px;
-        background: var(--light-bg);
-        margin: 0;
-        color: #333;
+        background-color: #f5f7fa;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: var(--text);
+        line-height: 1.6;
     }
-
-    /* ===== Main Area ===== */
-    .main-area {
-        padding: 2rem;
-        width: 100%;
-        max-width: 100%;
-        animation: fadeIn 0.4s ease-in-out;
-    }
-
-    .main-area h1 {
-        font-size: 2.2rem;
-        font-weight: 700;
-        color: var(--secondary);
-        margin-bottom: 0.5rem;
-    }
-
-    .main-area h2 {
-        font-size: 1.4rem;
-        font-weight: 700;
-        color: var(--primary);
-        margin-bottom: 2rem;
-    }
-
-    /* ===== Tabs ===== */
-    .tabs {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 2rem;
-        border-bottom: 2px solid var(--border);
-        margin-bottom: 2rem;
-    }
-
-    .tab {
-        font-size: 1rem;
-        padding: 0.8rem 1.2rem;
-        cursor: pointer;
-        border: none;
-        background: none;
-        font-weight: 500;
-        color: var(--text-muted);
-        border-bottom: 3px solid transparent;
-        transition: all 0.25s ease;
-    }
-
-    .tab:hover:not(.active) {
-        color: var(--primary);
-    }
-
-    .tab.active {
-        color: var(--primary);
-        border-bottom: 3px solid var(--primary);
-        font-weight: 700;
-        background: rgba(227, 6, 19, 0.05);
-        border-radius: 6px 6px 0 0;
-    }
-
-    /* ===== Filter Form ===== */
-    #filterForm {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 15px;
-        padding: 1rem;
-        background: #fff;
-        border-radius: 8px;
-        box-shadow: var(--card-shadow);
-        margin-bottom: 2rem;
-        align-items: flex-end;
-    }
-
-    #filterForm label {
-        font-size: 0.9rem;
-        color: #555;
-        margin-bottom: 4px;
-        display: block;
-    }
-
-    #filterForm select,
-    #filterForm input[type="date"] {
-        padding: 10px 14px;
-        border-radius: 6px;
-        border: 1px solid #ddd;
-        background: #fff;
-        min-width: 160px;
-    }
-
-    #filterForm select:focus,
-    #filterForm input:focus {
-        outline: none;
-        border-color: var(--primary);
-        box-shadow: 0 0 0 2px rgba(227, 6, 19, 0.1);
-    }
-
-    #filterForm button {
-        background: var(--primary);
-        color: #fff;
-        padding: 10px 18px;
-        border: none;
-        border-radius: 6px;
-        cursor: pointer;
-        font-weight: 600;
-        transition: background 0.3s ease, transform 0.2s ease;
-    }
-
-    #filterForm button:hover {
-        background: var(--primary-dark);
-        transform: translateY(-2px);
-    }
-
-    /* ===== Charts Container ===== */
-    #chartsContainer {
+    
+    .dashboard-container {
         display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 2rem;
-        width: 100%;
-        margin: 0;
+        grid-template-columns: 1fr;
+        gap: 2.5rem;
+        max-width: 1800px;
+        margin: 0 auto;
+        padding: 2.5rem 2rem;
     }
-
-    #chartsContainer h3 {
-        grid-column: 1 / -1;
-        font-size: 1.5rem;
-        color: var(--secondary);
-        margin-bottom: 0.5rem;
-    }
-
-    /* ===== Chart Cards ===== */
-    #chartsContainer > div {
-        background: #fff;
-        border-radius: 10px;
+    
+    .header-card {
+        background: white;
+        border-radius: 18px;
         box-shadow: var(--card-shadow);
-        padding: 1.5rem;
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        padding: 2.5rem;
+        transition: all 0.3s ease;
+        border-left: 5px solid var(--primary);
+    }
+    
+    .header-card:hover {
+        transform: translateY(-3px);
+        box-shadow: var(--hover-shadow);
+    }
+    
+    .page-title {
+        font-size: 2.4rem;
+        font-weight: 800;
+        color: var(--secondary);
+        margin-bottom: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        letter-spacing: -0.5px;
+    }
+    
+    .page-title i {
+        background: var(--gradient-primary);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-size: 2.2rem;
+    }
+    
+    .tabs-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.2rem;
+        margin-bottom: 2.5rem;
+    }
+    
+    .tab-link {
+        padding: 0.9rem 1.8rem;
+        cursor: pointer;
+        border: none;
+        background: white;
+        font-weight: 600;
+        color: var(--text-light);
+        border-radius: 12px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        text-decoration: none;
+        box-shadow: var(--card-shadow);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .tab-link::before {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
         width: 100%;
+        height: 3px;
+        background: var(--primary);
+        transform: scaleX(0);
+        transform-origin: right;
+        transition: transform 0.3s ease;
+    }
+    
+    .tab-link:hover, .tab-link.active {
+        color: var(--primary);
+        background: var(--primary-light);
+        transform: translateY(-3px);
+        box-shadow: var(--hover-shadow);
+    }
+    
+    .tab-link.active::before {
+        transform: scaleX(1);
+        transform-origin: left;
+    }
+    
+    .filter-section {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        padding: 2rem;
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: var(--card-shadow);
+        margin-bottom: 2.5rem;
+        align-items: flex-end;
+        border: 1px solid rgba(227, 6, 19, 0.08);
+        transition: all 0.3s ease;
+    }
+    
+    .filter-section:hover {
+        box-shadow: var(--hover-shadow);
+    }
+    
+    .filter-group {
         display: flex;
         flex-direction: column;
-    }
-
-    #chartsContainer > div:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 6px 20px rgba(0,0,0,0.12);
-    }
-
-    #chartsContainer h4 {
-        color: var(--primary);
-        font-size: 1.1rem;
-        font-weight: 600;
-        margin-bottom: 0.8rem;
-        border-bottom: 1px solid var(--border);
-        padding-bottom: 0.5rem;
-    }
-
-    /* ===== Chart Container ===== */
-    .chart-container {
+        min-width: 180px;
         flex: 1;
-        min-height: 550px;
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 0;
-        background: #fafafa;
+    }
+    
+    .filter-label {
+        font-size: 0.95rem;
+        color: var(--text-light);
+        margin-bottom: 10px;
+        font-weight: 600;
         display: flex;
-        align-items: stretch;
-        justify-content: stretch;
-        width: 100%;
+        align-items: center;
+        gap: 6px;
     }
-
-    /* Force Plotly charts to fill space */
-    .chart-container > div,
-    .chart-container > svg,
-    .js-plotly-plot,
-    .plot-container {
-        width: 100% !important;
-        height: 100% !important;
-    }
-
-    /* ===== Tree View ===== */
-    #jsmind_container {
-        height: 500px;
+    
+    .filter-input, .filter-select {
+        padding: 12px 16px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
         background: #fff;
-        border-radius: 8px;
-        box-shadow: var(--card-shadow);
-        padding: 0.5rem;
-        width: 100%;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     }
-
-    /* ===== Debug Info ===== */
+    
+    .filter-input:focus, .filter-select:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px var(--primary-light), 0 4px 8px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+    
+    .btn-primary {
+        background: var(--gradient-primary);
+        color: #fff;
+        padding: 12px 22px;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        height: fit-content;
+        box-shadow: 0 4px 8px rgba(227, 6, 19, 0.25);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .btn-primary:hover {
+        background: linear-gradient(135deg, #c10510 0%, #e53935 100%);
+        transform: translateY(-3px);
+        box-shadow: 0 6px 12px rgba(227, 6, 19, 0.3);
+    }
+    
+    .btn-primary:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 4px rgba(227, 6, 19, 0.3);
+    }
+    
     .debug-info {
-        font-size: 0.85rem;
-        color: var(--text-muted);
+        font-size: 0.9rem;
+        color: var(--text-light);
         background: #fff;
-        padding: 0.5rem 1rem;
+        padding: 1rem 1.25rem;
         border-left: 4px solid var(--primary);
-        margin-bottom: 1rem;
+        margin-bottom: 2rem;
         box-shadow: var(--card-shadow);
-        border-radius: 6px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        transition: all 0.3s ease;
     }
-
-    /* ===== Responsive ===== */
-    @media (max-width: 1024px) {
-        #chartsContainer {
+    
+    .debug-info:hover {
+        transform: translateX(5px);
+        box-shadow: var(--hover-shadow);
+    }
+    
+    /* 📊 Summary Cards */
+    .stats-grid {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 1.5rem;
+        flex-wrap: nowrap;
+    }
+    
+    .stat-card {
+        flex: 1;
+        max-width: 200px;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: var(--card-shadow);
+        padding: 1rem;
+        text-align: center;
+        transition: all 0.3s ease;
+        border-top: 3px solid var(--primary);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: var(--hover-shadow);
+    }
+    
+    .stat-icon {
+        font-size: 20px;
+        color: var(--primary);
+        margin-bottom: 10px;
+        background: var(--primary-light);
+        width: 45px;
+        height: 45px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        margin: 0 auto 10px;
+    }
+    
+    .stat-title {
+        margin: 0;
+        font-size: 13px;
+        color: var(--text-light);
+        font-weight: 600;
+        letter-spacing: 0.5px;
+    }
+    
+    .stat-value {
+        margin: 8px 0 0;
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--secondary);
+        letter-spacing: -0.5px;
+    }
+    
+    .chart-card {
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: var(--card-shadow);
+        padding: 2rem;
+        margin-bottom: 2rem;
+        transition: all 0.4s ease;
+        width: 100%;
+        border: 1px solid rgba(0,0,0,0.05);
+    }
+    
+    .chart-card:hover {
+        box-shadow: var(--hover-shadow);
+        transform: translateY(-5px);
+    }
+    
+    .chart-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        cursor: pointer;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+    }
+    
+    .chart-title {
+        color: var(--primary);
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .toggle-icon {
+        transition: transform 0.3s ease;
+    }
+    
+    .charts-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(520px, 1fr));
+        gap: 2.5rem;
+        width: 100%;
+        margin: 0;
+    }
+    
+    .tab-content {
+        display: none;
+    }
+    
+    .tab-content.active {
+        display: block;
+        animation: fadeIn 0.5s ease;
+    }
+    
+    .accordion {
+        margin-bottom: 1.5rem;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: var(--card-shadow);
+    }
+    
+    .accordion-header {
+        background: var(--primary-light);
+        padding: 1.25rem;
+        border-radius: 12px;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: 700;
+        color: var(--primary);
+        transition: all 0.3s ease;
+    }
+    
+    .accordion-header:hover {
+        background: rgba(227, 6, 19, 0.15);
+    }
+    
+    .accordion-content {
+        padding: 1.5rem;
+        background: #fff;
+        border-radius: 0 0 12px 12px;
+        display: none;
+        animation: slideDown 0.4s ease;
+    }
+    
+    .accordion.active .accordion-content {
+        display: block;
+    }
+    
+    .analysis-tabs {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+    
+    .analysis-tab {
+        padding: 12px 24px;
+        border-radius: 10px;
+        background: #f1f1f1;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .analysis-tab:hover {
+        background: #e5e5e5;
+        transform: translateY(-2px);
+    }
+    
+    .analysis-tab.active {
+        background: var(--gradient-primary);
+        color: white;
+        box-shadow: 0 4px 8px rgba(227, 6, 19, 0.25);
+    }
+    
+    .multi-select {
+        min-height: 120px;
+    }
+    
+    .filter-row {
+        display: flex;
+        gap: 15px;
+        align-items: end;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+    
+    .drilldown-section {
+        background: rgba(232, 244, 252, 0.7);
+        padding: 1.5rem;
+        border-radius: 14px;
+        margin-bottom: 1.5rem;
+        border-left: 4px solid #17a2b8;
+        transition: all 0.3s ease;
+    }
+    
+    .drilldown-section:hover {
+        background: rgba(232, 244, 252, 0.9);
+        transform: translateX(5px);
+    }
+    
+    .comparison-section {
+        background: rgba(240, 247, 255, 0.7);
+        padding: 1.5rem;
+        border-radius: 14px;
+        margin-bottom: 1.5rem;
+        border-left: 4px solid #1e3a8a;
+        transition: all 0.3s ease;
+    }
+    
+    .comparison-section:hover {
+        background: rgba(240, 247, 255, 0.9);
+        transform: translateX(5px);
+    }
+    
+    .comparison-values {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 15px;
+    }
+    
+    .comparison-tag {
+        background: var(--primary-light);
+        color: var(--primary);
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 600;
+        transition: all 0.2s ease;
+    }
+    
+    .comparison-tag:hover {
+        background: rgba(227, 6, 19, 0.2);
+        transform: scale(1.05);
+    }
+    
+    .comparison-tag .remove {
+        cursor: pointer;
+        font-weight: bold;
+        padding: 2px;
+        border-radius: 50%;
+        width: 18px;
+        height: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(227, 6, 19, 0.1);
+        transition: all 0.2s ease;
+    }
+    
+    .comparison-tag .remove:hover {
+        background: rgba(227, 6, 19, 0.3);
+        transform: scale(1.2);
+    }
+    
+    /* Animations */
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    
+    @keyframes slideDown {
+        from { 
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to { 
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    /* Loading animation */
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.5; }
+        100% { opacity: 1; }
+    }
+    
+    .loading-pulse {
+        animation: pulse 1.5s ease-in-out infinite;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 1200px) {
+        .charts-grid {
             grid-template-columns: 1fr;
         }
+        
+        .dashboard-container {
+            padding: 1.5rem;
+            gap: 2rem;
+        }
+        
+        .header-card {
+            padding: 2rem;
+        }
 
-        #filterForm {
+        .stats-grid {
+            flex-wrap: wrap;
+        }
+    }
+    
+    @media (max-width: 992px) {
+        .stats-grid {
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .stat-card {
+            max-width: 45%;
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .filter-section {
             flex-direction: column;
             align-items: stretch;
+            padding: 1.5rem;
         }
-
-        .main-area {
+        
+        .filter-group {
+            min-width: 100%;
+        }
+        
+        .stats-grid {
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .tabs-container {
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+        
+        .analysis-tabs {
+            flex-wrap: wrap;
+        }
+        
+        .filter-row {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 15px;
+        }
+        
+        .page-title {
+            font-size: 1.8rem;
+        }
+        
+        .dashboard-container {
             padding: 1rem;
+            gap: 1.5rem;
+        }
+        
+        .header-card {
+            padding: 1.5rem;
+        }
+        
+        .chart-card {
+            padding: 1.5rem;
+        }
+        
+        .charts-grid {
+            gap: 1.5rem;
         }
     }
-
-    /* ===== Animation ===== */
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(12px); }
-        to { opacity: 1; transform: translateY(0); }
+    
+    @media (max-width: 576px) {
+        .tab-link {
+            width: 100%;
+            text-align: center;
+            justify-content: center;
+        }
+        
+        .analysis-tab {
+            flex: 1;
+            min-width: calc(50% - 10px);
+            justify-content: center;
+            text-align: center;
+        }
+        
+        .stat-card {
+            max-width: 100%;
+        }
     }
 </style>
-
 {% endblock %}
-
-
 
 {% block content %}
 {% csrf_token %}
-<div class="main-area">
-    <h1>Broker Dashboard</h1>
-    <h2>Claims Prediction Engine</h2>
+<div class="dashboard-container">
+    <!-- Header Section -->
+    <div class="header-card">
+        <h1 class="page-title">
+            <i class="fas fa-analytics"></i>
+            Claims Distribution
+        </h1>
+        <p style="color: var(--text-light); margin: 0;">Advanced analysis of insurance claims with drill-down capabilities and comprehensive visualizations</p>
+    </div>
+    <!-- Tabs -->
+    <div id="tabs" style="display: flex; flex-wrap: wrap; gap: 1.5rem; border-bottom: 2px solid #e2e8f0; margin-bottom: 2.5rem; padding-bottom: 0.5rem;">
 
-    <!-- Tabs (Claims Tree button removed) -->
-    <div class="tabs">
-        <button class="tab active" onclick="showTab(event, 'data-prep')">Claim Distribution</button>
-        <a href="{% url 'provider_efficiency' %}" 
-           class="tab {% if request.resolver_match.url_name == 'provider_efficiency' %}active{% endif %}">
-           Provider Efficiency
+        <!-- Claim Distribution (Default Active) -->
+        <a href="{% url 'claim_prediction' %}" 
+        style="font-size: 1rem; padding: 0.8rem 1.5rem; cursor: pointer; border: none; background: rgba(227, 6, 19, 0.05); font-weight: 700; color: #e30613; border-bottom: 3px solid #e30613; border-radius: 8px 8px 0 0; text-decoration: none; display: flex; align-items: center; gap: 0.5rem; transition: all 0.25s ease;"
+        class="tab-link active">
+            <i class="fas fa-chart-pie"></i>
+            Claim Distribution
         </a>
+
+        <!-- Temporal Analysis -->
+        <a href="{% url 'temporal_analysis' %}" 
+        style="font-size: 1rem; padding: 0.8rem 1.5rem; cursor: pointer; border: none; background: none; font-weight: 500; color: #64748b; border-bottom: 3px solid transparent; border-radius: 8px 8px 0 0; text-decoration: none; display: flex; align-items: center; gap: 0.5rem; transition: all 0.25s ease;"
+        class="tab-link">
+            <i class="fas fa-chart-line"></i>
+            Temporal Analysis
+        </a>
+
+        <!-- Provider Efficiency -->
+        <a href="{% url 'provider_efficiency' %}" 
+        style="font-size: 1rem; padding: 0.8rem 1.5rem; cursor: pointer; border: none; background: none; font-weight: 500; color: #64748b; border-bottom: 3px solid transparent; border-radius: 8px 8px 0 0; text-decoration: none; display: flex; align-items: center; gap: 0.5rem; transition: all 0.25s ease;"
+        class="tab-link">
+            <i class="fas fa-hospital-user"></i>
+            Provider Efficiency
+        </a>
+
+        <!-- Diagnostic Patterns -->
         <a href="{% url 'diagnostic-patterns1' %}" 
-           class="tab {% if request.resolver_match.url_name == 'diagnostic-patterns1' %}active{% endif %}">
-           Diagnostic Patterns
+        style="font-size: 1rem; padding: 0.8rem 1.5rem; cursor: pointer; border: none; background: none; font-weight: 500; color: #64748b; border-bottom: 3px solid transparent; border-radius: 8px 8px 0 0; text-decoration: none; display: flex; align-items: center; gap: 0.5rem; transition: all 0.25s ease;"
+        class="tab-link">
+            <i class="fas fa-stethoscope"></i>
+            Diagnostic Patterns
         </a>
     </div>
 
-    <!-- Claim Distribution Tab -->
-    <div id="data-prep" class="tab-content" style="display:block;">
-        <!-- Filters -->
-        <form id="filterForm" method="GET" action="">
-            <label for="dataset_id">Select Dataset:</label>
-            <select name="dataset_id" id="dataset_id" required>
-                {% for table in dataset_ids %}
-                    <option value="{{ table }}" {% if table == selected_id %}selected{% endif %}>{{ table }}</option>
-                {% endfor %}
-            </select>
 
-            <label for="time_period">Time Period:</label>
-            <select name="time_period" id="time_period">
-                <option value="all" {% if time_period == 'all' %}selected{% endif %}>All Time</option>
-                <option value="year" {% if time_period == 'year' %}selected{% endif %}>Last Year</option>
-                <option value="quarter" {% if time_period == 'quarter' %}selected{% endif %}>Last Quarter</option>
-                <option value="month" {% if time_period == 'month' %}selected{% endif %}>Last Month</option>
-            </select>
+    <!-- Analysis Type Tabs 
+    <div class="tabs-container">
+        <div class="analysis-tabs">
+            <div class="analysis-tab {% if analysis_type == 'temporal' %}active{% endif %}" onclick="setAnalysisType('temporal')">
+                <i class="fas fa-clock"></i> Temporal Analysis
+            </div>
+            <div class="analysis-tab {% if analysis_type == 'provider' %}active{% endif %}" onclick="setAnalysisType('provider')">
+                <i class="fas fa-hospital"></i> Provider Analysis
+            </div>
+            <div class="analysis-tab {% if analysis_type == 'diagnosis' %}active{% endif %}" onclick="setAnalysisType('diagnosis')">
+                <i class="fas fa-stethoscope"></i> Diagnosis Analysis
+            </div>
+            <div class="analysis-tab {% if analysis_type == 'benefit' %}active{% endif %}" onclick="setAnalysisType('benefit')">
+                <i class="fas fa-procedures"></i> Benefit Analysis
+            </div>
+            <div class="analysis-tab {% if analysis_type == 'demographic' %}active{% endif %}" onclick="setAnalysisType('demographic')">
+                <i class="fas fa-users"></i> Demographic Analysis
+            </div>
+            <div class="analysis-tab {% if analysis_type == 'advanced' %}active{% endif %}" onclick="setAnalysisType('advanced')">
+                <i class="fas fa-chart-line"></i> Advanced Analysis
+            </div>
+        </div>
+        <input type="hidden" name="analysis_type" id="analysis_type" value="{{ analysis_type|default:'temporal' }}">
+    </div> -->
+    
 
-            <label for="start_date">Start Date:</label>
-            <input type="date" name="start_date" id="start_date" value="{{ start_date|default:'' }}">
+    <!-- Main Content -->
+    <div id="data-analysis" class="tab-content active">
+        <!-- Filters Form -->
+        <form method="GET" action="" id="filterForm">
+            <!-- Dataset Selection -->
+            <div class="filter-section">
+                <div class="filter-group">
+                    <label for="dataset_id" class="filter-label">Select Dataset:</label>
+                    <select name="dataset_id" id="dataset_id" class="filter-select" required onchange="updateColumnOptions()">
+                        {% for table in dataset_ids %}
+                            <option value="{{ table }}" {% if table == selected_id %}selected{% endif %}>{{ table }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
 
-            <label for="end_date">End Date:</label>
-            <input type="date" name="end_date" id="end_date" value="{{ end_date|default:'' }}">
+                <div class="filter-group">
+                    <label for="x_axis" class="filter-label">Analyze By:</label>
+                    <select name="x_axis" id="x_axis" class="filter-select" onchange="updateComparisonOptions()">
+                        {% for col in all_columns %}
+                            <option value="{{ col }}" {% if col == x_axis %}selected{% endif %}>{{ col }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
 
-            <label for="benefit_type">Benefit Type:</label>
-            <select name="benefit_type" id="benefit_type">
-                <option value="all" {% if benefit_type == 'all' %}selected{% endif %}>All Benefits</option>
-                <option value="inpatient" {% if benefit_type == 'inpatient' %}selected{% endif %}>Inpatient</option>
-                <option value="outpatient" {% if benefit_type == 'outpatient' %}selected{% endif %}>Outpatient</option>
-                <option value="dental" {% if benefit_type == 'dental' %}selected{% endif %}>Dental</option>
-                <option value="optical" {% if benefit_type == 'optical' %}selected{% endif %}>Optical</option>
-            </select>
+                <div class="filter-group">
+                    <label for="time_period" class="filter-label">Time Period:</label>
+                    <select name="time_period" id="time_period" class="filter-select" onchange="this.form.submit()">
+                        <option value="all" {% if time_period == 'all' %}selected{% endif %}>All Time</option>
+                        <option value="year" {% if time_period == 'year' %}selected{% endif %}>Last Year</option>
+                        <option value="quarter" {% if time_period == 'quarter' %}selected{% endif %}>Last Quarter</option>
+                        <option value="month" {% if time_period == 'month' %}selected{% endif %}>Last Month</option>
+                    </select>
+                </div>
 
-            <button type="submit">Apply</button>
+                <div class="filter-group">
+                    <label for="start_date" class="filter-label">Start Date:</label>
+                    <input type="date" name="start_date" id="start_date" value="{{ start_date|default:'' }}" class="filter-input" onchange="this.form.submit()">
+                </div>
+
+                <div class="filter-group">
+                    <label for="end_date" class="filter-label">End Date:</label>
+                    <input type="date" name="end_date" id="end_date" value="{{ end_date|default:'' }}" class="filter-input" onchange="this.form.submit()">
+                </div>
+
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-sync"></i> Refresh Analysis
+                </button>
+            </div>
+
+            <!-- Drilldown Section -->
+            {% if visualizations.main_chart %}
+            <div class="drilldown-section">
+                <h3><i class="fas fa-search-plus"></i> Filter by</h3>
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label for="drilldown_column" class="filter-label">Drill Down By:</label>
+                        <select name="drilldown_column" id="drilldown_column" class="filter-select" onchange="loadDrilldownOptions()">
+                            <option value="">Select Column</option>
+                            {% for col in cat_cols %}
+                                <option value="{{ col }}" {% if col == drilldown_column %}selected{% endif %}>{{ col }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label for="drilldown_value" class="filter-label">Select Values:</label>
+                        <select name="drilldown_value" id="drilldown_value" class="filter-select" multiple size="5">
+                            <option value="">Select Values</option>
+                            {% if drilldown_column %}
+                                {% for value in drilldown_values %}
+                                    <option value="{{ value }}" selected>{{ value }}</option>
+                                {% endfor %}
+                            {% endif %}
+                        </select>
+                    </div>
+
+                    <button type="button" class="btn-primary" onclick="applyDrilldown()">
+                        <i class="fas fa-filter"></i> Apply
+                    </button>
+
+                    {% if drilldown_column and drilldown_values %}
+                    <button type="button" class="btn-primary" onclick="clearDrilldown()">
+                        <i class="fas fa-times"></i> Clear Drilldown
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Comparison Section -->
+            <div class="comparison-section">
+                <h3><i class="fas fa-compress-arrows-alt"></i> Multi-Value Comparison</h3>
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label for="comparison_column" class="filter-label">Compare Values From:</label>
+                        <select name="comparison_column" id="comparison_column" class="filter-select" onchange="loadComparisonOptions()">
+                            <option value="">Select Column</option>
+                            {% for col in cat_cols %}
+                                <option value="{{ col }}" {% if col == comparison_column %}selected{% endif %}>{{ col }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label for="comparison_values" class="filter-label">Select Values to Compare:</label>
+                        <select name="comparison_values" id="comparison_values" class="filter-select multi-select" multiple size="5">
+                            <option value="">Select Values</option>
+                            {% if comparison_options %}
+                                {% for value in comparison_options %}
+                                    <option value="{{ value }}" {% if value in selected_comparison_values %}selected{% endif %}>{{ value }}</option>
+                                {% endfor %}
+                            {% endif %}
+                        </select>
+                    </div>
+
+                    <button type="button" class="btn-primary" onclick="applyComparison()">
+                        <i class="fas fa-chart-bar"></i> Apply Comparison
+                    </button>
+
+                    {% if selected_comparison_values %}
+                    <button type="button" class="btn-primary" onclick="clearComparison()">
+                        <i class="fas fa-times"></i> Clear Comparison
+                    </button>
+                    {% endif %}
+                </div>
+
+                {% if selected_comparison_values %}
+                <div class="comparison-values">
+                    <span>Comparing:</span>
+                    {% for value in selected_comparison_values %}
+                    <div class="comparison-tag">
+                        {{ value }}
+                        <span class="remove" onclick="removeComparisonValue('{{ value }}')">&times;</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
         </form>
 
         {% if debug_info %}
-            <div class="debug-info">{{ debug_info }}</div>
+            <div class="debug-info">
+                <i class="fas fa-info-circle"></i> {{ debug_info }}
+            </div>
         {% endif %}
 
-        <!-- Charts -->
-        <div id="chartsContainer">
-            <h3>Claims Distribution Analysis</h3>
-
-            <div>
-                <h4>1. Time Series: Claims Volume & Amount</h4>
-                {% if chart1_time_series %}{{ chart1_time_series|safe }}{% else %}<div>No data available</div>{% endif %}
+        <!-- 📊 Summary Cards -->
+        {% if visualizations.summary_stats %}
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-money-bill-wave"></i></div>
+                <h3 class="stat-title">Total Amount</h3>
+                <p class="stat-value">KES {{ visualizations.summary_stats.total_amount|floatformat:2|intcomma }}</p>
             </div>
 
-            <div>
-                <h4>2. Claims Heatmap (Day vs Hour)</h4>
-                {% if chart2_heatmap %}{{ chart2_heatmap|safe }}{% else %}<div>No data available</div>{% endif %}
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-file-invoice"></i></div>
+                <h3 class="stat-title">Total Claims</h3>
+                <p class="stat-value">{{ visualizations.summary_stats.total_claims|floatformat:0|intcomma }}</p>
             </div>
 
-            <div>
-                <h4>3. Cumulative Claims Curve (Lorenz)</h4>
-                {% if chart3_lorenz %}{{ chart3_lorenz|safe }}{% else %}<div>No data available</div>{% endif %}
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-calculator"></i></div>
+                <h3 class="stat-title">Average Claim</h3>
+                <p class="stat-value">KES {{ visualizations.summary_stats.avg_claim|floatformat:2|intcomma }}</p>
             </div>
 
-            <div>
-                <h4>4. Amount Distribution by Service Type</h4>
-                {% if chart4_boxplot %}{{ chart4_boxplot|safe }}{% else %}<div>No data available</div>{% endif %}
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-users"></i></div>
+                <h3 class="stat-title">Unique Members</h3>
+                <p class="stat-value">{{ visualizations.summary_stats.unique_members|floatformat:0|intcomma }}</p>
             </div>
 
-            <div>
-                <h4>5. Top 10 Services by Count & Amount</h4>
-                {% if chart5_top_services %}{{ chart5_top_services|safe }}{% else %}<div>No data available</div>{% endif %}
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-hospital"></i></div>
+                <h3 class="stat-title">Unique Providers</h3>
+                <p class="stat-value">{{ visualizations.summary_stats.unique_providers|floatformat:0|intcomma }}</p>
             </div>
 
-            <div>
-                <h4>6. Monthly Claims Growth Rate</h4>
-                {% if chart6_growth_rate %}{{ chart6_growth_rate|safe }}{% else %}<div>No data available</div>{% endif %}
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-stethoscope"></i></div>
+                <h3 class="stat-title">Unique Diagnoses</h3>
+                <p class="stat-value">{{ visualizations.summary_stats.unique_diagnoses|floatformat:0|intcomma }}</p>
             </div>
         </div>
+        {% endif %}
 
-        <!-- Claims Tree Button (Moved Below Charts) -->
-        <div style="margin-top:20px;">
-            <button class="tab" onclick="loadClaimsTree(); scrollToSection('claims-tree-tab')">
-                Claims Tree
-            </button>
+        <!-- Comparison Info -->
+        {% if visualizations.comparison_info %}
+        <div class="debug-info">
+            <i class="fas fa-compress-arrows-alt"></i> {{ visualizations.comparison_info }}
+        </div>
+        {% endif %}
+
+        <!-- Drilldown Info -->
+        {% if visualizations.drilldown_info %}
+        <div class="debug-info">
+            <i class="fas fa-search"></i> {{ visualizations.drilldown_info }}
+        </div>
+        {% endif %}
+
+        <!-- Main Chart -->
+        {% if visualizations.main_chart %}
+        <div class="chart-card">
+            <div class="chart-header">
+                <h4 class="chart-title">
+                    <i class="fas fa-chart-bar"></i> Main Analysis: Amount by {{ x_axis|title }}
+                </h4>
+            </div>
+            <div class="chart-content">
+                {{ visualizations.main_chart|safe }}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Comparison Charts -->
+        {% if visualizations.comparison_charts %}
+        <div class="charts-grid">
+            {% for chart in visualizations.comparison_charts %}
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h4 class="chart-title">
+                        <i class="fas fa-chart-bar"></i> {{ chart.title }}
+                    </h4>
+                </div>
+                <div class="chart-content">
+                    {{ chart.html|safe }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Analysis-Specific Visualizations -->
+        <div class="charts-grid">
+            <!-- Temporal Analysis -->
+            {% if analysis_type == 'temporal' %}
+                {% if visualizations.time_series %}
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h4 class="chart-title"><i class="fas fa-chart-line"></i> Monthly Trends</h4>
+                    </div>
+                    <div class="chart-content">
+                        {{ visualizations.time_series|safe }}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if visualizations.heatmap %}
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h4 class="chart-title"><i class="fas fa-calendar"></i> Time Distribution</h4>
+                    </div>
+                    <div class="chart-content">
+                        {{ visualizations.heatmap|safe }}
+                    </div>
+                </div>
+                {% endif %}
+            {% endif %}
+
+            <!-- Provider Analysis -->
+            {% if analysis_type == 'provider' %}
+                {% if visualizations.top_providers %}
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h4 class="chart-title"><i class="fas fa-hospital"></i> Top Providers</h4>
+                    </div>
+                    <div class="chart-content">
+                        {{ visualizations.top_providers|safe }}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if visualizations.provider_efficiency %}
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h4 class="chart-title"><i class="fas fa-tachometer-alt"></i> Provider Efficiency</h4>
+                    </div>
+                    <div class="chart-content">
+                        {{ visualizations.provider_efficiency|safe }}
+                    </div>
+                </div>
+                {% endif %}
+            {% endif %}
+
+            <!-- Diagnosis Analysis -->
+            {% if analysis_type == 'diagnosis' %}
+                {% if visualizations.top_diagnoses %}
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h4 class="chart-title"><i class="fas fa-disease"></i> Top Diagnoses</h4>
+                    </div>
+                    <div class="chart-content">
+                        {{ visualizations.top_diagnoses|safe }}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if visualizations.diagnosis_age %}
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h4 class="chart-title"><i class="fas fa-user-injured"></i> Diagnosis by Age</h4>
+                    </div>
+                    <div class="chart-content">
+                        {{ visualizations.diagnosis_age|safe }}
+                    </div>
+                </div>
+                {% endif %}
+            {% endif %}
+
+            <!-- Benefit Analysis -->
+            {% if analysis_type == 'benefit' %}
+                {% if visualizations.top_benefits %}
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h4 class="chart-title"><i class="fas fa-procedures"></i> Top Benefits</h4>
+                    </div>
+                    <div class="chart-content">
+                        {{ visualizations.top_benefits|safe }}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if visualizations.benefit_distribution %}
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h4 class="chart-title"><i class="fas fa-chart-pie"></i> Benefit Distribution</h4>
+                    </div>
+                    <div class="chart-content">
+                        {{ visualizations.benefit_distribution|safe }}
+                    </div>
+                </div>
+                {% endif %}
+            {% endif %}
+
+            <!-- Demographic Analysis -->
+            {% if analysis_type == 'demographic' %}
+                {% if visualizations.age_analysis %}
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h4 class="chart-title"><i class="fas fa-birthday-cake"></i> Age Analysis</h4>
+                    </div>
+                    <div class="chart-content">
+                        {{ visualizations.age_analysis|safe }}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if visualizations.gender_analysis %}
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h4 class="chart-title"><i class="fas fa-venus-mars"></i> Gender Analysis</h4>
+                    </div>
+                    <div class="chart-content">
+                        {{ visualizations.gender_analysis|safe }}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if visualizations.dependent_analysis %}
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h4 class="chart-title"><i class="fas fa-users"></i> Dependent Analysis</h4>
+                    </div>
+                    <div class="chart-content">
+                        {{ visualizations.dependent_analysis|safe }}
+                    </div>
+                </div>
+                {% endif %}
+            {% endif %}
+
+            <!-- Advanced Analysis -->
+            {% if analysis_type == 'advanced' %}
+                {% if visualizations.correlation %}
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h4 class="chart-title"><i class="fas fa-project-diagram"></i> Correlation Matrix</h4>
+                    </div>
+                    <div class="chart-content">
+                        {{ visualizations.correlation|safe }}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if visualizations.outliers %}
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h4 class="chart-title"><i class="fas fa-exclamation-triangle"></i> Outlier Detection</h4>
+                    </div>
+                    <div class="chart-content">
+                        {{ visualizations.outliers|safe }}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if visualizations.treemap %}
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h4 class="chart-title"><i class="fas fa-sitemap"></i> Claims Hierarchy</h4>
+                    </div>
+                    <div class="chart-content">
+                        {{ visualizations.treemap|safe }}
+                    </div>
+                </div>
+                {% endif %}
+            {% endif %}
+        </div>
+
+        <!-- Data Preview 
+        <div class="accordion" id="dataPreview">
+            <div class="accordion-header" onclick="toggleAccordion('dataPreview')">
+                <span><i class="fas fa-table"></i> Data Preview (First 100 rows)</span>
+                <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+            </div>
+            <div class="accordion-content">
+                <div style="overflow-x: auto; max-height: 500px;">
+                    <table class="data-table" style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background-color: #f8f9fa; position: sticky; top: 0;">
+                                {% for column in sample_columns %}
+                                <th style="padding: 8px; border: 1px solid #dee2e6; text-align: left;">{{ column }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in sample_data %}
+                            <tr>
+                                {% for column in sample_columns %}
+                                <td style="padding: 8px; border: 1px solid #dee2e6;">
+                                    {% for key, value in row.items %}
+                                        {% if key == column %}
+                                            {{ value|default:"" }}
+                                        {% endif %}
+                                    {% endfor %}
+                                </td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
+</div>-->
 
-    <!-- Claims Tree Tab -->
-    <div id="claims-tree-tab" class="tab-content" style="display:none; margin-top:30px;">
-        <h3>7. Claims Tree Structure (Lazy Load)</h3>
-        <div id="treeContainer" style="width:100%;height:650px;border:1px solid #ccc;background:#fff;display:flex;align-items:center;justify-content:center;">
-            <em>Click the "Claims Tree" button above to load...</em>
-        </div>
-    </div>
-</div>
-
-<!-- D3.js -->
-<script src="https://d3js.org/d3.v7.min.js"></script>
-
+<!-- JavaScript -->
 <script>
-function scrollToSection(id) {
-    document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
-}
-
-function showTab(event, tabId) {
-    document.querySelectorAll('.tab-content').forEach(div => div.style.display = 'none');
-    document.getElementById(tabId).style.display = 'block';
-    document.querySelectorAll('.tab').forEach(btn => btn.classList.remove('active'));
-    if (event && event.target) {
-        event.target.classList.add('active');
+// ==============================
+// Accordion Toggle
+// ==============================
+function toggleAccordion(accordionId) {
+    const accordion = document.getElementById(accordionId);
+    if (accordion) {
+        accordion.classList.toggle('active');
     }
 }
 
-document.getElementById('filterForm').addEventListener('change', function(e) {
-    const form = e.target.form;
-    const params = new URLSearchParams(new FormData(form)).toString();
-    fetch(window.location.pathname + '?' + params, {
+// ==============================
+// Set Analysis Type
+// ==============================
+function setAnalysisType(type) {
+    const input = document.getElementById('analysis_type');
+    if (input) {
+        input.value = type;
+        updateVisualizations();
+    }
+}
+
+// ==============================
+// Load Drilldown Options
+// ==============================
+function loadDrilldownOptions() {
+    const columnSelect = document.getElementById('drilldown_column');
+    const valueSelect = document.getElementById('drilldown_value');
+    const datasetInput = document.getElementById('dataset_id');
+
+    if (!columnSelect || !valueSelect || !datasetInput) return;
+
+    const datasetId = datasetInput.value.trim();
+    const columnName = columnSelect.value.trim();
+
+    if (!columnName) {
+        valueSelect.innerHTML = '<option value="">Select Values</option>';
+        return;
+    }
+
+    // Show loading state
+    valueSelect.innerHTML = '<option value="">Loading...</option>';
+
+    // Fetch unique values for the selected column
+    const url = `/get-filter-options/?dataset_id=${encodeURIComponent(datasetId)}&column_name=${encodeURIComponent(columnName)}`;
+    fetch(url)
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to fetch drilldown options');
+            return response.json();
+        })
+        .then(data => {
+            if (Array.isArray(data.values)) {
+                valueSelect.innerHTML = '';
+                data.values.forEach(value => {
+                    const option = document.createElement('option');
+                    option.value = value;
+                    option.textContent = value;
+                    valueSelect.appendChild(option);
+                });
+            } else if (data.error) {
+                valueSelect.innerHTML = `<option value="">Error: ${data.error}</option>`;
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error loading drilldown options:', error);
+            valueSelect.innerHTML = '<option value="">Error loading options</option>';
+        });
+}
+
+// ==============================
+// Load Comparison Options
+// ==============================
+function loadComparisonOptions() {
+    const columnSelect = document.getElementById('comparison_column');
+    const valueSelect = document.getElementById('comparison_values');
+    const datasetInput = document.getElementById('dataset_id');
+
+    if (!columnSelect || !valueSelect || !datasetInput) return;
+
+    const datasetId = datasetInput.value.trim();
+    const columnName = columnSelect.value.trim();
+
+    if (!columnName) {
+        valueSelect.innerHTML = '<option value="">Select Values</option>';
+        return;
+    }
+
+    // Show loading state
+    valueSelect.innerHTML = '<option value="">Loading...</option>';
+
+    // Fetch unique values for the selected column
+    const url = `/get-filter-options/?dataset_id=${encodeURIComponent(datasetId)}&column_name=${encodeURIComponent(columnName)}`;
+    fetch(url)
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to fetch comparison options');
+            return response.json();
+        })
+        .then(data => {
+            if (Array.isArray(data.values)) {
+                valueSelect.innerHTML = '';
+                data.values.forEach(value => {
+                    const option = document.createElement('option');
+                    option.value = value;
+                    option.textContent = value;
+                    valueSelect.appendChild(option);
+                });
+            } else if (data.error) {
+                valueSelect.innerHTML = `<option value="">Error: ${data.error}</option>`;
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error loading comparison options:', error);
+            valueSelect.innerHTML = '<option value="">Error loading options</option>';
+        });
+}
+
+// ==============================
+// Update Comparison Options
+// ==============================
+function updateComparisonOptions() {
+    const xAxisSelect = document.getElementById('x_axis');
+    const comparisonSelect = document.getElementById('comparison_column');
+    
+    if (!xAxisSelect || !comparisonSelect) return;
+    
+    // Clear comparison column when x-axis changes
+    comparisonSelect.value = '';
+    document.getElementById('comparison_values').innerHTML = '<option value="">Select Values</option>';
+}
+
+// ==============================
+// Clear Drilldown
+// ==============================
+function clearDrilldown() {
+    const columnSelect = document.getElementById('drilldown_column');
+    const valueSelect = document.getElementById('drilldown_value');
+
+    if (columnSelect) columnSelect.value = '';
+    if (valueSelect) valueSelect.innerHTML = '<option value="">Select Values</option>';
+
+    updateVisualizations();
+}
+
+// ==============================
+// Clear Comparison
+// ==============================
+function clearComparison() {
+    const columnSelect = document.getElementById('comparison_column');
+    const valueSelect = document.getElementById('comparison_values');
+
+    if (columnSelect) columnSelect.value = '';
+    if (valueSelect) valueSelect.innerHTML = '<option value="">Select Values</option>';
+
+    updateVisualizations();
+}
+
+// ==============================
+// Remove Comparison Value
+// ==============================
+function removeComparisonValue(value) {
+    const valueSelect = document.getElementById('comparison_values');
+    if (!valueSelect) return;
+    
+    // Find and deselect the option
+    for (let option of valueSelect.options) {
+        if (option.value === value) {
+            option.selected = false;
+            break;
+        }
+    }
+    
+    applyComparison();
+}
+
+// ==============================
+// Apply Drilldown (only on button click)
+// ==============================
+function applyDrilldown() {
+    const drilldownSelect = document.getElementById('drilldown_value');
+    if (!drilldownSelect) return;
+
+    const selected = Array.from(drilldownSelect.selectedOptions).map(opt => opt.value);
+    if (selected.length === 0) {
+        alert("Please select at least one value before applying.");
+        return;
+    }
+
+    updateVisualizations();
+}
+
+// ==============================
+// Apply Comparison
+// ==============================
+function applyComparison() {
+    const comparisonSelect = document.getElementById('comparison_values');
+    if (!comparisonSelect) return;
+
+    const selected = Array.from(comparisonSelect.selectedOptions).map(opt => opt.value);
+    if (selected.length === 0) {
+        alert("Please select at least one value to compare.");
+        return;
+    }
+
+    updateVisualizations();
+}
+
+// ==============================
+// Update Visualizations
+// ==============================
+function updateVisualizations() {
+    const container = document.getElementById('data-analysis');
+    const form = document.getElementById('filterForm');
+
+    if (!container || !form) return;
+
+    container.innerHTML =
+        '<div style="text-align: center; padding: 2rem;"><i class="fas fa-spinner fa-spin"></i> Loading visualizations...</div>';
+
+    const formData = new FormData(form);
+
+    // ✅ Collect multiple drilldown values
+    const drilldownSelect = document.getElementById('drilldown_value');
+    if (drilldownSelect) {
+        formData.delete('drilldown_value'); // clear old single value
+        Array.from(drilldownSelect.selectedOptions).forEach(opt => {
+            formData.append('drilldown_value', opt.value);
+        });
+    }
+
+    // ✅ Collect multiple comparison values
+    const comparisonSelect = document.getElementById('comparison_values');
+    if (comparisonSelect) {
+        formData.delete('comparison_values'); // clear old values
+        Array.from(comparisonSelect.selectedOptions).forEach(opt => {
+            formData.append('comparison_values', opt.value);
+        });
+    }
+
+    const params = new URLSearchParams();
+    for (const [key, value] of formData.entries()) {
+        params.append(key, value);
+    }
+
+    fetch(`?${params.toString()}`, {
         headers: { 'X-Requested-With': 'XMLHttpRequest' }
     })
-    .then(res => res.json())
-    .then(data => {
-        document.getElementById('chartsContainer').innerHTML = data.html;
-    });
-});
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to fetch visualizations');
+            return response.text();
+        })
+        .then(html => {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const newContent = doc.getElementById('data-analysis');
 
-function loadClaimsTree() {
-    showTab(null, 'claims-tree-tab');
+            container.innerHTML = newContent
+                ? newContent.innerHTML
+                : '<div class="debug-info">⚠️ Error loading content. Please refresh the page.</div>';
 
-    const params = new URLSearchParams(new FormData(document.getElementById('filterForm'))).toString();
-    fetch(window.location.pathname + '?' + params + '&load_tree=1')
-    .then(res => res.json())
-    .then(data => {
-        if (data.tree_data_json) {
-            renderClaimsTree(JSON.parse(data.tree_data_json));
-        } else {
-            document.getElementById('treeContainer').innerHTML = '<div>No data available</div>';
+            // ✅ Re-run Plotly scripts so charts render after AJAX
+            const scripts = container.querySelectorAll("script");
+            scripts.forEach(oldScript => {
+                const newScript = document.createElement("script");
+                if (oldScript.src) {
+                    newScript.src = oldScript.src;
+                } else {
+                    newScript.textContent = oldScript.textContent;
+                }
+                document.body.appendChild(newScript);
+                oldScript.remove(); // cleanup duplicate tags
+            });
+        })
+        .catch(error => {
+            console.error('❌ Error updating visualizations:', error);
+            container.innerHTML =
+                '<div class="debug-info">⚠️ Error loading content. Please refresh the page.</div>';
+        });
+}
+
+// ==============================
+// Update Column Options (on dataset change)
+// ==============================
+function updateColumnOptions() {
+    const datasetInput = document.getElementById('dataset_id');
+    if (!datasetInput) return;
+
+    const datasetId = datasetInput.value.trim();
+    const columnSelects = ['x_axis', 'drilldown_column', 'comparison_column'];
+
+    columnSelects.forEach(selectId => {
+        const select = document.getElementById(selectId);
+        if (select) {
+            const currentValue = select.value;
+            select.innerHTML = '<option value="">Loading...</option>';
+
+            fetch(`/get-filter-options/?dataset_id=${encodeURIComponent(datasetId)}&column_name=__all_columns__`)
+                .then(response => {
+                    if (!response.ok) throw new Error('Failed to fetch column options');
+                    return response.json();
+                })
+                .then(data => {
+                    if (Array.isArray(data.values)) {
+                        select.innerHTML = '';
+                        data.values.forEach(column => {
+                            const option = document.createElement('option');
+                            option.value = column;
+                            option.textContent = column;
+                            if (column === currentValue) option.selected = true;
+                            select.appendChild(option);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('❌ Error loading column options:', error);
+                });
         }
     });
 }
 
-function renderClaimsTree(treeData) {
-    document.getElementById('treeContainer').innerHTML = "";
-    const width = document.getElementById('treeContainer').clientWidth;
-    const height = document.getElementById('treeContainer').clientHeight;
+// ==============================
+// Initialize Page Events
+// ==============================
+document.addEventListener('DOMContentLoaded', () => {
+    // Auto-submit filters (NOT drilldown anymore)
+    const autoSubmitFilters = [
+        'gender', 'age_range', 'provider_type', 'provider_filter',
+        'benefit_type', 'diagnosis_filter', 'min_amount', 'max_amount',
+        'time_period', 'start_date', 'end_date'
+    ];
 
-    const svg = d3.select("#treeContainer").append("svg")
-        .attr("width", width)
-        .attr("height", height)
-        .append("g")
-        .attr("transform", "translate(50,50)");
+    autoSubmitFilters.forEach(filterId => {
+        const element = document.getElementById(filterId);
+        if (element) {
+            element.addEventListener('change', updateVisualizations);
+        }
+    });
 
-    const root = d3.hierarchy(treeData);
-    const treeLayout = d3.tree().size([height - 100, width - 200]);
-    treeLayout(root);
+    // Initialize drilldown if column already selected
+    const drilldownColumn = document.getElementById('drilldown_column');
+    if (drilldownColumn && drilldownColumn.value) {
+        loadDrilldownOptions();
+    }
 
-    svg.selectAll('path.link')
-        .data(root.links())
-        .enter().append('path')
-        .attr('class', 'link')
-        .attr('d', d3.linkHorizontal()
-            .x(d => d.y)
-            .y(d => d.x))
-        .style("fill", "none")
-        .style("stroke", "#ccc")
-        .style("stroke-width", 2);
+    // Initialize comparison if column already selected
+    const comparisonColumn = document.getElementById('comparison_column');
+    if (comparisonColumn && comparisonColumn.value) {
+        loadComparisonOptions();
+    }
 
-    const node = svg.selectAll('g.node')
-        .data(root.descendants())
-        .enter().append('g')
-        .attr('class', 'node')
-        .attr('transform', d => `translate(${d.y},${d.x})`);
-
-    node.append('circle')
-        .attr('r', 6)
-        .style("fill", "#4e79a7")
-        .style("stroke", "#333")
-        .style("stroke-width", 1.5);
-
-    node.append('text')
-        .attr('dy', 3)
-        .attr('x', d => d.children ? -12 : 12)
-        .style('text-anchor', d => d.children ? 'end' : 'start')
-        .style('font-size', '12px')
-        .text(d => d.data.name.length > 30 ? d.data.name.slice(0, 30) + "..." : d.data.name)
-        .append("title")
-        .text(d => d.data.name);
-}
+    // Tab click handler (styling)
+    document.querySelectorAll('#tabs .tab-link').forEach(tab => {
+        tab.addEventListener('click', function () {
+            document.querySelectorAll('#tabs .tab-link').forEach(t => {
+                t.style.background = "none";
+                t.style.color = "#64748b";
+                t.style.fontWeight = "500";
+                t.style.borderBottom = "3px solid transparent";
+            });
+            this.style.background = "rgba(227, 6, 19, 0.05)";
+            this.style.color = "#e30613";
+            this.style.fontWeight = "700";
+            this.style.borderBottom = "3px solid #e30613";
+        });
+    });
+});
 </script>
+
+<!-- ✅ Load Plotly library once -->
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 {% endblock %}

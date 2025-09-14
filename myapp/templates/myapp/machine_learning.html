@@ -1,0 +1,1714 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Advanced Analysis - Minet Insurance{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    /* Modern Minet Color Theme */
+    :root {
+        --minet-blue: #0033A0;
+        --minet-blue-light: #1a4ab3;
+        --minet-red: #E30613;
+        --minet-red-dark: #b8000b;
+        --minet-bg: #f8f9fc;
+        --minet-card-bg: #ffffff;
+        --minet-text: #333;
+        --minet-text-light: #666;
+        --minet-border: #e3e8ee;
+        --minet-success: #28a745;
+        --minet-warning: #ffc107;
+        --minet-info: #17a2b8;
+    }
+
+    body {
+        background-color: var(--minet-bg);
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: var(--minet-text);
+        line-height: 1.6;
+    }
+
+    .dashboard-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .section-card {
+        background: var(--minet-card-bg);
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(0, 51, 160, 0.08);
+        padding: 30px;
+        margin-bottom: 30px;
+        transition: all 0.3s ease;
+        border: 1px solid var(--minet-border);
+    }
+
+    .section-card:hover {
+        box-shadow: 0 15px 40px rgba(35, 35, 35, 0.15);
+    }
+
+    .section-title {
+        color: var(--minet-blue);
+        border-bottom: 2px solid var(--minet-red);
+        padding-bottom: 15px;
+        margin-top: 0;
+        margin-bottom: 25px;
+        font-size: 1.8rem;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        font-weight: 700;
+    }
+
+    .section-title i {
+        background: var(--minet-blue);
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.5rem;
+    }
+
+    /* Data Selection Area */
+    .data-selection {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 25px;
+        margin-bottom: 20px;
+    }
+
+    .select-container {
+        margin-bottom: 20px;
+        position: relative;
+    }
+
+    .select-container label {
+        display: block;
+        margin-bottom: 12px;
+        font-weight: 600;
+        color: var(--minet-blue);
+        font-size: 1.1rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .select-container label i {
+        color: var(--minet-red);
+        width: 24px;
+        text-align: center;
+    }
+
+    select {
+        width: 100%;
+        padding: 14px;
+        border-radius: 10px;
+        border: 1px solid var(--minet-border);
+        background: #f9fafb;
+        font-size: 1rem;
+        transition: all 0.3s;
+    }
+
+    select:focus {
+        outline: none;
+        border-color: var(--minet-blue);
+        box-shadow: 0 0 0 3px rgba(0, 51, 160, 0.1);
+    }
+
+    .choices__inner {
+        background: #f9fafb;
+        border: 1px solid var(--minet-border);
+        border-radius: 10px;
+        min-height: 52px;
+        padding: 0.5rem 1rem;
+        transition: all 0.3s;
+    }
+
+    .choices__inner:hover {
+        border-color: #c5cbd5;
+    }
+
+    .choices__list--multiple .choices__item {
+        background: var(--minet-red);
+        border: 1px solid var(--minet-red-dark);
+        color: white;
+        border-radius: 6px;
+        padding: 0.3rem 0.8rem;
+        font-weight: 500;
+    }
+
+    /* Loading indicator */
+    .column-loading {
+        display: none;
+        position: absolute;
+        right: 15px;
+        top: 42px;
+        color: var(--minet-red);
+        font-size: 14px;
+    }
+
+    /* Model Configuration */
+    .model-config {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 25px;
+        margin-top: 20px;
+    }
+
+    .model-card {
+        background: var(--minet-card-bg);
+        border-radius: 14px;
+        padding: 25px;
+        border: 2px solid var(--minet-border);
+        transition: all 0.3s ease;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .model-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--minet-border);
+        transition: all 0.3s;
+    }
+
+    .model-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+    }
+
+    .model-card:hover::before {
+        background: var(--minet-blue);
+    }
+
+    .model-card.selected {
+        border-color: var(--minet-blue);
+        background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%);
+    }
+
+    .model-card.selected::before {
+        background: var(--minet-red);
+    }
+
+    .model-card h3 {
+        color: var(--minet-blue);
+        margin-top: 0;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 1.4rem;
+        margin-bottom: 15px;
+    }
+
+    .model-card h3 i {
+        background: var(--minet-red);
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.2rem;
+    }
+
+    .model-card p {
+        color: var(--minet-text-light);
+        min-height: 60px;
+        line-height: 1.6;
+        margin-bottom: 20px;
+    }
+
+    .slider-container {
+        margin: 20px 0;
+    }
+
+    .slider-container label {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+        color: var(--minet-blue);
+        font-weight: 500;
+    }
+
+    .slider-value {
+        font-weight: bold;
+        color: var(--minet-red);
+    }
+
+    input[type="range"] {
+        width: 100%;
+        height: 8px;
+        border-radius: 4px;
+        background: #e9ecef;
+        outline: none;
+        -webkit-appearance: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: var(--minet-red);
+        cursor: pointer;
+        border: 2px solid white;
+        box-shadow: 0 2px 6px rgba(227, 6, 19, 0.3);
+    }
+
+    input[type="range"]:focus {
+        outline: none;
+    }
+
+    /* Visualization Area */
+    .results-container {
+        display: none;
+        margin-top: 30px;
+        padding-top: 30px;
+        border-top: 1px solid var(--minet-border);
+    }
+
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    .metric-card {
+        background: linear-gradient(135deg, #ffffff 0%, #f9f9f9 100%);
+        border-radius: 14px;
+        padding: 25px;
+        text-align: center;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        border: 1px solid var(--minet-border);
+        transition: all 0.3s;
+    }
+
+    .metric-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    .metric-value {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin: 15px 0;
+    }
+
+    .metric-label {
+        color: var(--minet-text-light);
+        font-size: 1.1rem;
+        font-weight: 500;
+    }
+
+    .chart-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+        gap: 25px;
+        margin-bottom: 30px;
+    }
+
+    .chart-container {
+        height: 420px;
+        background: var(--minet-card-bg);
+        border-radius: 14px;
+        padding: 25px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        border: 1px solid var(--minet-border);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .chart-container h3 {
+        margin: 0 0 20px 0;
+        color: var(--minet-blue);
+        font-size: 1.4rem;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .chart-container h3 i {
+        color: var(--minet-red);
+    }
+
+    .chart-content {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .chart-container img {
+        max-width: 100%;
+        max-height: 100%;
+        border-radius: 8px;
+        object-fit: contain;
+    }
+
+    /* Prediction Table */
+    .prediction-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+
+    .prediction-table th,
+    .prediction-table td {
+        padding: 12px 15px;
+        text-align: left;
+        border-bottom: 1px solid var(--minet-border);
+    }
+
+    .prediction-table th {
+        background-color: var(--minet-blue);
+        color: white;
+        font-weight: 600;
+    }
+
+    .prediction-table tr:nth-child(even) {
+        background-color: #f8f9fc;
+    }
+
+    .prediction-table tr:hover {
+        background-color: #e9ecef;
+    }
+
+    /* Report Section */
+    .report-section {
+        margin-top: 40px;
+        display: none;
+    }
+
+    .report-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid var(--minet-blue);
+    }
+
+    .report-title {
+        color: var(--minet-blue);
+        font-size: 1.8rem;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .report-title i {
+        background: var(--minet-blue);
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.5rem;
+    }
+
+    .report-actions {
+        display: flex;
+        gap: 15px;
+    }
+
+    .btn-download {
+        background: linear-gradient(135deg, var(--minet-blue) 0%, var(--minet-blue-light) 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 12px 25px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(0, 51, 160, 0.2);
+    }
+
+    .btn-download:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0, 51, 160, 0.3);
+    }
+
+    .report-content {
+        background: var(--minet-card-bg);
+        border-radius: 14px;
+        padding: 30px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        border: 1px solid var(--minet-border);
+    }
+
+    .model-report {
+        margin-bottom: 40px;
+        padding-bottom: 30px;
+        border-bottom: 1px solid var(--minet-border);
+    }
+
+    .model-report:last-child {
+        margin-bottom: 0;
+        padding-bottom: 0;
+        border-bottom: none;
+    }
+
+    .model-report-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .model-report-title {
+        color: var(--minet-blue);
+        font-size: 1.5rem;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .model-report-title i {
+        color: var(--minet-red);
+    }
+
+    .model-performance {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    .performance-card {
+        background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%);
+        border-radius: 12px;
+        padding: 20px;
+        border: 1px solid var(--minet-border);
+    }
+
+    .performance-card h4 {
+        color: var(--minet-blue);
+        margin-top: 0;
+        margin-bottom: 15px;
+        font-size: 1.2rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .performance-card h4 i {
+        color: var(--minet-red);
+    }
+
+    .performance-metric {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+        padding-bottom: 10px;
+        border-bottom: 1px dashed var(--minet-border);
+    }
+
+    .performance-metric:last-child {
+        margin-bottom: 0;
+        padding-bottom: 0;
+        border-bottom: none;
+    }
+
+    .metric-name {
+        color: var(--minet-text);
+        font-weight: 500;
+    }
+
+    .metric-score {
+        color: var(--minet-red);
+        font-weight: bold;
+    }
+
+    .interpretation {
+        background: #f9f9f9;
+        border-left: 4px solid var(--minet-blue);
+        padding: 15px 20px;
+        margin: 20px 0;
+        border-radius: 0 8px 8px 0;
+    }
+
+    .interpretation h4 {
+        color: var(--minet-blue);
+        margin-top: 0;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .interpretation p {
+        margin: 0;
+        line-height: 1.6;
+        color: var(--minet-text);
+    }
+
+    .feature-importance {
+        margin-top: 30px;
+    }
+
+    .feature-importance h4 {
+        color: var(--minet-blue);
+        margin-top: 0;
+        margin-bottom: 20px;
+        font-size: 1.3rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .feature-importance h4 i {
+        color: var(--minet-red);
+    }
+
+    .feature-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 15px;
+    }
+
+    .feature-item {
+        background: white;
+        border-radius: 8px;
+        padding: 15px;
+        border: 1px solid var(--minet-border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .feature-name {
+        color: var(--minet-text);
+        font-weight: 500;
+    }
+
+    .feature-weight {
+        color: var(--minet-red);
+        font-weight: bold;
+    }
+
+    /* Buttons and Controls */
+    .btn-train {
+        background: linear-gradient(135deg, var(--minet-red) 0%, var(--minet-red-dark) 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 16px 40px;
+        font-size: 1.2rem;
+        font-weight: bold;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin: 30px auto;
+        transition: all 0.3s ease;
+        box-shadow: 0 6px 20px rgba(227, 6, 19, 0.25);
+    }
+
+    .btn-train:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(227, 6, 19, 0.35);
+    }
+
+    .btn-train:disabled {
+        background: #cccccc;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+
+    .loading-spinner {
+        display: none;
+        text-align: center;
+        padding: 30px;
+    }
+
+    .spinner {
+        border: 4px solid rgba(227, 6, 19, 0.2);
+        border-radius: 50%;
+        border-top: 4px solid var(--minet-red);
+        width: 50px;
+        height: 50px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 20px;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    /* Alert Messages */
+    .alert {
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .alert-info {
+        background-color: #e8f4fd;
+        border-left: 4px solid var(--minet-info);
+        color: var(--minet-info);
+    }
+
+    .alert-warning {
+        background-color: #fff8e6;
+        border-left: 4px solid var(--minet-warning);
+        color: #856404;
+    }
+
+    .alert-success {
+        background-color: #eafaf1;
+        border-left: 4px solid var(--minet-success);
+        color: #155724;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 1100px) {
+        .chart-row {
+            grid-template-columns: 1fr;
+        }
+        
+        .model-performance {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .data-selection {
+            grid-template-columns: 1fr;
+        }
+        
+        .model-config {
+            grid-template-columns: 1fr;
+        }
+        
+        .section-card {
+            padding: 20px;
+        }
+        
+        .dashboard-container {
+            padding: 15px;
+        }
+        
+        .btn-train {
+            width: 100%;
+            justify-content: center;
+        }
+        
+        .report-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 15px;
+        }
+        
+        .report-actions {
+            width: 100%;
+            justify-content: center;
+        }
+        
+        .feature-list {
+            grid-template-columns: 1fr;
+        }
+        
+        .prediction-table {
+            font-size: 0.9rem;
+        }
+        
+        .prediction-table th,
+        .prediction-table td {
+            padding: 8px 10px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+
+    <!-- Machine Learning Analysis Section -->
+    <div class="section-card">
+        <h2 class="section-title"><i class="fas fa-brain"></i> Machine Learning Analysis</h2>
+        <p style="font-size: 1.1rem; color: var(--minet-text-light); margin-bottom: 30px; line-height: 1.6;">
+            Select a dataset to automatically load available columns for model training. Minet's advanced algorithms help identify patterns and predict claims with exceptional accuracy.
+        </p>
+        
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle fa-2x"></i>
+            <div>
+                <strong>Tip:</strong> For best results, select "amount" as the target variable and include features like age_at_claim, quantity, and categorical variables with fewer unique values.
+            </div>
+        </div>
+        
+        <div class="data-selection">
+            <!-- Table Selection -->
+            <div class="select-container">
+                <label for="table-select"><i class="fas fa-database"></i> Select Data Table</label>
+                <select id="table-select" class="choices-select">
+                    <option value="">-- Select Table --</option>
+                    {% for table in database_tables %}
+                        <option value="{{ table }}">{{ table }}</option>
+                    {% endfor %}
+                </select>
+                <div class="column-loading" id="column-loading" style="display:none;">
+                    <i class="fas fa-spinner fa-spin"></i> Loading columns...
+                </div>
+            </div>
+            
+            <!-- Prediction Target -->
+            <div class="select-container">
+                <label for="target-select"><i class="fas fa-bullseye"></i> Prediction Target</label>
+                <select id="target-select" class="choices-select" disabled>
+                    <option value="">-- Select target after choosing table --</option>
+                </select>
+            </div>
+            
+            <!-- Feature Columns -->
+            <div class="select-container">
+                <label for="features-select"><i class="fas fa-layer-group"></i> Feature Columns</label>
+                <select id="features-select" class="choices-select" multiple disabled>
+                    <option value="">-- Select features after choosing table --</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Model Configuration Section -->
+    <div class="section-card">
+        <h2 class="section-title"><i class="fas fa-sliders-h"></i> Model Configuration</h2>
+        
+        <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle"></i>
+            <div>
+                <strong>Note:</strong> Select at least one model to train. For regression problems (predicting numeric values like claim amounts), all models will be trained as regressors.
+            </div>
+        </div>
+        
+        <div class="model-config">
+            <!-- Random Forest -->
+            <div class="model-card" data-model="rf">
+                <h3><i class="fas fa-tree"></i> Random Forest</h3>
+                <p>Ensemble method that creates multiple decision trees for robust predictions.</p>
+                <div class="slider-container">
+                    <label>Number of Trees: <span class="slider-value" id="rf-trees-value">100</span></label>
+                    <input type="range" min="10" max="500" value="100" class="param-slider" id="rf-trees">
+                </div>
+                <div class="slider-container">
+                    <label>Max Depth: <span class="slider-value" id="rf-depth-value">10</span></label>
+                    <input type="range" min="1" max="30" value="10" class="param-slider" id="rf-depth">
+                </div>
+            </div>
+            
+            <!-- Linear Regression -->
+            <div class="model-card" data-model="lr">
+                <h3><i class="fas fa-chart-line"></i> Ridge Regression</h3>
+                <p>Linear model with L2 regularization to prevent overfitting.</p>
+                <div class="slider-container">
+                    <label>Alpha (Regularization): <span class="slider-value" id="lr-alpha-value">1.0</span></label>
+                    <input type="range" min="0" max="100" value="10" class="param-slider" id="lr-alpha">
+                </div>
+            </div>
+            
+            <!-- Gradient Boosting -->
+            <div class="model-card" data-model="gb">
+                <h3><i class="fas fa-project-diagram"></i> Gradient Boosting</h3>
+                <p>Builds models sequentially, each new model correcting errors from previous ones.</p>
+                <div class="slider-container">
+                    <label>Learning Rate: <span class="slider-value" id="gb-rate-value">0.1</span></label>
+                    <input type="range" min="1" max="50" value="10" class="param-slider" id="gb-rate">
+                </div>
+                <div class="slider-container">
+                    <label>Number of Estimators: <span class="slider-value" id="gb-est-value">100</span></label>
+                    <input type="range" min="10" max="500" value="100" class="param-slider" id="gb-est">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Loading Spinner -->
+        <div class="loading-spinner" id="training-spinner" style="display:none;">
+            <div class="spinner"></div>
+            <p style="font-size: 1.2rem; color: var(--minet-blue); font-weight: 500;">Training model with selected parameters...</p>
+            <p style="color: var(--minet-text-light);">This may take a few minutes depending on data size and model complexity.</p>
+        </div>
+        
+        <!-- Train Model Button -->
+        <button id="btn-train" class="btn-train" disabled>
+            <i class="fas fa-cogs"></i> Train Selected Model(s)
+        </button>
+    </div>
+
+    <!-- Analysis Results Section -->
+    <div class="section-card results-container" id="results-section" style="display:none;">
+        <h2 class="section-title"><i class="fas fa-chart-bar"></i> Analysis Results</h2>
+        
+        <div class="alert alert-success" id="results-alert" style="display:none;">
+            <i class="fas fa-check-circle"></i>
+            <div id="results-alert-content"></div>
+        </div>
+        
+        <div class="metrics-grid" id="metrics-container">
+            <!-- Metrics will be populated here -->
+        </div>
+        
+        <div class="chart-row" id="charts-container">
+            <!-- Charts will be populated here -->
+        </div>
+        
+        <!-- Prediction Table -->
+        <div id="prediction-table-container" style="display:none;">
+            <h3 style="color: var(--minet-blue); margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                <i class="fas fa-table"></i> Sample Predictions
+            </h3>
+            <div style="overflow-x: auto;">
+                <table class="prediction-table" id="prediction-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Actual Value</th>
+                            <th>Predicted Value</th>
+                            <th>Difference</th>
+                            <th>Error %</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Prediction data will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Section -->
+    <div class="report-section" id="report-section">
+        <div class="report-header">
+            <h2 class="report-title"><i class="fas fa-file-alt"></i> Detailed Analysis Report</h2>
+            <div class="report-actions">
+                <button id="btn-download-pdf" class="btn-download">
+                    <i class="fas fa-file-pdf"></i> Download PDF Report
+                </button>
+                <button id="btn-download-csv" class="btn-download">
+                    <i class="fas fa-file-csv"></i> Export Results CSV
+                </button>
+            </div>
+        </div>
+        
+        <div class="report-content" id="report-content">
+            <!-- Report content will be populated here -->
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_body %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+<script>
+$(function () {
+    // Initialize Choices.js select elements
+    let targetSelect, featuresSelect;
+    
+    function initSelects() {
+        // Destroy existing instances if they exist
+        if (targetSelect) targetSelect.destroy();
+        if (featuresSelect) featuresSelect.destroy();
+        
+        // Initialize new instances
+        targetSelect = new Choices('#target-select', {
+            removeItemButton: false,
+            searchEnabled: true,
+            placeholder: true,
+            placeholderValue: 'Select prediction target',
+            shouldSort: false
+        });
+        
+        featuresSelect = new Choices('#features-select', {
+            removeItemButton: true,
+            searchEnabled: true,
+            placeholder: true,
+            placeholderValue: 'Select feature columns',
+            shouldSort: false
+        });
+        
+        // Enable/disable based on table selection
+        const tableSelected = $('#table-select').val() !== '';
+        $('#target-select').prop('disabled', !tableSelected);
+        $('#features-select').prop('disabled', !tableSelected);
+    }
+    
+    initSelects();
+    
+    // --- Model selection handler ---
+    $('.model-card').click(function () {
+        $(this).toggleClass('selected');
+        updateTrainButtonState();
+    });
+    
+    function updateTrainButtonState() {
+        try {
+            const selectedModels = $('.model-card.selected').length > 0;
+            
+            // Get target value safely
+            const targetValue = targetSelect.getValue();
+            let targetSelected = false;
+            
+            if (targetValue === null || targetValue === undefined) {
+                targetSelected = false;
+            } else if (Array.isArray(targetValue)) {
+                targetSelected = targetValue.some(val => val && String(val).trim().length > 0);
+            } else if (typeof targetValue === 'object' && targetValue.value) {
+                targetSelected = String(targetValue.value).trim().length > 0;
+            } else {
+                targetSelected = String(targetValue).trim().length > 0;
+            }
+            
+            // Get features value safely
+            const featuresValue = featuresSelect.getValue();
+            let featuresSelected = false;
+            
+            if (Array.isArray(featuresValue)) {
+                featuresSelected = featuresValue.length > 0;
+            } else if (featuresValue !== null && featuresValue !== undefined) {
+                featuresSelected = true;
+            }
+            
+            $('#btn-train').prop('disabled', !(selectedModels && targetSelected && featuresSelected));
+        } catch (e) {
+            console.error("Error in updateTrainButtonState:", e);
+            $('#btn-train').prop('disabled', true);
+        }
+    }
+    
+    // --- Slider value displays ---
+    $('#rf-trees').on('input', function() {
+        $('#rf-trees-value').text($(this).val());
+    });
+    
+    $('#rf-depth').on('input', function() {
+        $('#rf-depth-value').text($(this).val());
+    });
+    
+    $('#lr-alpha').on('input', function() {
+        $('#lr-alpha-value').text((parseInt($(this).val()) / 10).toFixed(1));
+    });
+    
+    $('#gb-rate').on('input', function() {
+        $('#gb-rate-value').text((parseInt($(this).val()) / 100).toFixed(2));
+    });
+    
+    $('#gb-est').on('input', function() {
+        $('#gb-est-value').text($(this).val());
+    });
+    
+    // --- Load columns when table changes ---
+    $('#table-select').change(function () {
+        const table = $(this).val();
+        if (!table) {
+            $('#target-select, #features-select').prop('disabled', true);
+            initSelects();
+            return;
+        }
+        
+        $('#column-loading').show();
+        $('#target-select, #features-select').prop('disabled', true);
+        initSelects();
+        
+        $.get("{% url 'get_table_columns' %}", { table }, function (response) {
+            $('#column-loading').hide();
+            
+            if (response.error) {
+                alert('Error: ' + response.error);
+                return;
+            }
+            
+            if (!response.columns || response.columns.length === 0) {
+                alert('No columns found in this table');
+                return;
+            }
+            
+            // Set target options
+            targetSelect.setChoices(response.columns.map(col => ({
+                value: col,
+                label: col
+            })), 'value', 'label', true);
+            
+            // Set feature options
+            featuresSelect.setChoices(response.columns.map(col => ({
+                value: col,
+                label: col
+            })), 'value', 'label', true);
+            
+            // Auto-select suggested target if available
+            if (response.target_suggestion) {
+                targetSelect.setChoiceByValue(response.target_suggestion);
+            }
+            
+            $('#target-select, #features-select').prop('disabled', false);
+            initSelects();
+            updateTrainButtonState();
+            
+        }).fail(function() {
+            $('#column-loading').hide();
+            alert('Error loading table columns');
+        });
+    });
+    
+    // --- Ensure target is not selected as feature ---
+    $(document).on('change', '#target-select', function() {
+        try {
+            const target = targetSelect.getValue();
+            let targetValue;
+            
+            if (Array.isArray(target)) {
+                targetValue = target.length > 0 ? target[0] : null;
+            } else if (typeof target === 'object' && target.value) {
+                targetValue = target.value;
+            } else {
+                targetValue = target;
+            }
+            
+            if (targetValue) {
+                const currentFeatures = featuresSelect.getValue();
+                if (Array.isArray(currentFeatures)) {
+                    const newFeatures = currentFeatures.filter(f => {
+                        return String(f) !== String(targetValue);
+                    });
+                    if (newFeatures.length !== currentFeatures.length) {
+                        featuresSelect.setValue(newFeatures);
+                    }
+                }
+            }
+            updateTrainButtonState();
+        } catch (e) {
+            console.error("Error handling target change:", e);
+        }
+    });
+    
+    $(document).on('change', '#features-select', function() {
+        updateTrainButtonState();
+    });
+    
+    // --- Train model button ---
+    $('#btn-train').click(function() {
+        const table = $('#table-select').val();
+        const target = targetSelect.getValue();
+        const features = featuresSelect.getValue();
+        
+        // Extract target value safely
+        let targetValue;
+        if (Array.isArray(target)) {
+            targetValue = target.length > 0 ? target[0] : null;
+        } else if (typeof target === 'object' && target.value) {
+            targetValue = target.value;
+        } else {
+            targetValue = target;
+        }
+        
+        if (!targetValue) {
+            alert('Please select a valid target');
+            return;
+        }
+        
+        const selectedModels = $('.model-card.selected').map(function() {
+            return $(this).data('model');
+        }).get();
+        
+        if (!selectedModels.length || !table || !features || features.length === 0) {
+            alert('Please select table, target, at least one feature, and at least one model.');
+            return;
+        }
+        
+        // Build params for each selected model
+        const params = {};
+        
+        if (selectedModels.includes('rf')) {
+            params.rf = {
+                rf_trees: parseInt($('#rf-trees').val()),
+                rf_depth: parseInt($('#rf-depth').val())
+            };
+        }
+        
+        if (selectedModels.includes('lr')) {
+            params.lr = {
+                lr_alpha: (parseInt($('#lr-alpha').val()) / 10).toFixed(1)
+            };
+        }
+        
+        if (selectedModels.includes('gb')) {
+            params.gb = {
+                gb_rate: (parseInt($('#gb-rate').val()) / 100).toFixed(2),
+                gb_est: parseInt($('#gb-est').val())
+            };
+        }
+        
+        const formData = new FormData();
+        formData.append('table', table);
+        formData.append('target', targetValue);
+        
+        // Convert Choices.js objects to plain strings before appending
+        if (Array.isArray(features)) {
+            features.map(f => typeof f === 'object' ? f.value : f)
+                    .forEach(f => formData.append('features[]', f));
+        } else {
+            formData.append('features[]', typeof features === 'object' ? features.value : features);
+        }
+        
+        selectedModels.forEach(model => formData.append('model_types[]', model));
+        
+        formData.append('rf_trees', params.rf?.rf_trees || 100);
+        formData.append('rf_depth', params.rf?.rf_depth || 10);
+        formData.append('gb_rate', params.gb?.gb_rate || 0.1);
+        formData.append('gb_est', params.gb?.gb_est || 100);
+        formData.append('lr_alpha', params.lr?.lr_alpha || 1.0);
+        
+        $('#training-spinner').show();
+        $('#btn-train').prop('disabled', true);
+        
+        $.ajax({
+            url: "{% url 'train_model' %}",
+            method: "POST",
+            data: formData,
+            processData: false,
+            contentType: false,
+            headers: {
+                "X-CSRFToken": getCookie("csrftoken"),
+                "X-Requested-With": "XMLHttpRequest"
+            }
+        }).done(function(response) {
+            console.log("Training response:", response);
+            
+            if (response.success) {
+                displayResults(response);
+                generateReport(response);
+            } else {
+                alert('Training failed: ' + (response.error || 'Unknown error'));
+            }
+        }).fail(function(xhr) {
+            console.error("Training failed:", xhr.responseText);
+            alert('Training failed: ' + (xhr.responseJSON?.error || 'Server error'));
+        }).always(function() {
+            $('#training-spinner').hide();
+            $('#btn-train').prop('disabled', false);
+        });
+    });
+    
+    // --- Display results ---
+    function displayResults(response) {
+        if (!response || !response.results || typeof response.results !== 'object') {
+            console.error("Invalid results format:", response);
+            alert('No valid results returned from training.');
+            return;
+        }
+        
+        $('#metrics-container').empty();
+        $('#charts-container').empty();
+        $('#prediction-table-container').hide();
+        $('#results-alert').hide();
+        
+        $('#results-section').show();
+        
+        let bestModel = null;
+        let bestR2 = -Infinity;
+        
+        for (const [modelName, modelData] of Object.entries(response.results)) {
+            const metrics = modelData.metrics || {};
+            
+            // Find best model
+            if (metrics.r2 > bestR2) {
+                bestR2 = metrics.r2;
+                bestModel = modelName;
+            }
+            
+            // Add model header
+            $('#metrics-container').append(
+                `<h3 style="grid-column: 1 / -1; color: var(--minet-blue); border-bottom: 2px solid var(--minet-red); padding-bottom: 10px; margin-top: 0; margin-bottom: 20px;">${modelName.toUpperCase()} Metrics</h3>`
+            );
+            
+            // Add metrics cards
+            for (const [metric, value] of Object.entries(metrics)) {
+                let displayValue = Number(value).toFixed(4);
+                let colorClass = '';
+                
+                // Color code based on metric value
+                if (metric === 'r2' || metric === 'explained_variance') {
+                    if (value > 0.7) colorClass = 'minet-success';
+                    else if (value > 0.5) colorClass = 'minet-warning';
+                    else colorClass = 'minet-red';
+                } else if (metric === 'mae' || metric === 'rmse' || metric === 'mape') {
+                    if (value < 0.1) colorClass = 'minet-success';
+                    else if (value < 0.3) colorClass = 'minet-warning';
+                    else colorClass = 'minet-red';
+                }
+                
+                $('#metrics-container').append(`
+                    <div class="metric-card">
+                        <div class="metric-value ${colorClass}" style="color: ${colorClass ? '' : 'var(--minet-red)'}">${displayValue}</div>
+                        <div class="metric-label">${metric.toUpperCase()}</div>
+                    </div>
+                `);
+            }
+            
+            // Add charts
+            $('#charts-container').append(`
+                <div class="chart-container">
+                    <h3><i class="fas fa-project-diagram"></i> ${modelName.toUpperCase()} Performance</h3>
+                    <div class="chart-content">
+                        ${modelData.performance_chart ? `<img src="data:image/png;base64,${modelData.performance_chart}" alt="${modelName} Performance">` : 'No performance chart available'}
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <h3><i class="fas fa-chart-line"></i> ${modelName.toUpperCase()} Predictions</h3>
+                    <div class="chart-content">
+                        ${modelData.prediction_chart ? `<img src="data:image/png;base64,${modelData.prediction_chart}" alt="${modelName} Predictions">` : 'No prediction chart available'}
+                    </div>
+                </div>
+            `);
+            
+            // Add feature importance chart if available
+            if (modelData.feature_importance_chart) {
+                $('#charts-container').append(`
+                    <div class="chart-container">
+                        <h3><i class="fas fa-star"></i> ${modelName.toUpperCase()} Feature Importance</h3>
+                        <div class="chart-content">
+                            <img src="data:image/png;base64,${modelData.feature_importance_chart}" alt="${modelName} Feature Importance">
+                        </div>
+                    </div>
+                `);
+            }
+            
+            // Show prediction table for the best model
+            if (modelName === bestModel && modelData.predictions && modelData.predictions.length > 0) {
+                $('#prediction-table-container').show();
+                const tableBody = $('#prediction-table tbody');
+                tableBody.empty();
+                
+                modelData.predictions.forEach(pred => {
+                    const diff = pred.actual - pred.predicted;
+                    const errorPct = (Math.abs(diff) / pred.actual) * 100;
+                    
+                    tableBody.append(`
+                        <tr>
+                            <td>${pred.id}</td>
+                            <td>${pred.actual.toFixed(2)}</td>
+                            <td>${pred.predicted.toFixed(2)}</td>
+                            <td>${diff.toFixed(2)}</td>
+                            <td>${errorPct.toFixed(2)}%</td>
+                        </tr>
+                    `);
+                });
+            }
+        }
+        
+        // Show results alert
+        if (bestR2 > 0) {
+            $('#results-alert-content').html(`
+                <strong>Training Complete!</strong> Best model: ${bestModel.toUpperCase()} with R² = ${bestR2.toFixed(4)}. 
+                ${bestR2 > 0.7 ? 'Excellent predictive power!' : bestR2 > 0.5 ? 'Good predictive power.' : 'Consider feature engineering or trying different models.'}
+            `);
+            $('#results-alert').show();
+        }
+        
+        // Scroll to results
+        $('html, body').animate({
+            scrollTop: $('#results-section').offset().top - 100
+        }, 800);
+    }
+    
+    // --- Generate detailed report ---
+    function generateReport(response) {
+        if (!response || !response.results) return;
+        
+        const table = $('#table-select').val();
+        const target = targetSelect.getValue();
+        const features = featuresSelect.getValue();
+        const selectedModels = $('.model-card.selected').map(function() {
+            return $(this).data('model');
+        }).get();
+        
+        let targetValue;
+        if (Array.isArray(target)) {
+            targetValue = target.length > 0 ? target[0] : null;
+        } else if (typeof target === 'object' && target.value) {
+            targetValue = target.value;
+        } else {
+            targetValue = target;
+        }
+        
+        let reportHtml = `
+            <div class="report-overview">
+                <h3 style="color: var(--minet-blue); margin-top: 0; display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-info-circle"></i> Analysis Overview
+                </h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                    <div style="background: #f8f9fc; padding: 15px; border-radius: 8px; border-left: 4px solid var(--minet-blue);">
+                        <p style="margin: 0; font-weight: 500; color: var(--minet-blue);">Dataset</p>
+                        <p style="margin: 5px 0 0 0; font-size: 1.2rem; font-weight: bold;">${table}</p>
+                    </div>
+                    <div style="background: #f8f9fc; padding: 15px; border-radius: 8px; border-left: 4px solid var(--minet-red);">
+                        <p style="margin: 0; font-weight: 500; color: var(--minet-blue);">Target Variable</p>
+                        <p style="margin: 5px 0 0 0; font-size: 1.2rem; font-weight: bold;">${targetValue}</p>
+                    </div>
+                    <div style="background: #f8f9fc; padding: 15px; border-radius: 8px; border-left: 4px solid var(--minet-success);">
+                        <p style="margin: 0; font-weight: 500; color: var(--minet-blue);">Feature Count</p>
+                        <p style="margin: 5px 0 0 0; font-size: 1.2rem; font-weight: bold;">${Array.isArray(features) ? features.length : 1}</p>
+                    </div>
+                    <div style="background: #f8f9fc; padding: 15px; border-radius: 8px; border-left: 4px solid #ffc107;">
+                        <p style="margin: 0; font-weight: 500; color: var(--minet-blue);">Models Trained</p>
+                        <p style="margin: 5px 0 0 0; font-size: 1.2rem; font-weight: bold;">${selectedModels.join(', ').toUpperCase()}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Add model-specific reports
+        for (const [modelName, modelData] of Object.entries(response.results)) {
+            const metrics = modelData.metrics || {};
+            const featureImportance = modelData.feature_importance || {};
+            const predictions = modelData.predictions || [];
+            
+            // Sort features by importance
+            const sortedFeatures = Object.entries(featureImportance)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10); // Top 10 features
+            
+            reportHtml += `
+                <div class="model-report">
+                    <div class="model-report-header">
+                        <h3 class="model-report-title">
+                            <i class="fas fa-chart-bar"></i> ${modelName.toUpperCase()} Model Analysis
+                        </h3>
+                        <span style="background: var(--minet-blue); color: white; padding: 5px 15px; border-radius: 20px; font-weight: 500;">
+                            R² = ${metrics.r2 ? metrics.r2.toFixed(4) : 'N/A'}
+                        </span>
+                    </div>
+                    
+                    <div class="model-performance">
+                        <div class="performance-card">
+                            <h4><i class="fas fa-tachometer-alt"></i> Accuracy Metrics</h4>
+                            ${Object.entries(metrics).map(([metric, value]) => `
+                                <div class="performance-metric">
+                                    <span class="metric-name">${metric}</span>
+                                    <span class="metric-score">${Number(value).toFixed(4)}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                        
+                        <div class="performance-card">
+                            <h4><i class="fas fa-cog"></i> Model Parameters</h4>
+                            ${Object.entries(modelData.params || {}).slice(0, 5).map(([param, value]) => `
+                                <div class="performance-metric">
+                                    <span class="metric-name">${param}</span>
+                                    <span class="metric-score">${typeof value === 'number' ? value.toFixed(2) : String(value).substring(0, 20)}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    <div class="interpretation">
+                        <h4><i class="fas fa-lightbulb"></i> Performance Interpretation</h4>
+                        <p>
+                            ${generateInterpretation(modelName, metrics)}
+                        </p>
+                    </div>
+                    
+                    ${predictions.length > 0 ? `
+                    <div class="interpretation">
+                        <h4><i class="fas fa-table"></i> Sample Predictions</h4>
+                        <div style="overflow-x: auto;">
+                            <table class="prediction-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Actual</th>
+                                        <th>Predicted</th>
+                                        <th>Difference</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${predictions.slice(0, 5).map(pred => `
+                                        <tr>
+                                            <td>${pred.id}</td>
+                                            <td>${pred.actual.toFixed(2)}</td>
+                                            <td>${pred.predicted.toFixed(2)}</td>
+                                            <td>${(pred.actual - pred.predicted).toFixed(2)}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    ` : ''}
+                    
+                    ${sortedFeatures.length > 0 ? `
+                    <div class="feature-importance">
+                        <h4><i class="fas fa-star"></i> Top Feature Importance</h4>
+                        <div class="feature-list">
+                            ${sortedFeatures.map(([feature, importance]) => `
+                                <div class="feature-item">
+                                    <span class="feature-name">${feature}</span>
+                                    <span class="feature-weight">${Number(importance).toFixed(4)}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+        
+        // Add recommendations section
+        reportHtml += `
+            <div class="model-report">
+                <div class="model-report-header">
+                    <h3 class="model-report-title">
+                        <i class="fas fa-clipboard-list"></i> Recommendations & Next Steps
+                    </h3>
+                </div>
+                
+                <div class="interpretation">
+                    <h4><i class="fas fa-check-circle"></i> Model Selection Guidance</h4>
+                    <p>
+                        ${generateRecommendations(response.results)}
+                    </p>
+                </div>
+                
+                <div class="interpretation">
+                    <h4><i class="fas fa-forward"></i> Next Steps</h4>
+                    <p>
+                        Based on the analysis, consider these next steps to improve your model:
+                        <ul>
+                            <li>Collect more data to increase model robustness</li>
+                            <li>Experiment with different feature combinations</li>
+                            <li>Try more advanced feature engineering techniques</li>
+                            <li>Consider hyperparameter tuning for optimal performance</li>
+                            <li>Validate the model on new, unseen data</li>
+                        </ul>
+                    </p>
+                </div>
+            </div>
+        `;
+        
+        $('#report-content').html(reportHtml);
+        $('#report-section').show();
+        
+        // Scroll to report section
+        $('html, body').animate({
+            scrollTop: $('#report-section').offset().top - 100
+        }, 1000);
+    }
+    
+    function generateInterpretation(modelName, metrics) {
+        let interpretation = "";
+        
+        if (modelName === 'rf') {
+            interpretation = "The Random Forest model demonstrates strong predictive power through ensemble learning. ";
+        } else if (modelName === 'lr') {
+            interpretation = "The Ridge Regression model provides a regularized linear approach to prevent overfitting. ";
+        } else if (modelName === 'gb') {
+            interpretation = "The Gradient Boosting model sequentially improves predictions by focusing on previous errors. ";
+        }
+        
+        if (metrics.r2 > 0.7) {
+            interpretation += "The high R² score indicates the model explains most of the variance in the target variable. ";
+        } else if (metrics.r2 > 0.5) {
+            interpretation += "The moderate R² score suggests the model captures some but not all patterns in the data. ";
+        } else if (metrics.r2 > 0) {
+            interpretation += "The low R² score indicates the model may need feature engineering or different algorithms. ";
+        } else {
+            interpretation += "The negative R² score suggests the model performs worse than a simple mean predictor. ";
+        }
+        
+        if (metrics.mae) {
+            interpretation += `On average, predictions are off by ${Number(metrics.mae).toFixed(2)} units. `;
+        }
+        
+        interpretation += "Consider examining feature importance to understand which factors most influence predictions.";
+        
+        return interpretation;
+    }
+    
+    function generateRecommendations(results) {
+        let bestModel = "";
+        let bestScore = -Infinity;
+        
+        // Find the best model based on R² score
+        for (const [modelName, modelData] of Object.entries(results)) {
+            const score = modelData.metrics.r2 || 0;
+            if (score > bestScore) {
+                bestScore = score;
+                bestModel = modelName;
+            }
+        }
+        
+        let recommendation = `Based on the analysis, the <strong>${bestModel.toUpperCase()}</strong> model performed best with an R² score of ${bestScore.toFixed(4)}. `;
+        
+        if (bestScore > 0.8) {
+            recommendation += "This model demonstrates excellent predictive capability and is recommended for production use. ";
+        } else if (bestScore > 0.6) {
+            recommendation += "This model shows good performance but could benefit from additional tuning or feature engineering. ";
+        } else if (bestScore > 0.3) {
+            recommendation += "This model shows some predictive power but needs improvement before production deployment. ";
+        } else {
+            recommendation += "While this model performed best among those tested, consider exploring additional algorithms or data preprocessing techniques. ";
+        }
+        
+        recommendation += "Focus on the top features identified to understand what drives predictions in your data.";
+        
+        return recommendation;
+    }
+    
+    // --- Download PDF Report ---
+    $('#btn-download-pdf').click(function() {
+        // Using jsPDF from CDN
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        // Add title
+        doc.setFontSize(20);
+        doc.setTextColor(0, 51, 160);
+        doc.text('Minet Insurance - Machine Learning Report', 105, 20, { align: 'center' });
+        
+        // Add date
+        doc.setFontSize(12);
+        doc.setTextColor(100, 100, 100);
+        doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 105, 30, { align: 'center' });
+        
+        // Add overview section
+        doc.setFontSize(16);
+        doc.setTextColor(0, 51, 160);
+        doc.text('Analysis Overview', 20, 50);
+        
+        doc.setFontSize(12);
+        doc.setTextColor(0, 0, 0);
+        
+        const table = $('#table-select').val();
+        const target = targetSelect.getValue();
+        let targetValue;
+        
+        if (Array.isArray(target)) {
+            targetValue = target.length > 0 ? target[0] : null;
+        } else if (typeof target === 'object' && target.value) {
+            targetValue = target.value;
+        } else {
+            targetValue = target;
+        }
+        
+        const features = featuresSelect.getValue();
+        const featureCount = Array.isArray(features) ? features.length : 1;
+        
+        doc.text(`Dataset: ${table}`, 20, 60);
+        doc.text(`Target Variable: ${targetValue}`, 20, 70);
+        doc.text(`Number of Features: ${featureCount}`, 20, 80);
+        
+        // Add model results
+        let yPosition = 100;
+        
+        for (const [modelName, modelData] of Object.entries(window.lastTrainingResponse.results)) {
+            if (yPosition > 240) {
+                doc.addPage();
+                yPosition = 20;
+            }
+            
+            doc.setFontSize(16);
+            doc.setTextColor(0, 51, 160);
+            doc.text(`${modelName.toUpperCase()} Model Results`, 20, yPosition);
+            yPosition += 10;
+            
+            doc.setFontSize(12);
+            doc.setTextColor(0, 0, 0);
+            
+            // Add metrics table
+            const metrics = modelData.metrics || {};
+            const metricsData = Object.entries(metrics).map(([key, value]) => [key, Number(value).toFixed(4)]);
+            
+            doc.autoTable({
+                startY: yPosition,
+                head: [['Metric', 'Value']],
+                body: metricsData,
+                theme: 'grid',
+                headStyles: { fillColor: [227, 6, 19] }
+            });
+            
+            yPosition = doc.lastAutoTable.finalY + 15;
+        }
+        
+        // Save the PDF
+        doc.save(`Minet_ML_Report_${new Date().toISOString().slice(0, 10)}.pdf`);
+    });
+    
+    // --- Download CSV Results ---
+    $('#btn-download-csv').click(function() {
+        let csvContent = "Model,Metric,Value\n";
+        
+        for (const [modelName, modelData] of Object.entries(window.lastTrainingResponse.results)) {
+            const metrics = modelData.metrics || {};
+            
+            for (const [metric, value] of Object.entries(metrics)) {
+                csvContent += `"${modelName}","${metric}","${value}"\n`;
+            }
+        }
+        
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        
+        link.setAttribute("href", url);
+        link.setAttribute("download", `Minet_ML_Results_${new Date().toISOString().slice(0, 10)}.csv`);
+        link.style.visibility = 'hidden';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    });
+    
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    // Store the last training response for download functionality
+    window.lastTrainingResponse = null;
+    
+    // Modify the training success handler to store the response
+    const originalDisplayResults = displayResults;
+    displayResults = function(response) {
+        window.lastTrainingResponse = response;
+        originalDisplayResults(response);
+    };
+});
+</script>
+{% endblock %}

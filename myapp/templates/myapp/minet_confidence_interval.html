@@ -1,0 +1,422 @@
+{% extends 'myapp/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Minet Confidence Interval - Minet Insurance{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<style>
+    :root {
+        --primary: #E30613;
+        --primary-dark: #C10510;
+        --primary-light: #FDE8EA;
+        --secondary: #232323;
+        --light-bg: #F5F5F5;
+        --border: #E3E8EE;
+        --text-muted: #888;
+        --card-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    }
+
+    body {
+        font-family: "Segoe UI", Tahoma, sans-serif;
+        font-size: 16px;
+        margin: 0;
+        color: #333;
+        background: var(--light-bg);
+    }
+
+    /* Main area - white and touching navbar */
+    .main-area {
+        background: #fff;
+        width: 100%;
+        max-width: 100%;
+        margin: 0;
+        padding: 1.25rem 1.5rem 3rem;
+        animation: fadeIn 0.35s ease-in-out;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+    }
+
+    .main-header {
+        display:flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        margin-bottom: 0.75rem;
+    }
+    .main-header h1 {
+        font-size: 1.9rem;
+        font-weight: 700;
+        margin: 0;
+        color: var(--secondary);
+    }
+    .main-header p {
+        margin: 0.2rem 0 0;
+        color: var(--primary);
+        font-weight: 600;
+    }
+
+    /* Filter panel */
+    .filters {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+    .filters .form-control, .filters select {
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        padding: 8px 12px;
+        font-weight: 600;
+    }
+    .filters label {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--secondary);
+        margin-right: 0.4rem;
+    }
+    .filter-group {
+        display:flex;
+        align-items:center;
+        gap:0.5rem;
+    }
+
+    /* Loading spinner */
+    .loading-overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(255,255,255,0.6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 200;
+        border-radius: 8px;
+    }
+
+    /* Cards & layout */
+    .card {
+        background: #fff;
+        border-radius: 10px;
+        box-shadow: var(--card-shadow);
+        padding: 1.25rem;
+    }
+    .chart-card {
+        padding: 1rem;
+    }
+    .chart-title {
+        color: var(--primary);
+        font-weight: 700;
+        margin-bottom: 0.75rem;
+        font-size: 1.1rem;
+    }
+
+    .chart-container {
+        min-height: 460px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: #fafafa;
+    }
+    .chart-container > div,
+    .chart-container > svg,
+    .js-plotly-plot,
+    .plot-container { width:100% !important; height:100% !important; }
+
+    .summary-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    .stat-card {
+        background: var(--primary-light);
+        padding: 1.25rem;
+        border-radius: 10px;
+        text-align: left;
+    }
+    .stat-card .value {
+        font-size: 1.6rem;
+        font-weight: 800;
+        color: var(--primary);
+    }
+    .stat-card .label {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: var(--secondary);
+    }
+
+    .outlier-list {
+        margin-top: 0.75rem;
+        max-height: 220px;
+        overflow-y: auto;
+        border-top: 1px dashed var(--border);
+        padding-top: 0.5rem;
+    }
+    .outlier-item { display:flex; justify-content:space-between; padding:0.5rem 0; font-weight:600; color:var(--secondary); }
+    .outlier-date { color:var(--primary); font-weight:700; }
+
+    @media (max-width: 991px) {
+        .summary-grid { grid-template-columns: 1fr; }
+    }
+
+    @keyframes fadeIn { from {opacity:0; transform:translateY(8px)} to {opacity:1; transform:none} }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Header Section -->
+  <div style="text-align: center; margin-bottom: 2.5rem; padding: 2rem; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 75, 135, 0.08);">
+    <h1 style="color: #004b87; font-size: 2.8rem; margin-bottom: 1rem; font-weight: 800; letter-spacing: -0.5px; display: flex; align-items: center; justify-content: center; gap: 1rem;">
+      <span style="color: #e30613;"></span> Claims Intelligence Platform
+    </h1>
+    <p style="color: #666; font-size: 1.2rem; max-width: 800px; margin: 0 auto; line-height: 1.6;">
+      AI-powered predictive analytics for optimized claims management and strategic decision-making
+    </p>
+  </div>
+
+  <!-- Main Content Container -->
+  <div style="background: white; border-radius: 12px; box-shadow: 0 4px 24px rgba(0, 75, 135, 0.1); overflow: hidden;">
+    <!-- Tab Navigation -->
+    <div style="display: flex; overflow-x: auto; gap: 0; margin-bottom: 0; scrollbar-width: none; border-bottom: 1px solid #e0e0e0; background: linear-gradient(to right, #f8f9fa, #f1f3f5);">
+      <a href="{% url 'minet_forecast_volume' %}" 
+         style="flex: 0 0 auto; padding: 1.2rem 2rem; background: {% if request.path == '/minet_forecast_volume/' %}#004b87{% else %}transparent{% endif %}; cursor: pointer; text-decoration: none; color: {% if request.path == '/minet_forecast_volume/' %}white{% else %}#004b87{% endif %}; border-right: 1px solid #e0e0e0; font-weight: 600; transition: all 0.3s ease; display: flex; align-items: center; gap: 0.8rem;">
+        <i class="fas fa-chart-line" style="font-size: 1.1rem;"></i>
+        Forecast Volume
+      </a>
+      
+      <a href="{% url 'minet_confidence_interval' %}" 
+         style="flex: 0 0 auto; padding: 1.2rem 2rem; background: {% if request.path == '/minet_confidence_interval/' %}#004b87{% else %}transparent{% endif %}; cursor: pointer; text-decoration: none; color: {% if request.path == '/minet_confidence_interval/' %}white{% else %}#004b87{% endif %}; border-right: 1px solid #e0e0e0; font-weight: 600; transition: all 0.3s ease; display: flex; align-items: center; gap: 0.8rem;">
+        <i class="fas fa-chart-area" style="font-size: 1.1rem;"></i>
+        Confidence Interval
+      </a>
+      
+      <a href="{% url 'minet_impact_simulation' %}" 
+         style="flex: 0 0 auto; padding: 1.2rem 2rem; background: {% if request.path == '/minet_impact_simulation/' %}#004b87{% else %}transparent{% endif %}; cursor: pointer; text-decoration: none; color: {% if request.path == '/minet_impact_simulation/' %}white{% else %}#004b87{% endif %}; border-right: 1px solid #e0e0e0; font-weight: 600; transition: all 0.3s ease; display: flex; align-items: center; gap: 0.8rem;">
+        <i class="fas fa-cogs" style="font-size: 1.1rem;"></i>
+        Impact Simulation
+      </a>
+      
+      <a href="{% url 'minet_explainability' %}" 
+         style="flex: 0 0 auto; padding: 1.2rem 2rem; background: {% if request.path == '/minet_explainability/' %}#004b87{% else %}transparent{% endif %}; cursor: pointer; text-decoration: none; color: {% if request.path == '/minet_explainability/' %}white{% else %}#004b87{% endif %}; border-right: 1px solid #e0e0e0; font-weight: 600; transition: all 0.3s ease; display: flex; align-items: center; gap: 0.8rem;">
+        <i class="fas fa-lightbulb" style="font-size: 1.1rem;"></i>
+        Explainability
+      </a>
+      
+      <a href="#" style="flex: 0 0 auto; padding: 1.2rem 2rem; background: transparent; cursor: pointer; text-decoration: none; color: #004b87; border-right: 1px solid #e0e0e0; font-weight: 600; transition: all 0.3s ease; display: flex; align-items: center; gap: 0.8rem;">
+        <i class="fas fa-shield-alt" style="font-size: 1.1rem;"></i>
+        Risk Assessment
+      </a>
+    </div>
+
+<div class="main-area" id="main-area-wrapper">
+    <div style="position:relative">
+        <div class="main-header">
+            <div>
+                <h1>Minet Prediction Confidence Intervals</h1>
+                <p>Statistical confidence ranges for claims predictions using Minet data</p>
+            </div>
+
+            <!-- Top filters: dataset, confidence, date range -->
+            <div class="filters" aria-hidden="false">
+                <div class="filter-group">
+                    <label for="dataset-select">Dataset</label>
+                    <select id="dataset-select" class="form-control" aria-label="Dataset selector">
+                        <option value="all" {% if selected_dataset_id == 'all' %}selected{% endif %}>All datasets</option>
+                        {% for ds in datasets %}
+                            <option value="{{ ds.id }}" {% if selected_dataset_id == ds.id|stringformat:"s" %}selected{% endif %}>{{ ds.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="confidence-level">Confidence</label>
+                    <select id="confidence-level" name="confidence" class="form-control" aria-label="Confidence level">
+                        <option value="95" {% if selected_confidence == 95 %}selected{% endif %}>95%</option>
+                        <option value="90" {% if selected_confidence == 90 %}selected{% endif %}>90%</option>
+                        <option value="99" {% if selected_confidence == 99 %}selected{% endif %}>99%</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="start-date">From</label>
+                    <input id="start-date" class="form-control datepicker" value="{{ selected_start_date|default:'' }}" placeholder="YYYY-MM-DD" />
+                </div>
+
+                <div class="filter-group">
+                    <label for="end-date">To</label>
+                    <input id="end-date" class="form-control datepicker" value="{{ selected_end_date|default:'' }}" placeholder="YYYY-MM-DD" />
+                </div>
+
+                <div class="filter-group">
+                    <button id="apply-filters" class="btn" style="background:var(--primary); color:#fff; font-weight:700; border-radius:8px; padding:8px 12px;">Apply</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading overlay (hidden by default) -->
+        <div id="loading-overlay" class="loading-overlay" style="display:none;">
+            <div class="spinner-border text-danger" role="status" aria-hidden="true"></div>
+        </div>
+    </div>
+
+    <!-- Chart Card -->
+    <div class="card chart-card" id="chart-card">
+        <div class="chart-title">Monthly Claims with Confidence Intervals</div>
+        <div class="chart-container" id="chart-container">
+            {% if visualizations.confidence_intervals %}
+                {{ visualizations.confidence_intervals|safe }}
+            {% else %}
+                <div style="padding: 2rem; text-align: center; color: var(--text-muted); font-weight: 600;">No confidence interval data available</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Summary and Outliers -->
+    <div class="summary-grid">
+        <div class="card stat-card">
+            <div class="label">Average Monthly Range</div>
+            <div class="value" id="avg-ci-range">± KES {{ avg_ci_range|default:"0" }}</div>
+            <div style="margin-top:0.5rem; color:var(--secondary);">The confidence band shows the range within which we expect actual claims to fall <strong id="selected-confidence-text">{{ selected_confidence|default:95 }}</strong>% of the time.</div>
+            <div style="margin-top:0.5rem; color:var(--text-muted)">Wider band indicates higher uncertainty.</div>
+        </div>
+
+        <div class="card">
+            <div class="label" style="display:flex; justify-content:space-between; align-items:center;">
+                <span>Outlier Detection</span>
+                <span class="value" id="outlier-count">{{ outlier_count|default:"0" }}</span>
+            </div>
+            <div style="font-weight:700; color:var(--secondary); margin-top:0.5rem;">Months outside confidence band (last 12 months)</div>
+
+            <div class="outlier-list" id="outlier-list">
+                {% if outliers %}
+                    {% for o in outliers %}
+                        <div class="outlier-item">
+                            <span class="outlier-date">{{ o.date }}</span>
+                            <span class="outlier-amount">{{ o.amount }}</span>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div style="padding: 1.2rem; text-align: center; color: var(--text-muted); font-weight: 600;">No outliers detected in the last 12 months.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- flatpickr for date picking -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+(function(){
+    // initialize datepickers
+    flatpickr(".datepicker", {
+        dateFormat: "Y-m-d",
+        allowInput: true,
+    });
+
+    const datasetSelect = document.getElementById('dataset-select');
+    const confidenceSelect = document.getElementById('confidence-level');
+    const startDateInput = document.getElementById('start-date');
+    const endDateInput = document.getElementById('end-date');
+    const applyBtn = document.getElementById('apply-filters');
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const mainAreaSelector = '.main-area';
+
+    // helper to show/hide loading
+    function setLoading(on) {
+        loadingOverlay.style.display = on ? 'flex' : 'none';
+    }
+
+    // collect params
+    function getParams() {
+        const params = new URLSearchParams();
+        params.set('confidence', confidenceSelect.value);
+        params.set('dataset_id', datasetSelect.value || 'all');
+        if (startDateInput.value) params.set('start_date', startDateInput.value);
+        if (endDateInput.value) params.set('end_date', endDateInput.value);
+        // keep other query params intact (optional)
+        return params.toString();
+    }
+
+    // update page content by fetching same URL with params
+    function fetchAndUpdate() {
+        const baseUrl = window.location.pathname;
+        const params = getParams();
+        const url = baseUrl + (params ? ('?' + params) : '');
+        setLoading(true);
+
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(resp => {
+                if (!resp.ok) throw new Error('Network response was not ok');
+                return resp.text();
+            })
+            .then(html => {
+                // parse returned HTML and replace the .main-area content
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const newMain = doc.querySelector(mainAreaSelector);
+                if (newMain) {
+                    document.querySelector(mainAreaSelector).innerHTML = newMain.innerHTML;
+                    // update selected-confidence text (in case view returned different)
+                    const confText = doc.querySelector('#selected-confidence-text');
+                    if (confText) {
+                        const t = confText.textContent || confidenceSelect.value;
+                        const el = document.getElementById('selected-confidence-text');
+                        if (el) el.textContent = t;
+                    }
+                    // rebind datepickers & event handlers because we've replaced DOM
+                    rebindAfterUpdate();
+                } else {
+                    // fallback: full reload with params
+                    window.location.href = url;
+                }
+            })
+            .catch(err => {
+                console.error('AJAX error:', err);
+                // fallback to full page load
+                window.location.href = baseUrl + (params ? ('?' + params) : '');
+            })
+            .finally(() => setLoading(false));
+    }
+
+    // rebind handlers after replacing HTML fragment
+    function rebindAfterUpdate() {
+        // re-initialize flatpickr on newly inserted inputs
+        flatpickr(".datepicker", { dateFormat: "Y-m-d", allowInput: true });
+
+        // attach event listeners again
+        const newDataset = document.getElementById('dataset-select');
+        const newConfidence = document.getElementById('confidence-level');
+        const newApply = document.getElementById('apply-filters');
+
+        if (newDataset) newDataset.addEventListener('change', fetchAndUpdate);
+        if (newConfidence) newConfidence.addEventListener('change', fetchAndUpdate);
+        if (newApply) newApply.addEventListener('click', function(e){ e.preventDefault(); fetchAndUpdate(); });
+
+        // also support clicking any chart elements that might be interactive (Plotly preserves events)
+    }
+
+    // initial bindings
+    datasetSelect.addEventListener('change', fetchAndUpdate);
+    confidenceSelect.addEventListener('change', fetchAndUpdate);
+    applyBtn.addEventListener('click', function(e){
+        e.preventDefault();
+        fetchAndUpdate();
+    });
+
+    // optional: update on pressing Enter in date inputs
+    [startDateInput, endDateInput].forEach(inp => {
+        inp.addEventListener('keydown', function(e){
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                fetchAndUpdate();
+            }
+        });
+    });
+
+    // expose function for potential external calls
+    window.minet_fetchAndUpdate = fetchAndUpdate;
+})();
+</script>
+{% endblock %}

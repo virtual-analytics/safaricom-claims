@@ -1,369 +1,273 @@
 {% extends 'myapp/base.html' %}
 {% load humanize %}
-{% block title %}Acme_Brokers Dashboard - Minet Insurance{% endblock %}
+{% block title %}the Verse{% endblock %}
 
 {% block head %}
 {{ block.super }}
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
 {% endblock %}
 
 {% block content %}
-<style>
-/* ================= General Layout ================= */
-.main-area {
-    width: calc(100% - 60px);
-    margin: 0 auto;
-    background: #f9fafb;
-    padding: 1.5rem;
-}
-.main-area h1 {
-    font-size: 2.4rem;
-    font-weight: 700;
-    margin-bottom: 0.3em;
-    color: #e30613;
-}
-.main-area h2 {
-    font-size: 1.4rem;
-    font-weight: 600;
-    color: #e30613;
-    margin-bottom: 2rem;
-}
-
-/* Dataset Selection */
-.dataset-section {
-    background: #fff;
-    border-radius: 14px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
-    padding: 2rem;
-}
-.dataset-label {
-    font-size: 1.2rem;
-    font-weight: 500;
-    margin-right: 1rem;
-}
-.dataset-dropdown {
-    font-size: 1rem;
-    padding: 0.6em;
-    border-radius: 6px;
-    border: 1.5px solid #ccc;
-    margin-right: 1.2rem;
-}
-.desc-btn {
-    background: #e30613;
-    color: #fff;
-    border: none;
-    border-radius: 8px;
-    padding: 0.6em 1.6em;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s;
-}
-.desc-btn:hover { background: #b8000b; }
-
-/* Descriptive Stats */
-.desc-results {
-    margin-top: 2rem;
-    background: #fff;
-    border-radius: 10px;
-    padding: 1rem;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    overflow-x: auto;
-}
-.desc-table {
-    width: 100%;
-    min-width: 800px;
-    border-collapse: collapse;
-    background: #fff;
-}
-.desc-table th, .desc-table td {
-    padding: 0.6rem;
-    text-align: left;
-    border-bottom: 1px solid #eee;
-}
-.desc-table th {
-    background: #f5f5f5;
-    color: #e30613;
-    font-weight: bold;
-}
-
-/* Dashboard Stats Cards */
-.stats-container {
-    display: flex;
-    gap: 20px;
-    margin-top: 2rem;
-    flex-wrap: wrap;
-}
-.stat-card {
-    flex: 1;
-    min-width: 220px;
-    background: #fff;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-    padding: 20px;
-    text-align: center;
-    transition: transform 0.2s ease;
-}
-.stat-card:hover {
-    transform: translateY(-3px);
-}
-.stat-label {
-    font-size: 1rem;
-    color: #666;
-}
-.stat-value {
-    font-size: 1.6rem;
-    font-weight: bold;
-    color: #e30613;
-}
-
-/* Dashboard Cards */
-.dashboard-card {
-    background: #fff;
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    padding: 20px;
-    margin-top: 25px;
-}
-.card-header {
-    font-size: 1.2rem;
-    font-weight: 600;
-    margin-bottom: 15px;
-    color: #e30613;
-}
-.chart-container {
-    height: 500px;
-    width: 100%;
-}
-.no-data-message {
-    text-align: center;
-    padding: 50px 20px;
-    color: #777;
-    font-style: italic;
-}
-
-/* Two-column Charts */
-.two-column-charts {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 25px;
-    margin-top: 25px;
-}
-@media (max-width: 992px) {
-    .two-column-charts { grid-template-columns: 1fr; }
-}
-
-/* Date Filter */
-.date-filter-wrapper {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 1rem;
-    margin-bottom: 1rem;
-    flex-wrap: wrap;
-    gap: 15px;
-}
-.date-filter label {
-    font-weight: 500;
-}
-.date-filter input {
-    padding: 5px 8px;
-    border-radius: 5px;
-    border: 1px solid #ccc;
-}
-.btn-apply {
-    background: #e30613;
-    color: #fff;
-    border: none;
-    padding: 6px 14px;
-    border-radius: 5px;
-    cursor: pointer;
-}
-.btn-reset {
-    background: #ccc;
-    border: none;
-    padding: 6px 14px;
-    border-radius: 5px;
-    cursor: pointer;
-}
-.btn-export {
-    background: #e30613;
-    color: white;
-    border: none;
-    padding: 6px 14px;
-    border-radius: 5px;
-    cursor: pointer;
-}
-</style>
-
-<div class="main-area">
-    <h1>The Verse - Acme_Brokers Dashboard</h1>
-    <h2>Claims Data Upload</h2>
-
-    <!-- Dataset Selection -->
-    <div class="dataset-section">
-        <form method="get" id="dataset-form">
-            <label for="dataset_id" class="dataset-label">Select Dataset:</label>
-            <select name="dataset_id" id="dataset_id" class="dataset-dropdown" required>
-                <option value="">-- Select --</option>
-                {% for ds in dataset_ids %}
-                    <option value="{{ ds }}" {% if selected_id == ds %}selected{% endif %}>{{ ds }}</option>
-                {% endfor %}
-            </select>
-            <button type="submit" class="desc-btn" name="desc_btn" value="1">Descriptive Analytics</button>
-
+<div style="display: grid; grid-template-columns: 1fr; grid-template-rows: auto auto 1fr; gap: 2rem; max-width: 1400px; margin: 0 auto;">
+    <!-- Header Section -->
+    <div style="background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-radius: 16px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08); border: 1px solid rgba(255, 255, 255, 0.4); padding: 2rem; transition: all 0.3s ease; overflow: hidden;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; padding-bottom: 0.8rem; border-bottom: 2px solid rgba(227, 6, 19, 0.15);">
+            <h1 style="font-size: 1.8rem; font-weight: 700; color: #1e3a8a; display: flex; align-items: center; gap: 0.8rem;">
+                <i style="color: #e30613; font-size: 1.5rem;" class="fas fa-cloud-upload-alt"></i>
+                Claims Upload
+            </h1>
+            <div style="display: flex; gap: 1rem; align-items: center;">
+                <!-- Processing message placeholder -->
+                <span id="processing-msg" style="color: #e30613; font-weight: 600; display: none;">
+                    <i class="fas fa-spinner fa-spin"></i> Processing...
+                </span>
+            </div>
+        </div>
         
+        <p style="margin-bottom: 2rem; color: #6c757d;">
+            Analyze and visualize claims data to gain actionable insights. Select a dataset to begin.
+        </p>
+        
+        <!-- Dataset Selection -->
+        <form method="get" id="dataset-form">
+            <div style="display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap;">
+                <span style="font-size: 1.1rem; font-weight: 500; color: #1e3a8a; white-space: nowrap;">Select Dataset:</span>
+                <select name="dataset_id" id="dataset_id" style="font-size: 1rem; padding: 0.8em 1.2em; border-radius: 12px; border: 1px solid #e2e8f0; background: rgba(255, 255, 255, 0.7); min-width: 300px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);" required>
+                    <option value="">-- Select a dataset --</option>
+                    {% for ds in dataset_ids %}
+                        <option value="{{ ds }}" {% if selected_id == ds %}selected{% endif %}>{{ ds }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" style="background: linear-gradient(135deg, #e30613, #b0000b); color: #fff; border: none; border-radius: 12px; padding: 0.8em 2em; font-weight: 600; cursor: pointer; box-shadow: 0 4px 15px rgba(227, 6, 19, 0.25); display: flex; align-items: center; gap: 0.8rem;" name="desc_btn" value="1" onclick="showProcessing()">
+                    <i class="fas fa-cogs"></i> Process Data
+                </button>
+            </div>
         </form>
+    </div>
 
-        {% if desc_stats %}
-        <!-- Descriptive Stats -->
-        <div class="desc-results">
-            <h3>Descriptive Analytics for {{ selected_id|capfirst }}</h3>
-            <table class="desc-table">
+
+    <!-- Summary Stats Cards (Invoices vs Claims) -->
+    <div style="background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-radius: 14px; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.06); border: 1px solid rgba(255, 255, 255, 0.35); padding: 1.5rem; transition: all 0.3s ease; overflow: hidden;">
+        
+        <!-- Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem; padding-bottom: 0.6rem; border-bottom: 2px solid rgba(227, 6, 19, 0.12);">
+            <h2 style="font-size: 1.4rem; font-weight: 700; color: #1e3a8a; display: flex; align-items: center; gap: 0.6rem;">
+                <i style="color: #e30613; font-size: 1.2rem;" class="fas fa-chart-pie"></i>
+                Summary Statistics
+            </h2>
+        </div>
+
+        {% if visualizations %}
+        <!-- Stats Grid -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.2rem; margin-top: 1.2rem;">
+
+            <!-- 🔹 Total Invoices (Row Count) -->
+            <div style="padding: 1rem; border-radius: 10px; background: rgba(255, 255, 255, 0.9); box-shadow: 0 3px 10px rgba(0, 0, 0, 0.04); text-align: center; transition: transform 0.2s ease, box-shadow 0.2s ease;"
+                onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 6px 16px rgba(0,0,0,0.1)';"
+                onmouseout="this.style.transform='none'; this.style.boxShadow='0 3px 10px rgba(0,0,0,0.04)';">
+                <div style="font-size: 0.9rem; color: #4a5568; margin-bottom: 0.5rem; font-weight: 500;">Total Invoices</div>
+                <div style="font-size: 1.3rem; font-weight: 700; color: #e30613; line-height: 1.2;">
+                    {{ visualizations.summary_stats.total_invoices|intcomma }}
+                </div>
+            </div>
+
+            <!-- 🔹 Total Claims (Unique claim_ce) -->
+            <div style="padding: 1rem; border-radius: 10px; background: rgba(255, 255, 255, 0.9); box-shadow: 0 3px 10px rgba(0, 0, 0, 0.04); text-align: center; transition: transform 0.2s ease, box-shadow 0.2s ease;"
+                onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 6px 16px rgba(0,0,0,0.1)';"
+                onmouseout="this.style.transform='none'; this.style.boxShadow='0 3px 10px rgba(0,0,0,0.04)';">
+                <div style="font-size: 0.9rem; color: #4a5568; margin-bottom: 0.5rem; font-weight: 500;">Total Claims</div>
+                <div style="font-size: 1.3rem; font-weight: 700; color: #e30613; line-height: 1.2;">
+                    {{ visualizations.summary_stats.total_claims|intcomma }}
+                </div>
+            </div>
+
+            <!-- 🔹 Total Amount -->
+            <div style="padding: 1rem; border-radius: 10px; background: rgba(255, 255, 255, 0.9); box-shadow: 0 3px 10px rgba(0, 0, 0, 0.04); text-align: center; transition: transform 0.2s ease, box-shadow 0.2s ease;"
+                onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 6px 16px rgba(0,0,0,0.1)';"
+                onmouseout="this.style.transform='none'; this.style.boxShadow='0 3px 10px rgba(0,0,0,0.04)';">
+                <div style="font-size: 0.9rem; color: #4a5568; margin-bottom: 0.5rem; font-weight: 500;">Total Amount</div>
+                <div style="font-size: 1.3rem; font-weight: 700; color: #e30613; line-height: 1.2;">
+                    KES {{ visualizations.summary_stats.total_amount|floatformat:2|intcomma }}
+                </div>
+            </div>
+
+            <!-- 🔹 Average Claim -->
+            <div style="padding: 1rem; border-radius: 10px; background: rgba(255, 255, 255, 0.9); box-shadow: 0 3px 10px rgba(0, 0, 0, 0.04); text-align: center; transition: transform 0.2s ease, box-shadow 0.2s ease;"
+                onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 6px 16px rgba(0,0,0,0.1)';"
+                onmouseout="this.style.transform='none'; this.style.boxShadow='0 3px 10px rgba(0,0,0,0.04)';">
+                <div style="font-size: 0.9rem; color: #4a5568; margin-bottom: 0.5rem; font-weight: 500;">Average Claim</div>
+                <div style="font-size: 1.3rem; font-weight: 700; color: #e30613; line-height: 1.2;">
+                    KES {{ visualizations.summary_stats.avg_claim|floatformat:2|intcomma }}
+                </div>
+            </div>
+
+            <!-- 🔹 Unique Members -->
+            <div style="padding: 1rem; border-radius: 10px; background: rgba(255, 255, 255, 0.9); box-shadow: 0 3px 10px rgba(0, 0, 0, 0.04); text-align: center; transition: transform 0.2s ease, box-shadow 0.2s ease;"
+                onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 6px 16px rgba(0,0,0,0.1)';"
+                onmouseout="this.style.transform='none'; this.style.boxShadow='0 3px 10px rgba(0,0,0,0.04)';">
+                <div style="font-size: 0.9rem; color: #4a5568; margin-bottom: 0.5rem; font-weight: 500;">Unique Members</div>
+                <div style="font-size: 1.3rem; font-weight: 700; color: #e30613; line-height: 1.2;">
+                    {{ visualizations.summary_stats.unique_members|intcomma }}
+                </div>
+            </div>
+
+        </div>
+        {% else %}
+        <!-- Empty State -->
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem 1.5rem; text-align: center; background: rgba(240, 244, 254, 0.5); border-radius: 14px; border: 2px dashed rgba(30, 58, 138, 0.2);">
+            <i style="font-size: 3rem; color: rgba(30, 58, 138, 0.3); margin-bottom: 1rem;" class="fas fa-calculator"></i>
+            <h3 style="font-size: 1.2rem; color: #4a5568; margin-bottom: 0.6rem;">No Summary Statistics Available</h3>
+            <p style="color: #718096; max-width: 500px; margin: 0 auto; font-size: 0.9rem;">Process a dataset to view summary statistics.</p>
+        </div>
+        {% endif %}
+    </div>
+
+
+
+    <!-- Data Preview Section -->
+    {% if df_head %}
+    <div style="background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-radius: 16px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08); border: 1px solid rgba(255, 255, 255, 0.4); padding: 2rem; transition: all 0.3s ease; overflow: hidden;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem; padding-bottom: 0.6rem; border-bottom: 2px solid rgba(227, 6, 19, 0.15);">
+            <h2 style="font-size: 1.6rem; font-weight: 700; color: #1e3a8a; display: flex; align-items: center; gap: 0.7rem;">
+                <i style="color: #e30613; font-size: 1.3rem;" class="fas fa-table"></i>
+                Data Preview: {{ selected_id|capfirst }}
+            </h2>
+            <div style="display: flex; gap: 0.8rem;">
+                <span style="background: #e30613; color: white; padding: 0.35em 0.75em; border-radius: 20px; font-size: 0.9rem;">
+                    Showing 5 of {{ visualizations.summary_stats.total_claims|intcomma }} records
+                </span>
+            </div>
+        </div>
+        
+        <div style="margin-top: 1.5rem; overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); font-size: 0.9rem; table-layout: auto;">
                 <thead>
                     <tr>
-                        {% for col in desc_stats.0.keys %}
-                        <th>{{ col|capfirst }}</th>
+                        {% for key in df_head.0.keys|slice:":5" %}
+                            <th style="background: linear-gradient(135deg, #1e3a8a, #0f1f4d); color: #fff; font-weight: 600; padding: 0.65rem 0.9rem; text-align: left; border-bottom: 2px solid rgba(255, 255, 255, 0.15); position: sticky; top: 0; z-index: 2; white-space: nowrap;">{{ key|capfirst }}</th>
                         {% endfor %}
                     </tr>
                 </thead>
                 <tbody>
-                    {% for row in desc_stats %}
+                    {% for row in df_head|slice:":5" %}
                     <tr>
-                        {% for val in row.values %}
-                        <td>{{ val }}</td>
+                        {% for value in row.values|slice:":5" %}
+                            <td style="padding: 0.55rem 0.9rem; border: 1px solid rgba(0, 0, 0, 0.05); color: #2d3748; vertical-align: middle; white-space: nowrap;">{{ value }}</td>
                         {% endfor %}
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
+    </div>
+    {% endif %}
 
-        {% if visualizations %}
-        <h2 style="margin-top: 3rem;">Dashboard Summary & Visualizations</h2>
-
-        <!-- Summary Cards -->
-        <div class="stats-container">
-            <div class="stat-card">
-                <div class="stat-label">Total Claims</div>
-                <div class="stat-value">{{ visualizations.summary_stats.total_claims|intcomma }}</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Total Amount</div>
-                <div class="stat-value">KES {{ visualizations.summary_stats.total_amount|floatformat:2|intcomma }}</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Average Claim</div>
-                <div class="stat-value">KES {{ visualizations.summary_stats.avg_claim|floatformat:2|intcomma }}</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Unique Members</div>
-                <div class="stat-value">{{ visualizations.summary_stats.unique_members|intcomma }}</div>
-            </div>
+    
+    <!-- Descriptive Statistics - Collapsible Section -->
+    <div style="background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-radius: 16px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08); border: 1px solid rgba(255, 255, 255, 0.4); padding: 0; transition: all 0.3s ease; overflow: hidden;">
+        <div 
+            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0; padding: 1.5rem; cursor: pointer; border-bottom: 1px solid rgba(227, 6, 19, 0.1);"
+            onclick="toggleDescriptiveStats()"
+            id="descriptiveStatsHeader"
+        >
+            <h2 style="font-size: 1.8rem; font-weight: 700; color: #1e3a8a; display: flex; align-items: center; gap: 0.8rem; margin: 0;">
+                <i style="color: #e30613; font-size: 1.5rem;" class="fas fa-calculator"></i>
+                Descriptive Statistics (Click to Expand)
+            </h2>
+            <i class="fas fa-chevron-down" id="descriptiveStatsIcon" style="transition: transform 0.3s ease; color: #1e3a8a;"></i>
         </div>
-
-        <!-- Claims Over Time -->
-        <div class="dashboard-card">
-            <div class="card-header">Claims Submitted Over Time</div>
-            <div class="chart-container">
-                {% if visualizations.claims_time_chart %}
-                    <div id="claimsTimeChart">{{ visualizations.claims_time_chart|safe }}</div>
-                {% else %}
-                    <div class="no-data-message">No claims data available</div>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Benefit Category & Sunburst -->
-        <div class="two-column-charts">
-            <div class="dashboard-card">
-                <div class="card-header">Unique Claims by Benefit Category</div>
-                <div class="chart-container">
-                    {% if visualizations.category_amounts %}
-                        <div id="categoryChart">{{ visualizations.category_amounts|safe }}</div>
-                    {% else %}
-                        <div class="no-data-message">No category data available</div>
-                    {% endif %}
-                </div>
-            </div>
-            <div class="dashboard-card">
-                <div class="card-header">Claim Amounts Breakdown (Sunburst)</div>
-                <div class="chart-container">
-                    {% if visualizations.sunburst %}
-                        <div id="sunburstChart">{{ visualizations.sunburst|safe }}</div>
-                    {% else %}
-                        <div class="no-data-message">No sunburst data available</div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <!-- Top Claimants -->
-        <div class="dashboard-card">
-            <div class="card-header">Top Claimants by Total Amount</div>
-            <div class="chart-container">
-                {% if visualizations.top_claimants %}
-                    {{ visualizations.top_claimants|safe }}
-                {% else %}
-                    <div class="no-data-message">No claimant data available</div>
-                {% endif %}
-            </div>
-            <div class="table-container">
-                <table class="desc-table">
+        
+        <div id="descriptiveStatsContent" style="display: none; padding: 0 1.5rem 1.5rem;">
+            {% if desc_stats %}
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); font-size: 0.95rem;">
                     <thead>
-                        <tr><th>Member ID</th><th>Total Amount (KES)</th><th>Claim Count</th></tr>
+                        <tr>
+                            {% for col in desc_stats.0.keys %}
+                                <th style="background: linear-gradient(135deg, #1e3a8a, #0f1f4d); color: #fff; font-weight: 600; padding: 1rem 1.2rem; text-align: left; border-bottom: 2px solid rgba(255, 255, 255, 0.15); position: sticky; top: 0; z-index: 2;">{{ col|capfirst }}</th>
+                            {% endfor %}
+                        </tr>
                     </thead>
                     <tbody>
-                        {% for claimant in visualizations.top_claimants_table %}
+                        {% for row in desc_stats %}
                         <tr>
-                            <td>{{ claimant.claim_me }}</td>
-                            <td>{{ claimant.total_amount|floatformat:2 }}</td>
-                            <td>{{ claimant.claim_count }}</td>
+                            {% for val in row.values %}
+                                <td style="padding: 0.9rem 1.2rem; border: 1px solid rgba(0, 0, 0, 0.05); color: #2d3748; vertical-align: middle;">{{ val }}</td>
+                            {% endfor %}
                         </tr>
-                        {% empty %}
-                        <tr><td colspan="3">No claimant data available</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
-        </div>
-
-        <!-- Claim Frequency Distribution -->
-        <div class="dashboard-card">
-            <div class="card-header">Claim Frequency Distribution</div>
-            <div class="chart-container">
-                {% if visualizations.claim_freq %}
-                    {{ visualizations.claim_freq|safe }}
-                {% else %}
-                    <div class="no-data-message">No frequency data available</div>
-                {% endif %}
+            {% else %}
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4rem 2rem; text-align: center; background: rgba(240, 244, 254, 0.5); border-radius: 16px; border: 2px dashed rgba(30, 58, 138, 0.2);">
+                <i style="font-size: 4rem; color: rgba(30, 58, 138, 0.3); margin-bottom: 1.5rem;" class="fas fa-chart-bar"></i>
+                <h3 style="font-size: 1.5rem; color: #4a5568; margin-bottom: 1rem;">No Descriptive Statistics Available</h3>
+                <p style="color: #718096; max-width: 600px; margin: 0 auto;">Select a dataset and click "Process Data" to generate descriptive statistics.</p>
             </div>
+            {% endif %}
         </div>
-        {% endif %}
-        {% endif %}
     </div>
+    
+    
+
 </div>
+<footer class="bg-[#0c1123]/95 text-gray-300 px-8 sm:px-12 lg:px-20 py-6 flex flex-col sm:flex-row justify-between items-center gap-4 sm:gap-0 shadow-inner">
+  
+  <!-- Copyright -->
+  <p class="text-sm sm:text-base text-center sm:text-left">
+    &copy; {% now "Y" %} Minet Insurance. All rights reserved.
+  </p>
 
-
-
-<footer style="background-color: #f8f9fa; color: #333; text-align: center; padding: 1rem 0; font-size: 0.9rem; border-top: 1px solid #ddd; margin-top: 2rem; width: 100%;">
-    © 2025 Designed by Virtual Analytics, All Rights Reserved |
-    <a href="#" style="color: #1BB64F; text-decoration: none; margin: 0 8px;">Terms & Conditions</a> |
-    <a href="#" style="color: #1BB64F; text-decoration: none; margin: 0 8px;">Privacy Policy</a>
+  <!-- Links -->
+  <div class="flex gap-4 text-sm sm:text-base">
+    <a href="#" class="hover:text-[#1cb3c9] transition-colors duration-300">Privacy Policy</a>
+    <span>|</span>
+    <a href="#" class="hover:text-[#1cb3c9] transition-colors duration-300">Terms of Service</a>
+  </div>
 </footer>
 
-<!-- JS for Date Filtering & Export -->
+
 <script>
+// Show "Processing..." message
+function showProcessing() {
+    const msg = document.getElementById("processing-msg");
+    if (msg) {
+        msg.style.display = "inline-flex";
+    }
+}
+
+// Toggle function for descriptive statistics
+function toggleDescriptiveStats() {
+    const content = document.getElementById('descriptiveStatsContent');
+    const icon = document.getElementById('descriptiveStatsIcon');
+    
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        icon.style.transform = 'rotate(180deg)';
+    } else {
+        content.style.display = 'none';
+        icon.style.transform = 'rotate(0deg)';
+    }
+}
+
 document.addEventListener("DOMContentLoaded", function () {
+    // Initialize with descriptive stats collapsed
+    const statsContent = document.getElementById('descriptiveStatsContent');
+    if (statsContent) statsContent.style.display = 'none';
+
+    // Function to filter Plotly chart data
     function filterChartData(chartId, start, end) {
         const chartElement = document.getElementById(chartId);
         if (!chartElement) return;
+        
         const gd = chartElement.querySelector("div.js-plotly-plot");
-        if (!gd) return;
-
+        if (!gd || !gd.data) return;
+        
         const fullData = gd.data;
         const filteredData = fullData.map(trace => {
-            const xFiltered = [];
-            const yFiltered = [];
+            const xFiltered = [], yFiltered = [];
             trace.x.forEach((date, i) => {
                 if (date >= start && date <= end) {
                     xFiltered.push(date);
@@ -372,35 +276,59 @@ document.addEventListener("DOMContentLoaded", function () {
             });
             return { ...trace, x: xFiltered, y: yFiltered };
         });
-
+        
         Plotly.react(gd, filteredData, gd.layout);
     }
 
-    document.getElementById("applyDateFilter").addEventListener("click", function () {
-        const start = document.getElementById("startDate").value;
-        const end = document.getElementById("endDate").value;
-        if (!start || !end) {
-            alert("Please select both dates");
-            return;
+    // Apply Date Filter
+    document.getElementById("applyDateFilter")?.addEventListener("click", function () {
+        const start = document.getElementById("startDate")?.value;
+        const end = document.getElementById("endDate")?.value;
+        
+        if (!start || !end) { 
+            alert("Please select both start and end dates"); 
+            return; 
         }
-        ["claimsTimeChart", "categoryChart", "sunburstChart"].forEach(chartId => {
-            filterChartData(chartId, start, end);
-        });
+
+        // Show processing message
+        showProcessing();
+
+        // Apply filter to all charts
+        ["claimsTimeChart", "categoryChart", "sunburstChart"].forEach(
+            id => filterChartData(id, start, end)
+        );
+        
+        // Hide processing message after filtering
+        setTimeout(() => {
+            const msg = document.getElementById("processing-msg");
+            if (msg) msg.style.display = "none";
+        }, 1000);
+
+        // Show success toast
+        const toast = document.createElement('div');
+        toast.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            background: #27ae60;
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 10000;
+            animation: slideIn 0.3s, fadeOut 0.3s 2.5s forwards;
+        `;
+        toast.innerHTML = `<i class="fas fa-check-circle"></i> Date filter applied successfully`;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => toast.remove(), 3000);
     });
 
-    document.getElementById("resetDateFilter").addEventListener("click", function () {
-        location.reload();
-    });
-
-    document.getElementById("exportClaimsData").addEventListener("click", function () {
-        const gd = document.querySelector("#claimsTimeChart div.js-plotly-plot");
-        if (gd) {
-            Plotly.downloadImage(gd, {
-                format: 'png',
-                filename: 'claims_over_time'
-            });
-        }
+    // Reset Date Filter
+    document.getElementById("resetDateFilter")?.addEventListener("click", function () { 
+        location.reload(); 
     });
 });
 </script>
+
 {% endblock %}
