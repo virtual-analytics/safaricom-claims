@@ -186,3 +186,8 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
 SESSION_COOKIE_AGE = 3600  # 1 hour
 SESSION_SAVE_EVERY_REQUEST = True
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://safaricom-claims-production-be5c.up.railway.app",
+    "http://safaricom-claims-production-be5c.up.railway.app"
+]
