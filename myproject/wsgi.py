@@ -8,9 +8,16 @@ https://docs.djangoproject.com/en/5.2/howto/deployment/wsgi/
 """
 
 import os
+import sys
+import traceback
 
-from django.core.wsgi import get_wsgi_application
+try:
+    from django.core.wsgi import get_wsgi_application
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'myproject.settings')
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'myproject.settings')
 
-application = get_wsgi_application()
+    application = get_wsgi_application()
+except Exception as e:
+    print("WSGI startup error:", e, file=sys.stderr)
+    traceback.print_exc()
+    raise
