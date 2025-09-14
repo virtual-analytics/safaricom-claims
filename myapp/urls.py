@@ -126,4 +126,7 @@ urlpatterns = [
     path('fraud-detection/minet-suspicious-providers/', views.minet_suspicious_providers, name='minet_suspicious_providers'),
     path('fraud-detection/minet_monthly_trends/', views.minet_monthly_trends, name='minet_monthly_trends'),
     path('fraud-detection/minet_potential_cases/', views.minet_potential_cases, name='minet_potential_cases'),
+    
+    # Health check URL
+    path('healthz/', views.health_check, name='health_check'),
 ]
