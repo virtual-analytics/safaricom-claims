@@ -17,6 +17,10 @@ try:
 
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'myproject.settings')
 
+    # Print the PORT environment variable for debugging
+    port_env = os.environ.get('PORT', None)
+    print(f"[WSGI DEBUG] PORT environment variable is: {port_env}", file=sys.stderr)
+
     def debug_application(environ, start_response):
         print(f"[WSGI DEBUG] Request: {environ.get('REQUEST_METHOD')} {environ.get('PATH_INFO')} at {time.strftime('%Y-%m-%d %H:%M:%S')}", file=sys.stderr)
         return application(environ, start_response)
