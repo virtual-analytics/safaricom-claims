@@ -75,7 +75,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'myproject.wsgi.application'
-DB_LIVE = os.environ.get("DB_LIVE", "False")
+DB_LIVE = os.getenv("DB_LIVE", "False").lower() in ["true", "1", "yes"]
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
