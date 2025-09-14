@@ -56,8 +56,9 @@ def health_check(request):
 
 
 
-templates_dir = os.path.join(settings.BASE_DIR, 'myapp', 'templates', 'myapp')
-os.makedirs(templates_dir, exist_ok=True)
+# Removed os.makedirs from global scope to avoid blocking Gunicorn workers
+# templates_dir = os.path.join(settings.BASE_DIR, 'myapp', 'templates', 'myapp')
+# os.makedirs(templates_dir, exist_ok=True)
 
 # Create your views here.
 
