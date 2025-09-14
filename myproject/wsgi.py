@@ -20,6 +20,10 @@ try:
     # Print the PORT environment variable for debugging
     port_env = os.environ.get('PORT', None)
     print(f"[WSGI DEBUG] PORT environment variable is: {port_env}", file=sys.stderr)
+    if port_env is None or port_env == '8080':
+        print("[WSGI WARNING] The PORT environment variable is not set correctly!\n"
+              "If you are running on Railway, do NOT set PORT in your .env or Railway variables.\n"
+              "Let Railway inject the correct PORT. Your Procfile should use --bind 0.0.0.0:$PORT.", file=sys.stderr)
 
     def debug_application(environ, start_response):
         print(f"[WSGI DEBUG] Request: {environ.get('REQUEST_METHOD')} {environ.get('PATH_INFO')} at {time.strftime('%Y-%m-%d %H:%M:%S')}", file=sys.stderr)
