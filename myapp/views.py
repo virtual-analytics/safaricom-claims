@@ -52,6 +52,7 @@ from collections import defaultdict
 from django.http import HttpResponse
 
 def health_check(request):
+    print("[DEBUG] /healthz endpoint called")
     return HttpResponse("OK", content_type="text/plain")
 
 
@@ -63,6 +64,7 @@ def health_check(request):
 # Create your views here.
 
 def landing(request):
+    print(f"[DEBUG] landing view called. User authenticated: {request.user.is_authenticated}")
     if request.user.is_authenticated:
         return redirect('home')  # Optional: skip landing for logged-in users
     return render(request, 'myapp/landing.html')
