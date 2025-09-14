@@ -25,12 +25,14 @@ try:
               "If you are running on Railway, do NOT set PORT in your .env or Railway variables.\n"
               "Let Railway inject the correct PORT. Your Procfile should use --bind 0.0.0.0:$PORT.", file=sys.stderr)
 
-    def debug_application(environ, start_response):
-        print(f"[WSGI DEBUG] Request: {environ.get('REQUEST_METHOD')} {environ.get('PATH_INFO')} at {time.strftime('%Y-%m-%d %H:%M:%S')}", file=sys.stderr)
-        return application(environ, start_response)
-
     application = get_wsgi_application()
     print("[WSGI DEBUG] WSGI application started successfully", file=sys.stderr)
+    original_application = application
+
+    def debug_application(environ, start_response):
+        print(f"[WSGI DEBUG] Request: {environ.get('REQUEST_METHOD')} {environ.get('PATH_INFO')} at {time.strftime('%Y-%m-%d %H:%M:%S')}", file=sys.stderr)
+        return original_application(environ, start_response)
+
     application = debug_application
 except Exception as e:
     print("WSGI startup error:", e, file=sys.stderr)
