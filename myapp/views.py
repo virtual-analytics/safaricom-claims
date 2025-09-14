@@ -108,16 +108,32 @@ def login_view(request):
 
 
 def get_database_tables():
-    """Return all non-SQLite internal tables from the database."""
+    """Return all non-internal tables from the database (works with SQLite & PostgreSQL)."""
+    vendor = connection.vendor  # 'sqlite', 'postgresql', 'mysql', etc.
+
     with connection.cursor() as cursor:
-        cursor.execute("""
-            SELECT name FROM sqlite_master 
-            WHERE type='table' 
-            AND name NOT LIKE 'sqlite_%'
-            AND name NOT LIKE 'django_%'
-            AND name NOT LIKE 'auth_%'
-            AND name NOT LIKE 'sessions%'
-        """)
+        if vendor == 'sqlite':
+            cursor.execute("""
+                SELECT name 
+                FROM sqlite_master 
+                WHERE type='table' 
+                AND name NOT LIKE 'sqlite_%'
+                AND name NOT LIKE 'django_%'
+                AND name NOT LIKE 'auth_%'
+                AND name NOT LIKE 'sessions%'
+            """)
+        elif vendor == 'postgresql':
+            cursor.execute("""
+                SELECT tablename 
+                FROM pg_catalog.pg_tables 
+                WHERE schemaname='public'
+                AND tablename NOT LIKE 'django_%'
+                AND tablename NOT LIKE 'auth_%'
+                AND tablename NOT LIKE 'sessions%'
+            """)
+        else:
+            raise NotImplementedError(f"Database vendor '{vendor}' not supported yet.")
+
         return [row[0] for row in cursor.fetchall()]
     
 
@@ -349,14 +365,35 @@ import colorsys
 # Cache dataset metadata
 @lru_cache(maxsize=32)
 def get_database_tables_cached():
-    """Get all available database tables (cached)"""
+    """Get all available database tables (cached, works with SQLite & PostgreSQL)."""
     try:
+        vendor = connection.vendor  # 'sqlite', 'postgresql', 'mysql', etc.
+
         with connection.cursor() as cursor:
-            cursor.execute("""
-                SELECT name FROM sqlite_master 
-                WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'django_%'
-            """)
+            if vendor == 'sqlite':
+                cursor.execute("""
+                    SELECT name 
+                    FROM sqlite_master 
+                    WHERE type='table' 
+                    AND name NOT LIKE 'sqlite_%' 
+                    AND name NOT LIKE 'django_%'
+                    AND name NOT LIKE 'auth_%'
+                    AND name NOT LIKE 'sessions%'
+                """)
+            elif vendor == 'postgresql':
+                cursor.execute("""
+                    SELECT tablename 
+                    FROM pg_catalog.pg_tables 
+                    WHERE schemaname='public'
+                    AND tablename NOT LIKE 'django_%'
+                    AND tablename NOT LIKE 'auth_%'
+                    AND tablename NOT LIKE 'sessions%'
+                """)
+            else:
+                raise NotImplementedError(f"Database vendor '{vendor}' not supported yet.")
+
             return [row[0] for row in cursor.fetchall()]
+
     except Exception as e:
         print(f"Error getting database tables: {e}")
         return []
@@ -2417,12 +2454,37 @@ def calculate_efficiency_scores(df):
 
 
 def get_database_tables():
+    """
+    Return all non-internal tables from the database.
+    Supports SQLite and PostgreSQL.
+    """
+    vendor = connection.vendor  # 'sqlite', 'postgresql', etc.
+
     with connection.cursor() as cursor:
-        cursor.execute("""
-            SELECT table_name 
-            FROM information_schema.tables 
-            WHERE table_schema = 'public'
-        """)
+        if vendor == 'sqlite':
+            cursor.execute("""
+                SELECT name 
+                FROM sqlite_master 
+                WHERE type='table'
+                  AND name NOT LIKE 'sqlite_%'
+                  AND name NOT LIKE 'django_%'
+                  AND name NOT LIKE 'auth_%'
+                  AND name NOT LIKE 'sessions%'
+            """)
+        elif vendor == 'postgresql':
+            cursor.execute("""
+                SELECT tablename 
+                FROM pg_catalog.pg_tables
+                WHERE schemaname = 'public'
+                  AND tablename NOT LIKE 'django_%'
+                  AND tablename NOT LIKE 'auth_%'
+                  AND tablename NOT LIKE 'sessions%'
+            """)
+        else:
+            raise NotImplementedError(
+                f"Database vendor '{vendor}' is not supported yet."
+            )
+
         return [row[0] for row in cursor.fetchall()]
 ##########
 
@@ -8358,13 +8420,38 @@ class MLModelManager:
             self._available_tables = self.get_database_tables()
         return self._available_tables
 
-    def get_database_tables(self):
-        """Query the SQLite master table to list all user tables."""
+    def get_database_tables():
+        """
+        Return all non-internal tables from the database.
+        Works with SQLite and PostgreSQL.
+        """
+        vendor = connection.vendor  # 'sqlite', 'postgresql', etc.
+
         with connection.cursor() as cursor:
-            cursor.execute("""
-                SELECT name FROM sqlite_master
-                WHERE type='table' AND name NOT LIKE 'sqlite_%'
-            """)
+            if vendor == 'sqlite':
+                cursor.execute("""
+                    SELECT name 
+                    FROM sqlite_master
+                    WHERE type='table'
+                    AND name NOT LIKE 'sqlite_%'
+                    AND name NOT LIKE 'django_%'
+                    AND name NOT LIKE 'auth_%'
+                    AND name NOT LIKE 'sessions%'
+                """)
+            elif vendor == 'postgresql':
+                cursor.execute("""
+                    SELECT tablename
+                    FROM pg_catalog.pg_tables
+                    WHERE schemaname = 'public'
+                    AND tablename NOT LIKE 'django_%'
+                    AND tablename NOT LIKE 'auth_%'
+                    AND tablename NOT LIKE 'sessions%'
+                """)
+            else:
+                raise NotImplementedError(
+                    f"Database vendor '{vendor}' not supported yet."
+                )
+
             tables = [row[0] for row in cursor.fetchall()]
         return tables
 
@@ -9337,13 +9424,40 @@ class FraudDetector:
 # =======================
 
 def get_database_tables():
-    """Return all non-sqlite internal tables from the database"""
+    """
+    Return all user-defined tables from the database.
+    Supports SQLite and PostgreSQL.
+    Excludes internal system tables and Django's default tables.
+    """
+    vendor = connection.vendor  # 'sqlite', 'postgresql', 'mysql', etc.
+
     with connection.cursor() as cursor:
-        cursor.execute("""
-            SELECT name FROM sqlite_master 
-            WHERE type='table' AND name NOT LIKE 'sqlite_%'
-            ORDER BY name
-        """)
+        if vendor == 'sqlite':
+            cursor.execute("""
+                SELECT name 
+                FROM sqlite_master 
+                WHERE type='table' 
+                  AND name NOT LIKE 'sqlite_%'
+                  AND name NOT LIKE 'django_%'
+                  AND name NOT LIKE 'auth_%'
+                  AND name NOT LIKE 'sessions%'
+                ORDER BY name
+            """)
+        elif vendor == 'postgresql':
+            cursor.execute("""
+                SELECT tablename 
+                FROM pg_catalog.pg_tables 
+                WHERE schemaname='public'
+                  AND tablename NOT LIKE 'django_%'
+                  AND tablename NOT LIKE 'auth_%'
+                  AND tablename NOT LIKE 'sessions%'
+                ORDER BY tablename
+            """)
+        else:
+            raise NotImplementedError(
+                f"Database vendor '{vendor}' is not supported yet."
+            )
+
         return [row[0] for row in cursor.fetchall()]
 
 def get_table_data(table_name):
@@ -9547,13 +9661,35 @@ logger = logging.getLogger(__name__)
 
 # Helper functions
 def get_database_tables():
-    """Get list of available database tables"""
+    """Get list of available database tables across different database backends."""
+    vendor = connection.vendor  # 'sqlite', 'postgresql', 'mysql', etc.
+
     with connection.cursor() as cursor:
-        cursor.execute("""
-            SELECT name FROM sqlite_master 
-            WHERE type='table' AND name NOT LIKE 'sqlite_%'
-            ORDER by name
-        """)
+        if vendor == "sqlite":
+            cursor.execute("""
+                SELECT name 
+                FROM sqlite_master 
+                WHERE type='table' 
+                AND name NOT LIKE 'sqlite_%'
+                ORDER BY name
+            """)
+        elif vendor == "postgresql":
+            cursor.execute("""
+                SELECT tablename 
+                FROM pg_catalog.pg_tables 
+                WHERE schemaname='public'
+                ORDER BY tablename
+            """)
+        elif vendor == "mysql":
+            cursor.execute("""
+                SELECT table_name 
+                FROM information_schema.tables 
+                WHERE table_schema = DATABASE()
+                ORDER BY table_name
+            """)
+        else:
+            raise NotImplementedError(f"Database vendor '{vendor}' is not supported yet.")
+
         return [row[0] for row in cursor.fetchall()]
 
 def get_table_data(table_name):
