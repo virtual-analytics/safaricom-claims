@@ -11396,13 +11396,35 @@ def calculate_quality_score(df):
 
 @login_required(login_url='login')
 def profiling_report_view(request):
-    # Get available datasets
+    """View to generate profiling report with available dataset tables."""
+    vendor = connection.vendor  # 'sqlite', 'postgresql', 'mysql', etc.
+
     with connection.cursor() as cursor:
-        cursor.execute("""
-            SELECT name FROM sqlite_master 
-            WHERE type='table' AND name NOT LIKE 'sqlite_%'
-            ORDER by name
-        """)
+        if vendor == "sqlite":
+            cursor.execute("""
+                SELECT name 
+                FROM sqlite_master 
+                WHERE type='table' 
+                AND name NOT LIKE 'sqlite_%'
+                ORDER BY name
+            """)
+        elif vendor == "postgresql":
+            cursor.execute("""
+                SELECT tablename 
+                FROM pg_catalog.pg_tables 
+                WHERE schemaname='public'
+                ORDER BY tablename
+            """)
+        elif vendor == "mysql":
+            cursor.execute("""
+                SELECT table_name 
+                FROM information_schema.tables 
+                WHERE table_schema = DATABASE()
+                ORDER BY table_name
+            """)
+        else:
+            raise NotImplementedError(f"Database vendor '{vendor}' is not supported yet.")
+
         dataset_ids = [row[0] for row in cursor.fetchall()]
     
     selected_id = request.GET.get('dataset_id', dataset_ids[0] if dataset_ids else None)
