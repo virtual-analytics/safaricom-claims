@@ -1091,10 +1091,40 @@ warnings.filterwarnings('ignore')
 
 @login_required(login_url='login')
 def TemporalAnalysisView(request):
-    """Main view for comprehensive temporal analysis"""
-    # Get available datasets
+    """
+    Main view for comprehensive temporal analysis.
+    Dynamically fetches available datasets depending on the database vendor.
+    Supports SQLite and PostgreSQL.
+    """
+    vendor = connection.vendor  # 'sqlite', 'postgresql', etc.
+
     with connection.cursor() as cursor:
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        if vendor == 'sqlite':
+            cursor.execute("""
+                SELECT name 
+                FROM sqlite_master 
+                WHERE type='table'
+                  AND name NOT LIKE 'sqlite_%'
+                  AND name NOT LIKE 'django_%'
+                  AND name NOT LIKE 'auth_%'
+                  AND name NOT LIKE 'sessions%'
+                ORDER BY name
+            """)
+        elif vendor == 'postgresql':
+            cursor.execute("""
+                SELECT tablename 
+                FROM pg_catalog.pg_tables
+                WHERE schemaname = 'public'
+                  AND tablename NOT LIKE 'django_%'
+                  AND tablename NOT LIKE 'auth_%'
+                  AND tablename NOT LIKE 'sessions%'
+                ORDER BY tablename
+            """)
+        else:
+            raise NotImplementedError(
+                f"Database vendor '{vendor}' is not supported yet."
+            )
+
         dataset_ids = [row[0] for row in cursor.fetchall()]
     
     # Get parameters
