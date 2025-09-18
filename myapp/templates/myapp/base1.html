@@ -651,15 +651,15 @@
                   ><i class="fas fa-file-medical"></i> Claims Overview</a
                 >
               </li>
-              <!--<li><a href="#"><i class="fas fa-list-alt"></i> Claims Amount by Category</a></li>
-                        <li><a href="#"><i class="fas fa-building"></i> Claims Amount by Cost Centre</a></li>
-                        <li><a href="#"><i class="fas fa-briefcase-medical"></i> Service Utilization by Benefit Type</a></li>-->
             </ul>
           </li>
 
           <!-- Advanced Analysis -->
           <li>
-            <a href="#" class="tab-with-arrow">
+            <a
+              href="{% url 'safaricom_claim_distribution' %}"
+              class="tab-with-arrow"
+            >
               <i class="fas fa-chart-line"></i>
               <span class="nav-text">Claims Exploration</span>
               <i class="fas fa-chevron-right arrow"></i>
@@ -690,7 +690,7 @@
 
           <!-- Claims Prediction -->
           <li>
-            <a href="#" class="tab-with-arrow">
+            <a href="{% url 'forecasted_volume' %}" class="tab-with-arrow">
               <i class="fas fa-magic"></i>
               <span class="nav-text">Claims Prediction</span>
               <i class="fas fa-chevron-right arrow"></i>
@@ -721,7 +721,7 @@
 
           <!-- Fraud Detection -->
           <li>
-            <a href="#" class="tab-with-arrow">
+            <a href="{% url 'risk_scores' %}" class="tab-with-arrow">
               <i class="fas fa-search-dollar"></i>
               <span class="nav-text">Fraud Detection</span>
               <i class="fas fa-chevron-right arrow"></i>
@@ -762,7 +762,7 @@
 
           <!-- Reporting -->
           <li>
-            <a href="#" class="tab-with-arrow">
+            <a href="{% url 'download_reports' %}" class="tab-with-arrow">
               <i class="fas fa-file-alt"></i>
               <span class="nav-text">Reporting</span>
               <i class="fas fa-chevron-right arrow"></i>
