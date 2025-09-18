@@ -1,833 +1,948 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
-    <meta charset="UTF-8">
+  <head>
+    <meta charset="UTF-8" />
     <title>{% block title %}the Verse{% endblock %}</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <style>
-        :root {
-            --safaricom-green: #1BB64F;
-            --safaricom-dark-green: #00A651;
-            --safaricom-light-green: #E8F5E9;
-            --safaricom-gray: #F8F9FA;
-            --safaricom-dark-gray: #495057;
-            --safaricom-border: #E0E0E0;
-            --safaricom-card-shadow: 0 4px 12px rgba(27, 182, 79, 0.08);
-            --safaricom-hover-shadow: 0 8px 24px rgba(27, 182, 79, 0.12);
-            --transition-speed: 0.3s;
+      :root {
+        --safaricom-green: #1bb64f;
+        --safaricom-dark-green: #00a651;
+        --safaricom-light-green: #e8f5e9;
+        --safaricom-gray: #f8f9fa;
+        --safaricom-dark-gray: #495057;
+        --safaricom-border: #e0e0e0;
+        --safaricom-card-shadow: 0 4px 12px rgba(27, 182, 79, 0.08);
+        --safaricom-hover-shadow: 0 8px 24px rgba(27, 182, 79, 0.12);
+        --transition-speed: 0.3s;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        background: #f7fdf9;
+        font-family: "Inter", "Segoe UI", Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        color: #333;
+        line-height: 1.6;
+      }
+
+      .safaricom-header {
+        background: linear-gradient(
+          90deg,
+          hsla(139, 49%, 90%, 1) 0%,
+          #d1e2daff 100%
+        );
+        padding: 0.8rem 2.5rem;
+        box-shadow: 0 4px 12px rgba(27, 182, 79, 0.15);
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        transition: all var(--transition-speed);
+      }
+
+      .safaricom-header.scrolled {
+        padding: 0.6rem 2.5rem;
+        box-shadow: 0 4px 20px rgba(27, 182, 79, 0.2);
+      }
+
+      .header-logos {
+        display: flex;
+        align-items: center;
+        gap: 2rem;
+      }
+
+      .minet-logo img,
+      .safaricom-logo img {
+        height: 50px;
+        width: auto;
+        display: block;
+        transition: all var(--transition-speed);
+      }
+
+      .safaricom-header.scrolled .minet-logo img,
+      .safaricom-header.scrolled .safaricom-logo img {
+        height: 45px;
+      }
+
+      .header-title {
+        color: white;
+        font-weight: 600;
+        font-size: 1.4rem;
+        margin-left: 1rem;
+        letter-spacing: 0.5px;
+      }
+
+      .user-menu {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+      }
+
+      .user-info {
+        color: white;
+        text-align: right;
+      }
+
+      .user-name {
+        font-weight: 600;
+        font-size: 0.95rem;
+      }
+
+      .user-role {
+        font-size: 0.8rem;
+        opacity: 0.9;
+      }
+
+      .user-avatar {
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        background: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--safaricom-green);
+        font-weight: bold;
+        cursor: pointer;
+        transition: all var(--transition-speed);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+      }
+
+      .user-avatar:hover {
+        transform: scale(1.05);
+        border-color: white;
+      }
+
+      .safaricom-layout {
+        display: flex;
+        min-height: 100vh;
+        margin-top: 80px;
+      }
+
+      .safaricom-sidebar {
+        width: 300px;
+        background: #fff;
+        padding: 2rem 0;
+        box-shadow: 2px 0 12px rgba(27, 182, 79, 0.06);
+        position: fixed;
+        top: 80px;
+        left: 0;
+        bottom: 0;
+        height: calc(100vh - 80px);
+        display: flex;
+        flex-direction: column;
+        z-index: 900;
+        overflow-y: auto;
+        transition: all var(--transition-speed);
+      }
+
+      .sidebar-collapse {
+        position: absolute;
+        top: 1rem;
+        right: -12px;
+        width: 24px;
+        height: 24px;
+        background: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        z-index: 910;
+        color: var(--safaricom-green);
+      }
+
+      .sidebar-collapse:hover {
+        background: var(--safaricom-green);
+        color: white;
+      }
+
+      .sidebar-collapsed .safaricom-sidebar {
+        width: 80px;
+        overflow: visible;
+      }
+
+      .sidebar-collapsed .safaricom-main-content {
+        margin-left: 80px;
+      }
+
+      .sidebar-collapsed .nav-text,
+      .sidebar-collapsed .sidebar-title,
+      .sidebar-collapsed .sidebar-about p,
+      .sidebar-collapsed .sidebar-btn span,
+      .sidebar-collapsed .logout-btn span,
+      .sidebar-collapsed .arrow {
+        display: none;
+      }
+
+      .sidebar-collapsed .nav-tabs a {
+        justify-content: center;
+        padding: 0.9rem;
+      }
+
+      .sidebar-collapsed .nav-tabs i {
+        margin-right: 0;
+        font-size: 1.2rem;
+      }
+
+      .sidebar-collapsed .sub-tabs {
+        position: absolute;
+        left: 80px;
+        top: 0;
+        width: 220px;
+        background: white;
+        box-shadow: 4px 0 16px rgba(0, 0, 0, 0.1);
+        border-radius: 0 8px 8px 0;
+        z-index: 920;
+      }
+
+      .sidebar-collapsed .nav-tabs li {
+        position: relative;
+      }
+
+      /* Navigation Tabs Styling */
+      .nav-tabs {
+        list-style: none;
+        padding: 0;
+        margin: 0 0 1.5rem 0;
+      }
+
+      .nav-tabs li {
+        margin-bottom: 0.3rem;
+        position: relative;
+      }
+
+      .nav-tabs a {
+        display: flex;
+        align-items: center;
+        padding: 0.9rem 1.5rem;
+        color: var(--safaricom-dark-gray);
+        text-decoration: none;
+        border-radius: 0;
+        transition: all var(--transition-speed);
+        font-weight: 500;
+        position: relative;
+        overflow: hidden;
+        border-left: 4px solid transparent;
+      }
+
+      .nav-tabs a:before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        width: 0;
+        background: linear-gradient(
+          90deg,
+          rgba(27, 182, 79, 0.1) 0%,
+          rgba(27, 182, 79, 0.05) 100%
+        );
+        transition: width var(--transition-speed);
+        z-index: -1;
+      }
+
+      .nav-tabs a:hover:before {
+        width: 100%;
+      }
+
+      .nav-tabs a:hover {
+        color: var(--safaricom-green);
+        border-left-color: var(--safaricom-green);
+      }
+
+      .nav-tabs a.active {
+        background: linear-gradient(
+          90deg,
+          rgba(27, 182, 79, 0.15) 0%,
+          rgba(27, 182, 79, 0.05) 100%
+        );
+        color: var(--safaricom-green);
+        border-left-color: var(--safaricom-green);
+        font-weight: 600;
+      }
+
+      .nav-tabs a.active:before {
+        width: 100%;
+      }
+
+      .nav-tabs a i {
+        margin-right: 12px;
+        width: 20px;
+        text-align: center;
+        transition: all var(--transition-speed);
+      }
+
+      .nav-tabs a.active i {
+        transform: scale(1.1);
+      }
+
+      .sub-tabs {
+        list-style: none;
+        padding-left: 0;
+        margin: 0;
+        display: none;
+        background: rgba(248, 249, 250, 0.8);
+      }
+
+      .sub-tabs li a {
+        padding: 0.8rem 1.5rem 0.8rem 3.2rem;
+        font-size: 0.9rem;
+        color: #666;
+        border-left: 4px solid transparent;
+      }
+
+      .sub-tabs li a:hover {
+        color: var(--safaricom-green);
+        background: rgba(27, 182, 79, 0.05);
+        border-left-color: var(--safaricom-green);
+      }
+
+      .sub-tabs li a.active {
+        color: var(--safaricom-green);
+        background: rgba(27, 182, 79, 0.08);
+        border-left-color: var(--safaricom-green);
+        font-weight: 600;
+      }
+
+      .tab-with-arrow {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .tab-with-arrow .arrow {
+        transition: transform var(--transition-speed);
+        font-size: 0.8rem;
+      }
+
+      .tab-with-arrow.active .arrow {
+        transform: rotate(90deg);
+      }
+
+      /* About Section Styling */
+      .sidebar-about {
+        margin-top: auto;
+        padding: 1.5rem 1.5rem 0;
+        border-top: 1px solid var(--safaricom-border);
+      }
+
+      .sidebar-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--safaricom-green);
+        margin-bottom: 1rem;
+      }
+
+      .sidebar-features {
+        list-style: none;
+        padding: 0;
+        margin: 0 0 1.5rem 0;
+      }
+
+      .sidebar-features li {
+        color: #555;
+        font-size: 0.9rem;
+        margin-bottom: 0.7rem;
+        padding-left: 1.5rem;
+        position: relative;
+      }
+
+      .sidebar-features li:before {
+        content: "•";
+        color: var(--safaricom-green);
+        position: absolute;
+        left: 0;
+        font-size: 1.2em;
+      }
+
+      .sidebar-btn {
+        background: linear-gradient(
+          90deg,
+          var(--safaricom-green) 0%,
+          var(--safaricom-dark-green) 100%
+        );
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: 0.9rem 1.5rem;
+        font-weight: 600;
+        font-size: 0.95rem;
+        cursor: pointer;
+        box-shadow: var(--safaricom-card-shadow);
+        transition: all var(--transition-speed);
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+        text-align: center;
+      }
+
+      .sidebar-btn:hover {
+        background: linear-gradient(
+          90deg,
+          var(--safaricom-dark-green) 0%,
+          #008e44 100%
+        );
+        box-shadow: var(--safaricom-hover-shadow);
+        transform: translateY(-2px);
+      }
+
+      /* Logout Button */
+      .sidebar-logout {
+        margin-top: 1.5rem;
+        padding: 1.5rem 1.5rem 0;
+        border-top: 1px solid var(--safaricom-border);
+      }
+
+      .logout-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f8f9fa;
+        color: #495057;
+        border: 1px solid var(--safaricom-border);
+        border-radius: 8px;
+        padding: 0.8rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all var(--transition-speed);
+        text-decoration: none;
+        gap: 0.5rem;
+      }
+
+      .logout-btn:hover {
+        background: var(--safaricom-green);
+        color: white;
+        border-color: var(--safaricom-green);
+      }
+
+      /* Main Content */
+      .safaricom-main-content {
+        flex: 1;
+        padding: 2.5rem 3rem;
+        background: #f7fdf9;
+        margin-left: 300px;
+        min-height: calc(100vh - 80px);
+        transition: all var(--transition-speed);
+      }
+
+      .content-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+      }
+
+      .page-title {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: var(--safaricom-dark-gray);
+      }
+
+      .breadcrumb {
+        display: flex;
+        align-items: center;
+        color: #6c757d;
+        font-size: 0.9rem;
+      }
+
+      .breadcrumb a {
+        color: var(--safaricom-green);
+        text-decoration: none;
+      }
+
+      .breadcrumb i {
+        margin: 0 0.5rem;
+        font-size: 0.7rem;
+      }
+
+      /* Responsive Design */
+      @media (max-width: 1200px) {
+        .safaricom-sidebar {
+          width: 260px;
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        .safaricom-main-content {
+          margin-left: 260px;
+          padding: 2rem 2.5rem;
+        }
+      }
+
+      @media (max-width: 992px) {
+        .safaricom-sidebar {
+          transform: translateX(-100%);
+          width: 280px;
+          box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
         }
 
-        body {
-            background: #f7fdf9;
-            font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            color: #333;
-            line-height: 1.6;
+        .sidebar-open .safaricom-sidebar {
+          transform: translateX(0);
         }
 
+        .safaricom-main-content {
+          margin-left: 0;
+          padding: 2rem;
+        }
+
+        .mobile-menu-toggle {
+          display: block;
+          position: fixed;
+          bottom: 2rem;
+          right: 2rem;
+          width: 60px;
+          height: 60px;
+          border-radius: 50%;
+          background: var(--safaricom-green);
+          color: white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+          box-shadow: 0 4px 16px rgba(27, 182, 79, 0.3);
+          cursor: pointer;
+        }
+
+        .header-title {
+          display: none;
+        }
+      }
+
+      @media (max-width: 768px) {
         .safaricom-header {
-            background: linear-gradient(90deg, hsla(139, 49%, 90%, 1.00) 0%, #d1e2daff 100%);
-            padding: 0.8rem 2.5rem;
-            box-shadow: 0 4px 12px rgba(27, 182, 79, 0.15);
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            transition: all var(--transition-speed);
+          padding: 0.8rem 1.5rem;
         }
 
-        .safaricom-header.scrolled {
-            padding: 0.6rem 2.5rem;
-            box-shadow: 0 4px 20px rgba(27, 182, 79, 0.2);
-        }
-
-        .header-logos {
-            display: flex;
-            align-items: center;
-            gap: 2rem;
+        .safaricom-main-content {
+          padding: 1.5rem;
         }
 
         .minet-logo img,
         .safaricom-logo img {
-            height: 50px;
-            width: auto;
-            display: block;
-            transition: all var(--transition-speed);
-        }
-
-        .safaricom-header.scrolled .minet-logo img,
-        .safaricom-header.scrolled .safaricom-logo img {
-            height: 45px;
-        }
-
-        .header-title {
-            color: white;
-            font-weight: 600;
-            font-size: 1.4rem;
-            margin-left: 1rem;
-            letter-spacing: 0.5px;
-        }
-
-        .user-menu {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .user-info {
-            color: white;
-            text-align: right;
+          height: 40px;
         }
 
         .user-name {
-            font-weight: 600;
-            font-size: 0.95rem;
+          display: none;
         }
 
         .user-role {
-            font-size: 0.8rem;
-            opacity: 0.9;
+          display: none;
         }
+      }
 
-        .user-avatar {
-            width: 45px;
-            height: 45px;
-            border-radius: 50%;
-            background: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--safaricom-green);
-            font-weight: bold;
-            cursor: pointer;
-            transition: all var(--transition-speed);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-        }
-
-        .user-avatar:hover {
-            transform: scale(1.05);
-            border-color: white;
-        }
-
-        .safaricom-layout {
-            display: flex;
-            min-height: 100vh;
-            margin-top: 80px;
-        }
-
-        .safaricom-sidebar {
-            width: 300px;
-            background: #fff;
-            padding: 2rem 0;
-            box-shadow: 2px 0 12px rgba(27, 182, 79, 0.06);
-            position: fixed;
-            top: 80px;
-            left: 0;
-            bottom: 0;
-            height: calc(100vh - 80px);
-            display: flex;
-            flex-direction: column;
-            z-index: 900;
-            overflow-y: auto;
-            transition: all var(--transition-speed);
-        }
-
-        .sidebar-collapse {
-            position: absolute;
-            top: 1rem;
-            right: -12px;
-            width: 24px;
-            height: 24px;
-            background: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-            z-index: 910;
-            color: var(--safaricom-green);
-        }
-
-        .sidebar-collapse:hover {
-            background: var(--safaricom-green);
-            color: white;
-        }
-
-        .sidebar-collapsed .safaricom-sidebar {
-            width: 80px;
-            overflow: visible;
-        }
-
-        .sidebar-collapsed .safaricom-main-content {
-            margin-left: 80px;
-        }
-
-        .sidebar-collapsed .nav-text,
-        .sidebar-collapsed .sidebar-title,
-        .sidebar-collapsed .sidebar-about p,
-        .sidebar-collapsed .sidebar-btn span,
-        .sidebar-collapsed .logout-btn span,
-        .sidebar-collapsed .arrow {
-            display: none;
-        }
-
-        .sidebar-collapsed .nav-tabs a {
-            justify-content: center;
-            padding: 0.9rem;
-        }
-
-        .sidebar-collapsed .nav-tabs i {
-            margin-right: 0;
-            font-size: 1.2rem;
-        }
-
-        .sidebar-collapsed .sub-tabs {
-            position: absolute;
-            left: 80px;
-            top: 0;
-            width: 220px;
-            background: white;
-            box-shadow: 4px 0 16px rgba(0, 0, 0, 0.1);
-            border-radius: 0 8px 8px 0;
-            z-index: 920;
-        }
-
-        .sidebar-collapsed .nav-tabs li {
-            position: relative;
-        }
-
-        /* Navigation Tabs Styling */
-        .nav-tabs {
-            list-style: none;
-            padding: 0;
-            margin: 0 0 1.5rem 0;
-        }
-
-        .nav-tabs li {
-            margin-bottom: 0.3rem;
-            position: relative;
-        }
-
-        .nav-tabs a {
-            display: flex;
-            align-items: center;
-            padding: 0.9rem 1.5rem;
-            color: var(--safaricom-dark-gray);
-            text-decoration: none;
-            border-radius: 0;
-            transition: all var(--transition-speed);
-            font-weight: 500;
-            position: relative;
-            overflow: hidden;
-            border-left: 4px solid transparent;
-        }
-
-        .nav-tabs a:before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            height: 100%;
-            width: 0;
-            background: linear-gradient(90deg, rgba(27, 182, 79, 0.1) 0%, rgba(27, 182, 79, 0.05) 100%);
-            transition: width var(--transition-speed);
-            z-index: -1;
-        }
-
-        .nav-tabs a:hover:before {
-            width: 100%;
-        }
-
-        .nav-tabs a:hover {
-            color: var(--safaricom-green);
-            border-left-color: var(--safaricom-green);
-        }
-
-        .nav-tabs a.active {
-            background: linear-gradient(90deg, rgba(27, 182, 79, 0.15) 0%, rgba(27, 182, 79, 0.05) 100%);
-            color: var(--safaricom-green);
-            border-left-color: var(--safaricom-green);
-            font-weight: 600;
-        }
-
-        .nav-tabs a.active:before {
-            width: 100%;
-        }
-
-        .nav-tabs a i {
-            margin-right: 12px;
-            width: 20px;
-            text-align: center;
-            transition: all var(--transition-speed);
-        }
-
-        .nav-tabs a.active i {
-            transform: scale(1.1);
-        }
-
-        .sub-tabs {
-            list-style: none;
-            padding-left: 0;
-            margin: 0;
-            display: none;
-            background: rgba(248, 249, 250, 0.8);
-        }
-
-        .sub-tabs li a {
-            padding: 0.8rem 1.5rem 0.8rem 3.2rem;
-            font-size: 0.9rem;
-            color: #666;
-            border-left: 4px solid transparent;
-        }
-
-        .sub-tabs li a:hover {
-            color: var(--safaricom-green);
-            background: rgba(27, 182, 79, 0.05);
-            border-left-color: var(--safaricom-green);
-        }
-
-        .sub-tabs li a.active {
-            color: var(--safaricom-green);
-            background: rgba(27, 182, 79, 0.08);
-            border-left-color: var(--safaricom-green);
-            font-weight: 600;
-        }
-
-        .tab-with-arrow {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .tab-with-arrow .arrow {
-            transition: transform var(--transition-speed);
-            font-size: 0.8rem;
-        }
-
-        .tab-with-arrow.active .arrow {
-            transform: rotate(90deg);
-        }
-
-        /* About Section Styling */
-        .sidebar-about {
-            margin-top: auto;
-            padding: 1.5rem 1.5rem 0;
-            border-top: 1px solid var(--safaricom-border);
-        }
-
-        .sidebar-title {
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: var(--safaricom-green);
-            margin-bottom: 1rem;
-        }
-
-        .sidebar-features {
-            list-style: none;
-            padding: 0;
-            margin: 0 0 1.5rem 0;
-        }
-
-        .sidebar-features li {
-            color: #555;
-            font-size: 0.9rem;
-            margin-bottom: 0.7rem;
-            padding-left: 1.5rem;
-            position: relative;
-        }
-
-        .sidebar-features li:before {
-            content: '•';
-            color: var(--safaricom-green);
-            position: absolute;
-            left: 0;
-            font-size: 1.2em;
-        }
-
-        .sidebar-btn {
-            background: linear-gradient(90deg, var(--safaricom-green) 0%, var(--safaricom-dark-green) 100%);
-            color: #fff;
-            border: none;
-            border-radius: 8px;
-            padding: 0.9rem 1.5rem;
-            font-weight: 600;
-            font-size: 0.95rem;
-            cursor: pointer;
-            box-shadow: var(--safaricom-card-shadow);
-            transition: all var(--transition-speed);
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            margin-bottom: 1.5rem;
-            text-align: center;
-        }
-
-        .sidebar-btn:hover {
-            background: linear-gradient(90deg, var(--safaricom-dark-green) 0%, #008e44 100%);
-            box-shadow: var(--safaricom-hover-shadow);
-            transform: translateY(-2px);
-        }
-
-        /* Logout Button */
-        .sidebar-logout {
-            margin-top: 1.5rem;
-            padding: 1.5rem 1.5rem 0;
-            border-top: 1px solid var(--safaricom-border);
-        }
-
-        .logout-btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #f8f9fa;
-            color: #495057;
-            border: 1px solid var(--safaricom-border);
-            border-radius: 8px;
-            padding: 0.8rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all var(--transition-speed);
-            text-decoration: none;
-            gap: 0.5rem;
-        }
-
-        .logout-btn:hover {
-            background: var(--safaricom-green);
-            color: white;
-            border-color: var(--safaricom-green);
-        }
-
-        /* Main Content */
-        .safaricom-main-content {
-            flex: 1;
-            padding: 2.5rem 3rem;
-            background: #f7fdf9;
-            margin-left: 300px;
-            min-height: calc(100vh - 80px);
-            transition: all var(--transition-speed);
-        }
-
+      @media (max-width: 576px) {
         .content-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 2rem;
-        }
-
-        .page-title {
-            font-size: 1.8rem;
-            font-weight: 700;
-            color: var(--safaricom-dark-gray);
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 0.5rem;
         }
 
         .breadcrumb {
-            display: flex;
-            align-items: center;
-            color: #6c757d;
-            font-size: 0.9rem;
+          margin-top: 0.5rem;
         }
+      }
 
-        .breadcrumb a {
-            color: var(--safaricom-green);
-            text-decoration: none;
-        }
+      /* Animation for page content */
+      .main-content-inner {
+        animation: fadeIn 0.5s ease-in-out;
+      }
 
-        .breadcrumb i {
-            margin: 0 0.5rem;
-            font-size: 0.7rem;
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
         }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
 
-        /* Responsive Design */
-        @media (max-width: 1200px) {
-            .safaricom-sidebar {
-                width: 260px;
-            }
-            
-            .safaricom-main-content {
-                margin-left: 260px;
-                padding: 2rem 2.5rem;
-            }
-        }
+      /* Custom scrollbar for sidebar */
+      .safaricom-sidebar::-webkit-scrollbar {
+        width: 6px;
+      }
 
-        @media (max-width: 992px) {
-            .safaricom-sidebar {
-                transform: translateX(-100%);
-                width: 280px;
-                box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
-            }
-            
-            .sidebar-open .safaricom-sidebar {
-                transform: translateX(0);
-            }
-            
-            .safaricom-main-content {
-                margin-left: 0;
-                padding: 2rem;
-            }
-            
-            .mobile-menu-toggle {
-                display: block;
-                position: fixed;
-                bottom: 2rem;
-                right: 2rem;
-                width: 60px;
-                height: 60px;
-                border-radius: 50%;
-                background: var(--safaricom-green);
-                color: white;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                z-index: 1000;
-                box-shadow: 0 4px 16px rgba(27, 182, 79, 0.3);
-                cursor: pointer;
-            }
-            
-            .header-title {
-                display: none;
-            }
-        }
+      .safaricom-sidebar::-webkit-scrollbar-track {
+        background: #f1f1f1;
+      }
 
-        @media (max-width: 768px) {
-            .safaricom-header {
-                padding: 0.8rem 1.5rem;
-            }
-            
-            .safaricom-main-content {
-                padding: 1.5rem;
-            }
-            
-            .minet-logo img, 
-            .safaricom-logo img {
-                height: 40px;
-            }
-            
-            .user-name {
-                display: none;
-            }
-            
-            .user-role {
-                display: none;
-            }
-        }
+      .safaricom-sidebar::-webkit-scrollbar-thumb {
+        background: var(--safaricom-green);
+        border-radius: 3px;
+      }
 
-        @media (max-width: 576px) {
-            .content-header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 0.5rem;
-            }
-            
-            .breadcrumb {
-                margin-top: 0.5rem;
-            }
-        }
-
-        /* Animation for page content */
-        .main-content-inner {
-            animation: fadeIn 0.5s ease-in-out;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* Custom scrollbar for sidebar */
-        .safaricom-sidebar::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .safaricom-sidebar::-webkit-scrollbar-track {
-            background: #f1f1f1;
-        }
-
-        .safaricom-sidebar::-webkit-scrollbar-thumb {
-            background: var(--safaricom-green);
-            border-radius: 3px;
-        }
-
-        .safaricom-sidebar::-webkit-scrollbar-thumb:hover {
-            background: var(--safaricom-dark-green);
-        }
+      .safaricom-sidebar::-webkit-scrollbar-thumb:hover {
+        background: var(--safaricom-dark-green);
+      }
     </style>
-</head>
+  </head>
 
-<body>
+  <body>
     <div class="safaricom-header">
-        <div class="header-logos">
-            <div class="minet-logo">
-                <img src="{% static 'images/Minet-Logo.png' %}" alt="Minet Logo" />
-            </div>
-            <div class="safaricom-logo" style="position: absolute; left: 50%; transform: translateX(-50%);">
-                <img src="{% static 'images/Safaricom_Logo.png' %}" alt="Safaricom Logo" />
-            </div>
-            
+      <div class="header-logos">
+        <div class="minet-logo">
+          <img src="{% static 'images/Minet-Logo.png' %}" alt="Minet Logo" />
         </div>
-        
-        <div class="user-menu">
-            <div class="user-info">
-                <div class="user-name">{{ username }}</div>
-                <div class="user-role">Administrator</div>
-            </div>
-            <div class="user-avatar">
-                <i class="fas fa-user"></i>
-            </div>
+        <div
+          class="safaricom-logo"
+          style="position: absolute; left: 50%; transform: translateX(-50%)"
+        >
+          <img
+            src="{% static 'images/Safaricom_logo.png' %}"
+            alt="Safaricom Logo"
+          />
         </div>
+      </div>
+
+      <div class="user-menu">
+        <div class="user-info">
+          <div class="user-name">{{ username }}</div>
+          <div class="user-role">Administrator</div>
+        </div>
+        <div class="user-avatar">
+          <i class="fas fa-user"></i>
+        </div>
+      </div>
     </div>
 
     <div class="safaricom-layout">
-        <aside class="safaricom-sidebar">
-            <div class="sidebar-collapse">
-                <i class="fas fa-chevron-left"></i>
-            </div>
-            
-            <ul class="nav-tabs">
+      <aside class="safaricom-sidebar">
+        <div class="sidebar-collapse">
+          <i class="fas fa-chevron-left"></i>
+        </div>
 
-                <!-- Home -->
-                <li>
-                    <a href="safaricom_home.html" class="tab-with-arrow">
-                        <i class="fas fa-tachometer-alt"></i>
-                        <span class="nav-text">Home</span>
-                        <i class="fas fa-chevron-right arrow"></i>
-                    </a>
-                    <ul class="sub-tabs">
-                        <li><a href="{% url 'safaricom_home' %}"><i class="fas fa-file-medical"></i> Claims Overview</a></li>
-                        <!--<li><a href="#"><i class="fas fa-list-alt"></i> Claims Amount by Category</a></li>
+        <ul class="nav-tabs">
+          <!-- Home -->
+          <li>
+            <a href="{% url 'safaricom_home' %}" class="tab-with-arrow">
+              <i class="fas fa-tachometer-alt"></i>
+              <span class="nav-text">Home</span>
+              <i class="fas fa-chevron-right arrow"></i>
+            </a>
+            <ul class="sub-tabs">
+              <li>
+                <a href="{% url 'safaricom_home' %}"
+                  ><i class="fas fa-file-medical"></i> Claims Overview</a
+                >
+              </li>
+              <!--<li><a href="#"><i class="fas fa-list-alt"></i> Claims Amount by Category</a></li>
                         <li><a href="#"><i class="fas fa-building"></i> Claims Amount by Cost Centre</a></li>
                         <li><a href="#"><i class="fas fa-briefcase-medical"></i> Service Utilization by Benefit Type</a></li>-->
-                    </ul>
-                </li>
-
-                <!-- Advanced Analysis -->
-                <li>
-                    <a href="#" class="tab-with-arrow">
-                        <i class="fas fa-chart-line"></i>
-                        <span class="nav-text">Claims Exploration</span>
-                        <i class="fas fa-chevron-right arrow"></i>
-                    </a>
-                    <ul class="sub-tabs">
-                        <li><a href="{% url 'safaricom_claim_distribution' %}"><i class="fas fa-chart-pie"></i> Claims Distribution</a></li>
-                        <li><a href="{% url 'safaricom_temporal_analysis' %}"><i class="fas fa-clock"></i> Temporal Analysis</a></li>
-                        <li><a href="{% url 'safaricom_provider_efficiency' %}"><i class="fas fa-hospital-user"></i> Provider Efficiency</a></li>
-                        <li><a href="{% url 'safaricom_diagnosis_patterns' %}"><i class="fas fa-stethoscope"></i> Diagnosis Patterns</a></li>
-                    </ul>
-                </li>
-
-                <!-- Claims Prediction -->
-                <li>
-                    <a href="#" class="tab-with-arrow">
-                        <i class="fas fa-magic"></i>
-                        <span class="nav-text">Claims Prediction</span>
-                        <i class="fas fa-chevron-right arrow"></i>
-                    </a>
-                    <ul class="sub-tabs">
-                        <li><a href="{% url 'forecasted_volume' %}"><i class="fas fa-chart-area"></i> Forecasted Volume</a></li>
-                        <li><a href="{% url 'confidence_intervals' %}"><i class="fas fa-ruler-combined"></i> Confidence Intervals</a></li>
-                        <li><a href="{% url 'impact_simulation' %}"><i class="fas fa-project-diagram"></i> Impact Simulation</a></li>
-                        <li><a href="{% url 'explainability' %}"><i class="fas fa-lightbulb"></i> Explainability</a></li>
-                    </ul>
-                </li>
-
-                <!-- Fraud Detection -->
-                <li>
-                    <a href="#" class="tab-with-arrow">
-                        <i class="fas fa-search-dollar"></i>
-                        <span class="nav-text">Fraud Detection</span>
-                        <i class="fas fa-chevron-right arrow"></i>
-                    </a>
-                    <ul class="sub-tabs">
-                        <li><a href="{% url 'risk_scores' %}"><i class="fas fa-exclamation-triangle"></i> Risk Scores</a></li>
-                        <li><a href="{% url 'suspicious_providers' %}"><i class="fas fa-user-secret"></i> Suspicious Providers</a></li>
-                        <li><a href="{% url 'diagnosis_patterns' %}"><i class="fas fa-diagnoses"></i> Diagnosis Patterns</a></li>
-                        <li><a href="{% url 'monthly_trends' %}"><i class="fas fa-calendar-alt"></i> Monthly Trends</a></li>
-                        <li><a href="{% url 'potential_cases' %}"><i class="fas fa-exclamation-circle"></i> Potential Cases</a></li>
-                        <li><a href="{% url 'geospatial_heatmap' %}"><i class="fas fa-map-marked-alt"></i> Geospatial Heatmap</a></li>
-                    </ul>
-                </li>
-
-                <!-- Reporting -->
-                <li>
-                    <a href="#" class="tab-with-arrow">
-                        <i class="fas fa-file-alt"></i>
-                        <span class="nav-text">Reporting</span>
-                        <i class="fas fa-chevron-right arrow"></i>
-                    </a>
-                    <ul class="sub-tabs">
-                        <li><a href="{% url 'download_reports' %}"><i class="fas fa-download"></i> Download Reports</a></li>
-                        <li><a href="{% url 'claim_drilldown' %}"><i class="fas fa-search"></i> Claim Drilldown</a></li>
-                        <li><a href="{% url 'custom_filters' %}"><i class="fas fa-filter"></i> Custom Filters</a></li>
-                    </ul>
-                </li>
-
             </ul>
+          </li>
 
+          <!-- Advanced Analysis -->
+          <li>
+            <a href="#" class="tab-with-arrow">
+              <i class="fas fa-chart-line"></i>
+              <span class="nav-text">Claims Exploration</span>
+              <i class="fas fa-chevron-right arrow"></i>
+            </a>
+            <ul class="sub-tabs">
+              <li>
+                <a href="{% url 'safaricom_claim_distribution' %}"
+                  ><i class="fas fa-chart-pie"></i> Claims Distribution</a
+                >
+              </li>
+              <li>
+                <a href="{% url 'safaricom_temporal_analysis' %}"
+                  ><i class="fas fa-clock"></i> Temporal Analysis</a
+                >
+              </li>
+              <li>
+                <a href="{% url 'safaricom_provider_efficiency' %}"
+                  ><i class="fas fa-hospital-user"></i> Provider Efficiency</a
+                >
+              </li>
+              <li>
+                <a href="{% url 'safaricom_diagnosis_patterns' %}"
+                  ><i class="fas fa-stethoscope"></i> Diagnosis Patterns</a
+                >
+              </li>
+            </ul>
+          </li>
 
-            <div class="sidebar-logout">
-                <a href="{% url 'logout' %}" class="logout-btn">
-                    <i class="fas fa-sign-out-alt"></i>
-                    <span>Logout</span>
-                </a>
-            </div>
+          <!-- Claims Prediction -->
+          <li>
+            <a href="#" class="tab-with-arrow">
+              <i class="fas fa-magic"></i>
+              <span class="nav-text">Claims Prediction</span>
+              <i class="fas fa-chevron-right arrow"></i>
+            </a>
+            <ul class="sub-tabs">
+              <li>
+                <a href="{% url 'forecasted_volume' %}"
+                  ><i class="fas fa-chart-area"></i> Forecasted Volume</a
+                >
+              </li>
+              <li>
+                <a href="{% url 'confidence_intervals' %}"
+                  ><i class="fas fa-ruler-combined"></i> Confidence Intervals</a
+                >
+              </li>
+              <li>
+                <a href="{% url 'impact_simulation' %}"
+                  ><i class="fas fa-project-diagram"></i> Impact Simulation</a
+                >
+              </li>
+              <li>
+                <a href="{% url 'explainability' %}"
+                  ><i class="fas fa-lightbulb"></i> Explainability</a
+                >
+              </li>
+            </ul>
+          </li>
 
-            <div class="sidebar-about">
-                <div class="sidebar-title">About</div>
-                <p>A comprehensive healthcare claims reporting platform offering predictive modeling, real-time fraud detection, scenario analysis, and interactive reports—built to inform, empower, and elevate decision-making.</p>
-                
-                <a href="#" class="sidebar-btn">
-                    <i class="fas fa-rocket"></i> <span>Launch API Console</span>
-                </a>
-            </div>
-        </aside>
+          <!-- Fraud Detection -->
+          <li>
+            <a href="#" class="tab-with-arrow">
+              <i class="fas fa-search-dollar"></i>
+              <span class="nav-text">Fraud Detection</span>
+              <i class="fas fa-chevron-right arrow"></i>
+            </a>
+            <ul class="sub-tabs">
+              <li>
+                <a href="{% url 'risk_scores' %}"
+                  ><i class="fas fa-exclamation-triangle"></i> Risk Scores</a
+                >
+              </li>
+              <li>
+                <a href="{% url 'suspicious_providers' %}"
+                  ><i class="fas fa-user-secret"></i> Suspicious Providers</a
+                >
+              </li>
+              <li>
+                <a href="{% url 'diagnosis_patterns' %}"
+                  ><i class="fas fa-diagnoses"></i> Diagnosis Patterns</a
+                >
+              </li>
+              <li>
+                <a href="{% url 'monthly_trends' %}"
+                  ><i class="fas fa-calendar-alt"></i> Monthly Trends</a
+                >
+              </li>
+              <li>
+                <a href="{% url 'potential_cases' %}"
+                  ><i class="fas fa-exclamation-circle"></i> Potential Cases</a
+                >
+              </li>
+              <li>
+                <a href="{% url 'geospatial_heatmap' %}"
+                  ><i class="fas fa-map-marked-alt"></i> Geospatial Heatmap</a
+                >
+              </li>
+            </ul>
+          </li>
 
-        <main class="safaricom-main-content">
-            
-            
-            <div class="main-content-inner">
-                {% block content %}{% endblock %}
-            </div>
-        </main>
+          <!-- Reporting -->
+          <li>
+            <a href="#" class="tab-with-arrow">
+              <i class="fas fa-file-alt"></i>
+              <span class="nav-text">Reporting</span>
+              <i class="fas fa-chevron-right arrow"></i>
+            </a>
+            <ul class="sub-tabs">
+              <li>
+                <a href="{% url 'download_reports' %}"
+                  ><i class="fas fa-download"></i> Download Reports</a
+                >
+              </li>
+              <li>
+                <a href="{% url 'claim_drilldown' %}"
+                  ><i class="fas fa-search"></i> Claim Drilldown</a
+                >
+              </li>
+              <li>
+                <a href="{% url 'custom_filters' %}"
+                  ><i class="fas fa-filter"></i> Custom Filters</a
+                >
+              </li>
+            </ul>
+          </li>
+        </ul>
+
+        <div class="sidebar-logout">
+          <a href="{% url 'logout' %}" class="logout-btn">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>Logout</span>
+          </a>
+        </div>
+
+        <div class="sidebar-about">
+          <div class="sidebar-title">About</div>
+          <p>
+            A comprehensive healthcare claims reporting platform offering
+            predictive modeling, real-time fraud detection, scenario analysis,
+            and interactive reports—built to inform, empower, and elevate
+            decision-making.
+          </p>
+
+          <a href="#" class="sidebar-btn">
+            <i class="fas fa-rocket"></i> <span>Launch API Console</span>
+          </a>
+        </div>
+      </aside>
+
+      <main class="safaricom-main-content">
+        <div class="main-content-inner">{% block content %}{% endblock %}</div>
+      </main>
     </div>
 
     <div class="mobile-menu-toggle">
-        <i class="fas fa-bars"></i>
+      <i class="fas fa-bars"></i>
     </div>
 
     <script>
-        // Toggle sub-tabs when clicking on main tabs
-        document.querySelectorAll('.tab-with-arrow').forEach(tab => {
-            tab.addEventListener('click', function(e) {
-                e.preventDefault();
-                const parentLi = this.closest('li');
-                const subTabs = parentLi.querySelector('.sub-tabs');
-                
-                // Close all other open tabs
-                document.querySelectorAll('.sub-tabs').forEach(st => {
-                    if (st !== subTabs && !st.closest('li').classList.contains('keep-open')) {
-                        st.style.display = 'none';
-                        st.previousElementSibling.classList.remove('active');
-                    }
-                });
-                
-                // Toggle current tab
-                if (subTabs.style.display === 'block') {
-                    subTabs.style.display = 'none';
-                    this.classList.remove('active');
-                } else {
-                    subTabs.style.display = 'block';
-                    this.classList.add('active');
-                    
-                    // If in collapsed mode, add keep-open class to maintain visibility
-                    if (document.body.classList.contains('sidebar-collapsed')) {
-                        parentLi.classList.add('keep-open');
-                    }
-                }
+      // Toggle sub-tabs when clicking on main tabs
+      document.querySelectorAll(".tab-with-arrow").forEach((tab) => {
+        tab.addEventListener("click", function (e) {
+          e.preventDefault();
+          const parentLi = this.closest("li");
+          const subTabs = parentLi.querySelector(".sub-tabs");
+
+          // Close all other open tabs
+          document.querySelectorAll(".sub-tabs").forEach((st) => {
+            if (
+              st !== subTabs &&
+              !st.closest("li").classList.contains("keep-open")
+            ) {
+              st.style.display = "none";
+              st.previousElementSibling.classList.remove("active");
+            }
+          });
+
+          // Toggle current tab
+          if (subTabs.style.display === "block") {
+            subTabs.style.display = "none";
+            this.classList.remove("active");
+          } else {
+            subTabs.style.display = "block";
+            this.classList.add("active");
+
+            // If in collapsed mode, add keep-open class to maintain visibility
+            if (document.body.classList.contains("sidebar-collapsed")) {
+              parentLi.classList.add("keep-open");
+            }
+          }
+        });
+      });
+
+      // Close submenus when clicking outside in collapsed mode
+      document.addEventListener("click", function (e) {
+        if (document.body.classList.contains("sidebar-collapsed")) {
+          if (
+            !e.target.closest(".nav-tabs li.keep-open") &&
+            !e.target.closest(".sub-tabs")
+          ) {
+            document.querySelectorAll(".sub-tabs").forEach((st) => {
+              st.style.display = "none";
             });
+            document.querySelectorAll(".nav-tabs li").forEach((li) => {
+              li.classList.remove("keep-open");
+            });
+          }
+        }
+      });
+
+      // Set active tab based on current page
+      document.addEventListener("DOMContentLoaded", function () {
+        // Get current path
+        const path = window.location.pathname;
+
+        // Find all nav links and check if they match current path
+        document.querySelectorAll(".nav-tabs a").forEach((link) => {
+          if (link.getAttribute("href") === path) {
+            link.classList.add("active");
+
+            // If it's in a sub-tab, also activate the parent tab
+            const parentTab = link.closest(".sub-tabs")?.previousElementSibling;
+            if (parentTab) {
+              parentTab.classList.add("active");
+              parentTab.nextElementSibling.style.display = "block";
+            }
+          }
         });
 
-        // Close submenus when clicking outside in collapsed mode
-        document.addEventListener('click', function(e) {
-            if (document.body.classList.contains('sidebar-collapsed')) {
-                if (!e.target.closest('.nav-tabs li.keep-open') && !e.target.closest('.sub-tabs')) {
-                    document.querySelectorAll('.sub-tabs').forEach(st => {
-                        st.style.display = 'none';
-                    });
-                    document.querySelectorAll('.nav-tabs li').forEach(li => {
-                        li.classList.remove('keep-open');
-                    });
-                }
-            }
+        // Add scroll event listener to header
+        window.addEventListener("scroll", function () {
+          const header = document.querySelector(".safaricom-header");
+          if (window.scrollY > 10) {
+            header.classList.add("scrolled");
+          } else {
+            header.classList.remove("scrolled");
+          }
         });
 
-        // Set active tab based on current page
-        document.addEventListener('DOMContentLoaded', function() {
-            // Get current path
-            const path = window.location.pathname;
-            
-            // Find all nav links and check if they match current path
-            document.querySelectorAll('.nav-tabs a').forEach(link => {
-                if (link.getAttribute('href') === path) {
-                    link.classList.add('active');
-                    
-                    // If it's in a sub-tab, also activate the parent tab
-                    const parentTab = link.closest('.sub-tabs')?.previousElementSibling;
-                    if (parentTab) {
-                        parentTab.classList.add('active');
-                        parentTab.nextElementSibling.style.display = 'block';
-                    }
-                }
-            });
-            
-            // Add scroll event listener to header
-            window.addEventListener('scroll', function() {
-                const header = document.querySelector('.safaricom-header');
-                if (window.scrollY > 10) {
-                    header.classList.add('scrolled');
-                } else {
-                    header.classList.remove('scrolled');
-                }
-            });
-            
-            // Sidebar collapse functionality
-            const sidebarCollapse = document.querySelector('.sidebar-collapse');
-            if (sidebarCollapse) {
-                sidebarCollapse.addEventListener('click', function() {
-                    document.body.classList.toggle('sidebar-collapsed');
-                    this.querySelector('i').classList.toggle('fa-chevron-left');
-                    this.querySelector('i').classList.toggle('fa-chevron-right');
-                });
-            }
-            
-            // Mobile menu toggle
-            const mobileMenuToggle = document.querySelector('.mobile-menu-toggle');
-            if (mobileMenuToggle) {
-                mobileMenuToggle.addEventListener('click', function() {
-                    document.body.classList.toggle('sidebar-open');
-                    this.querySelector('i').classList.toggle('fa-bars');
-                    this.querySelector('i').classList.toggle('fa-times');
-                });
-            }
-        });
+        // Sidebar collapse functionality
+        const sidebarCollapse = document.querySelector(".sidebar-collapse");
+        if (sidebarCollapse) {
+          sidebarCollapse.addEventListener("click", function () {
+            document.body.classList.toggle("sidebar-collapsed");
+            this.querySelector("i").classList.toggle("fa-chevron-left");
+            this.querySelector("i").classList.toggle("fa-chevron-right");
+          });
+        }
 
-        // Close submenus when clicking on a sub-tab item in collapsed mode
-        document.querySelectorAll('.sub-tabs a').forEach(link => {
-            link.addEventListener('click', function() {
-                if (document.body.classList.contains('sidebar-collapsed')) {
-                    document.querySelectorAll('.sub-tabs').forEach(st => {
-                        st.style.display = 'none';
-                    });
-                    document.querySelectorAll('.nav-tabs li').forEach(li => {
-                        li.classList.remove('keep-open');
-                    });
-                }
+        // Mobile menu toggle
+        const mobileMenuToggle = document.querySelector(".mobile-menu-toggle");
+        if (mobileMenuToggle) {
+          mobileMenuToggle.addEventListener("click", function () {
+            document.body.classList.toggle("sidebar-open");
+            this.querySelector("i").classList.toggle("fa-bars");
+            this.querySelector("i").classList.toggle("fa-times");
+          });
+        }
+      });
+
+      // Close submenus when clicking on a sub-tab item in collapsed mode
+      document.querySelectorAll(".sub-tabs a").forEach((link) => {
+        link.addEventListener("click", function () {
+          if (document.body.classList.contains("sidebar-collapsed")) {
+            document.querySelectorAll(".sub-tabs").forEach((st) => {
+              st.style.display = "none";
             });
+            document.querySelectorAll(".nav-tabs li").forEach((li) => {
+              li.classList.remove("keep-open");
+            });
+          }
         });
+      });
     </script>
 
     {% block extra_scripts %}
-        <!-- jQuery and Select2 (required by child templates) -->
-        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <!-- jQuery and Select2 (required by child templates) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link
+      href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     {% endblock %}
-</body>
+  </body>
 </html>
