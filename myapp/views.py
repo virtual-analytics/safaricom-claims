@@ -4659,11 +4659,30 @@ def safaricom_home(request):
             'unique_members': unique_members
         })
 
-        # ===== SINGLE INTERACTIVE CHART =====
+        # ===== SINGLE INTERACTIVE CHART WITH TREND LINES =====
         if not df.empty:
             daily_df = df.resample('D').size().reset_index(name='count')
             weekly_df = df.resample('W-MON').size().reset_index(name='count')
             monthly_df = df.resample('M').size().reset_index(name='count')
+
+            # Add trend lines for each aggregation
+            def add_trend_line(data_df, period_name):
+                # Convert datetime to numeric for linear regression
+                x = np.arange(len(data_df))
+                y = data_df['count'].values
+                
+                # Linear regression
+                slope, intercept = np.polyfit(x, y, 1)
+                trend_line = slope * x + intercept
+                
+                return go.Scatter(
+                    x=data_df['datetime'], 
+                    y=trend_line,
+                    mode='lines',
+                    name=f'{period_name} Trend',
+                    line=dict(dash='dash', width=2),
+                    visible=False
+                )
 
             fig = go.Figure()
 
@@ -4673,6 +4692,7 @@ def safaricom_home(request):
                 mode='lines+markers', name='Daily Claims', visible=True,
                 line=dict(color='blue')
             ))
+            fig.add_trace(add_trend_line(daily_df, 'Daily'))
 
             # Weekly trace
             fig.add_trace(go.Scatter(
@@ -4680,6 +4700,7 @@ def safaricom_home(request):
                 mode='lines+markers', name='Weekly Claims', visible=False,
                 line=dict(color='orange')
             ))
+            fig.add_trace(add_trend_line(weekly_df, 'Weekly'))
 
             # Monthly trace
             fig.add_trace(go.Scatter(
@@ -4687,6 +4708,7 @@ def safaricom_home(request):
                 mode='lines+markers', name='Monthly Claims', visible=False,
                 line=dict(color='green')
             ))
+            fig.add_trace(add_trend_line(monthly_df, 'Monthly'))
 
             # Dropdown for switching
             fig.update_layout(
@@ -4704,15 +4726,15 @@ def safaricom_home(request):
                     buttons=list([
                         dict(label="Daily",
                              method="update",
-                             args=[{"visible": [True, False, False]},
+                             args=[{"visible": [True, True, False, False, False, False]},
                                    {"title": "Daily Claims Submitted"}]),
                         dict(label="Weekly",
                              method="update",
-                             args=[{"visible": [False, True, False]},
+                             args=[{"visible": [False, False, True, True, False, False]},
                                    {"title": "Weekly Claims Submitted"}]),
                         dict(label="Monthly",
                              method="update",
-                             args=[{"visible": [False, False, True]},
+                             args=[{"visible": [False, False, False, False, True, True]},
                                    {"title": "Monthly Claims Submitted"}]),
                     ]),
                 )]
@@ -4727,7 +4749,64 @@ def safaricom_home(request):
 
             context['visualizations']['claims_time_chart'] = fig.to_html(full_html=False)
 
-        # ===== OTHER CHARTS REMAIN UNCHANGED =====
+        # ===== LORENZ CHART (Wealth Distribution) =====
+        if 'claim_me' in df.columns and 'amount' in df.columns:
+            # Calculate cumulative distribution of claims by member
+            member_totals = df.groupby('claim_me')['amount'].sum().sort_values()
+            total_amount_all = member_totals.sum()
+            
+            # Calculate Lorenz curve data
+            cumulative_members = np.arange(1, len(member_totals) + 1) / len(member_totals)
+            cumulative_amount = member_totals.cumsum() / total_amount_all
+            
+            # Perfect equality line
+            perfect_equality = np.linspace(0, 1, len(cumulative_members))
+            
+            # Calculate Gini coefficient
+            gini = 1 - 2 * np.trapz(cumulative_amount, cumulative_members)
+            
+            lorenz_fig = go.Figure()
+            
+            # Lorenz curve
+            lorenz_fig.add_trace(go.Scatter(
+                x=cumulative_members, y=cumulative_amount,
+                mode='lines', name='Lorenz Curve',
+                line=dict(color='#1BB64F', width=3),
+                fill='tonexty'
+            ))
+            
+            # Perfect equality line
+            lorenz_fig.add_trace(go.Scatter(
+                x=[0, 1], y=[0, 1],
+                mode='lines', name='Perfect Equality',
+                line=dict(color='red', dash='dash', width=2)
+            ))
+            
+            lorenz_fig.update_layout(
+                title=f'Lorenz Curve (Gini Coefficient: {gini:.3f})',
+                xaxis_title='Cumulative Proportion of Members',
+                yaxis_title='Cumulative Proportion of Claims Amount',
+                showlegend=True,
+                margin=dict(l=20, r=20, t=60, b=20),
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)',
+                annotations=[
+                    dict(
+                        x=0.5, y=0.5,
+                        xref="paper", yref="paper",
+                        text=f"Gini: {gini:.3f}",
+                        showarrow=False,
+                        font=dict(size=16, color="black"),
+                        bgcolor="white",
+                        bordercolor="black",
+                        borderwidth=1
+                    )
+                ]
+            )
+            
+            context['visualizations']['lorenz_chart'] = lorenz_fig.to_html(full_html=False)
+
+        # ===== BENEFIT CATEGORY CHART =====
         if 'benefit' in df.columns:
             benefit_amount = df.groupby('benefit')['amount'].sum().reset_index()
             if not benefit_amount.empty:
@@ -5519,93 +5598,159 @@ def claim_distribution(request):
 ######
 
 ##### Temporal analysis 
-
 import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
-from django.shortcuts import render
+from plotly.subplots import make_subplots
 from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
 from django.utils import timezone
-from datetime import timedelta
-from myapp.models import ClaimRecord
-
+from datetime import timedelta, datetime
+from django.db.models import Q, Sum, Count, Max, Min
+from .models import ClaimRecord
+import json
+from scipy import stats
+from statsmodels.tsa.seasonal import seasonal_decompose
+import warnings
+warnings.filterwarnings('ignore')
 
 @login_required
 def temporal_analysis(request):
     username = request.user.username
     context = {
-        'username': username,
-        'time_unit': request.GET.get('time_unit', 'month'),
-        'metric': request.GET.get('metric', 'Total Amount'),
-        'benefit_types': ClaimRecord.objects.values_list('benefit', flat=True).distinct().order_by('benefit'),
-        'providers': ClaimRecord.objects.values_list('prov_name', flat=True).distinct().order_by('prov_name'),
-        'cost_centers': ClaimRecord.objects.values_list('cost_center', flat=True).distinct().order_by('cost_center'),
-        'error_message': None,
-        'temporal_chart': None,
-        'cumulative_chart': None,
-        'dow_chart': None,
-        'month_chart': None,
-        'hour_chart': None,
-        'boxplot_chart': None,
-        'categorical_chart': None,
-        'heatmap_chart': None,
+        "username": username,
+        "time_unit": request.GET.get("time_unit", "month"),
+        "metric": request.GET.get("metric", "Total Amount"),
+        "benefit_types": ClaimRecord.objects.values_list("benefit", flat=True).distinct().order_by("benefit"),
+        "providers": ClaimRecord.objects.values_list("prov_name", flat=True).distinct().order_by("prov_name"),
+        "cost_centers": ClaimRecord.objects.values_list("cost_center", flat=True).distinct().order_by("cost_center"),
+        "error_message": None,
+        "summary_stats": None,
+        "applied_filters": {
+            "time_period": request.GET.get("time_period", "all"),
+            "benefit_type": request.GET.get("benefit_type", "all"),
+            "provider": request.GET.get("provider", "all"),
+            "cost_center": request.GET.get("cost_center", "all"),
+        },
     }
+
+    # Chart placeholders
+    charts = [
+        "temporal_chart", "cumulative_chart", "dow_chart", "month_chart",
+        "hour_chart", "boxplot_chart", "categorical_chart", "heatmap_chart",
+        "rolling_avg_chart", "providers_chart", "benefits_chart", "anomaly_chart",
+        "decomposition_chart", "seasonality_chart", "correlation_chart",
+        "weekly_pattern_chart", "trend_analysis_chart", "comparison_chart",
+    ]
+    for chart in charts:
+        context[chart] = None
 
     try:
         # -----------------------------
         # Apply filters
         # -----------------------------
-        time_period = request.GET.get('time_period', 'all')
-        benefit_type = request.GET.get('benefit_type', 'all')
-        provider = request.GET.get('provider', 'all')
-        cost_center = request.GET.get('cost_center', 'all')
+        time_period = request.GET.get("time_period", "all")
+        benefit_type = request.GET.get("benefit_type", "all")
+        provider = request.GET.get("provider", "all")
+        cost_center = request.GET.get("cost_center", "all")
 
         claims = ClaimRecord.objects.all()
 
-        if time_period != 'all':
+        # Time filter
+        if time_period != "all":
             today = timezone.now().date()
-            if time_period == '3m':
+            if time_period == "3m":
                 start_date = today - timedelta(days=90)
-            elif time_period == '6m':
+                claims = claims.filter(claim_prov_date__gte=start_date)
+            elif time_period == "6m":
                 start_date = today - timedelta(days=180)
-            elif time_period == '12m':
+                claims = claims.filter(claim_prov_date__gte=start_date)
+            elif time_period == "12m":
                 start_date = today - timedelta(days=365)
-            claims = claims.filter(claim_prov_date__gte=start_date)
+                claims = claims.filter(claim_prov_date__gte=start_date)
+            else:  # custom year
+                try:
+                    start_date = datetime(int(time_period), 1, 1).date()
+                    end_date = datetime(int(time_period), 12, 31).date()
+                    claims = claims.filter(claim_prov_date__range=[start_date, end_date])
+                except Exception:
+                    pass
 
-        if benefit_type != 'all':
+        if benefit_type != "all":
             claims = claims.filter(benefit=benefit_type)
-        if provider != 'all':
+        if provider != "all":
             claims = claims.filter(prov_name=provider)
-        if cost_center != 'all':
+        if cost_center != "all":
             claims = claims.filter(cost_center=cost_center)
 
-        claims = claims.values(
-            'id', 'claim_prov_date', 'amount', 'prov_name', 'benefit', 'cost_center'
-        )[:20000]
+        # -----------------------------
+        # Summary statistics
+        # -----------------------------
+        summary_data = claims.aggregate(
+            total_claims=Count("claim_me", distinct=True),  # unique claim_me
+            total_amount=Sum("amount"),
+            max_amount=Max("amount"),
+            min_amount=Min("amount"),
+        )
 
-        df = pd.DataFrame.from_records(claims)
-        if df.empty:
-            context['error_message'] = "No claims found matching your filters"
-            return render(request, 'myapp/temporal_analysis.html', context)
+        # Correct average claim
+        if summary_data["total_amount"] and summary_data["total_claims"]:
+            avg_amount = summary_data["total_amount"] / summary_data["total_claims"]
+        else:
+            avg_amount = 0
 
-        # Clean amount
-        df['amount'] = pd.to_numeric(
-            df['amount'].astype(str).str.replace(r'[^\d.]', '', regex=True).replace('', '0'),
-            errors='coerce'
-        ).fillna(0)
-
-        # Handle datetime
-        df['datetime'] = pd.to_datetime(df['claim_prov_date'], errors='coerce')
-        df = df.dropna(subset=['datetime']).sort_values('datetime')
-        if df.empty:
-            context['error_message'] = "No valid claim dates available"
-            return render(request, 'myapp/temporal_analysis.html', context)
-
-        df.set_index('datetime', inplace=True)
+        context["summary_stats"] = {
+            "total_claims": f"{summary_data['total_claims']:,}" if summary_data["total_claims"] else "0",
+            "total_amount": f"KES {summary_data['total_amount']:,.2f}" if summary_data["total_amount"] else "KES 0.00",
+            "avg_amount": f"KES {avg_amount:,.2f}" if avg_amount else "KES 0.00",
+            "max_amount": f"KES {summary_data['max_amount']:,.2f}" if summary_data["max_amount"] else "KES 0.00",
+            "min_amount": f"KES {summary_data['min_amount']:,.2f}" if summary_data["min_amount"] else "KES 0.00",
+        }
 
         # -----------------------------
-        # Aggregations
+        # Build dataframe for charts
+        # -----------------------------
+        claims_data = claims.values(
+            "id", "claim_prov_date", "amount", "prov_name", "benefit",
+            "cost_center", "gender", "dependent_type", "ailment",
+        )
+        df = pd.DataFrame.from_records(claims_data)
+
+        if df.empty:
+            context["error_message"] = "No claims found matching your filters"
+            return render(request, "myapp/temporal_analysis.html", context)
+
+        # Ensure numeric amounts
+        df["amount"] = pd.to_numeric(
+            df["amount"].astype(str).str.replace(r"[^\d.]", "", regex=True).replace("", "0"),
+            errors="coerce",
+        ).fillna(0)
+
+        df["datetime"] = pd.to_datetime(df["claim_prov_date"], errors="coerce")
+        df = df.dropna(subset=["datetime"]).sort_values("datetime")
+
+        if df.empty:
+            context["error_message"] = "No valid claim dates available"
+            return render(request, "myapp/temporal_analysis.html", context)
+
+        df.set_index("datetime", inplace=True)
+
+        # Create filter description
+        filter_description = []
+        if time_period != 'all':
+            filter_description.append(f"Period: {time_period}")
+        if benefit_type != 'all':
+            filter_description.append(f"Benefit: {benefit_type}")
+        if provider != 'all':
+            filter_description.append(f"Provider: {provider}")
+        if cost_center != 'all':
+            filter_description.append(f"Cost Center: {cost_center}")
+        
+        filter_text = " | ".join(filter_description) if filter_description else "All Data"
+
+        # -----------------------------
+        # 1. MAIN TEMPORAL ANALYSIS
         # -----------------------------
         period_map = {
             'day': 'D',
@@ -5617,114 +5762,315 @@ def temporal_analysis(request):
         time_unit = request.GET.get('time_unit', 'month')
         resample_rule = period_map.get(time_unit, 'M')
 
-        temporal = df.resample(resample_rule).agg(
-            total_amount=('amount', 'sum'),
-            claim_count=('id', 'count'),
-            avg_amount=('amount', 'mean')
-        ).reset_index()
+        temporal = df.resample(resample_rule).agg({
+            'amount': ['sum', 'count', 'mean', 'max', 'min', 'std'],
+            'id': 'count'
+        }).round(2)
+        
+        temporal.columns = ['total_amount', 'claim_count', 'avg_amount', 'max_amount', 'min_amount', 'std_amount', 'id_count']
+        temporal = temporal.reset_index()
+        temporal = temporal[temporal['claim_count'] > 0]  # Remove periods with no claims
 
-        # -----------------------------
-        # Main temporal chart
-        # -----------------------------
+        # Main temporal chart with enhanced insights
         metric = request.GET.get('metric', 'Total Amount')
         if metric == 'Claim Count':
-            y_col, title, label = 'claim_count', f"Claim Count by {time_unit}", "Number of Claims"
+            y_col, title_suffix, label = 'claim_count', "Claim Count", "Number of Claims"
         elif metric == 'Average Amount':
-            y_col, title, label = 'avg_amount', f"Average Claim Amount by {time_unit}", "Average Amount (KES)"
+            y_col, title_suffix, label = 'avg_amount', "Average Claim Amount", "Average Amount (KES)"
+        elif metric == 'Max Amount':
+            y_col, title_suffix, label = 'max_amount', "Maximum Claim Amount", "Max Amount (KES)"
+        elif metric == 'Min Amount':
+            y_col, title_suffix, label = 'min_amount', "Minimum Claim Amount", "Min Amount (KES)"
         else:
-            y_col, title, label = 'total_amount', f"Total Claim Amount by {time_unit}", "Total Amount (KES)"
+            y_col, title_suffix, label = 'total_amount', "Total Claim Amount", "Total Amount (KES)"
 
-        fig = px.line(temporal, x='datetime', y=y_col,
-                      title=title, labels={y_col: label}, template='plotly_white')
-        fig.update_traces(line_color='#1BB64F')
+        title = f"{title_suffix} by {time_unit.capitalize()} - {filter_text}"
+        
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=temporal['datetime'], y=temporal[y_col], 
+                               mode='lines+markers', name=title_suffix,
+                               line=dict(color='#1BB64F', width=3),
+                               marker=dict(size=6)))
+        
+        # Add trend line
+        if len(temporal) > 1:
+            z = np.polyfit(range(len(temporal)), temporal[y_col], 1)
+            p = np.poly1d(z)
+            fig.add_trace(go.Scatter(x=temporal['datetime'], y=p(range(len(temporal))),
+                                   mode='lines', name='Trend Line',
+                                   line=dict(color='#FF6B6B', width=2, dash='dash')))
+        
+        fig.update_layout(title=dict(text=title, x=0.5, xanchor='center'),
+                         xaxis_title=f"Time ({time_unit.capitalize()})",
+                         yaxis_title=label,
+                         template='plotly_white',
+                         hovermode='x unified')
         context['temporal_chart'] = fig.to_html(full_html=False)
 
         # -----------------------------
-        # Cumulative growth
+        # 2. CUMULATIVE ANALYSIS
         # -----------------------------
         temporal['cumulative_amount'] = temporal['total_amount'].cumsum()
-        cum_fig = px.area(temporal, x='datetime', y='cumulative_amount',
-                          title="Cumulative Claim Amount Over Time",
-                          labels={'cumulative_amount': 'Cumulative Amount (KES)'},
-                          template='plotly_white')
+        temporal['cumulative_claims'] = temporal['claim_count'].cumsum()
+        
+        cum_fig = make_subplots(specs=[[{"secondary_y": True}]])
+        cum_fig.add_trace(go.Scatter(x=temporal['datetime'], y=temporal['cumulative_amount'],
+                                   name="Cumulative Amount", line=dict(color='#3498DB', width=3)),
+                         secondary_y=False)
+        cum_fig.add_trace(go.Scatter(x=temporal['datetime'], y=temporal['cumulative_claims'],
+                                   name="Cumulative Claims", line=dict(color='#9B59B6', width=3)),
+                         secondary_y=True)
+        
+        cum_fig.update_layout(title=dict(text=f"Cumulative Growth Analysis - {filter_text}", x=0.5),
+                            xaxis_title="Time",
+                            template='plotly_white')
+        cum_fig.update_yaxes(title_text="Cumulative Amount (KES)", secondary_y=False)
+        cum_fig.update_yaxes(title_text="Cumulative Claims", secondary_y=True)
         context['cumulative_chart'] = cum_fig.to_html(full_html=False)
 
         # -----------------------------
-        # Day-of-week pattern
+        # 3. DEEP DAY-OF-WEEK ANALYSIS
         # -----------------------------
         df['day_of_week'] = df.index.day_name()
-        dow = df.groupby('day_of_week')['amount'].sum().reindex(
-            ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-        ).reset_index()
-        dow_fig = px.bar(dow, x='day_of_week', y='amount',
-                         title="Total Claim Amount by Day of Week",
-                         labels={'amount': 'Total Amount (KES)'}, template='plotly_white')
+        df['day_of_week_num'] = df.index.dayofweek
+        
+        # Multiple perspectives on day-of-week analysis
+        dow_analysis = df.groupby('day_of_week').agg({
+            'amount': ['sum', 'mean', 'count', 'std'],
+            'id': 'count'
+        }).round(2)
+        dow_analysis.columns = ['total_amount', 'avg_amount', 'transaction_count', 'std_amount', 'claim_count']
+        dow_analysis = dow_analysis.reindex(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'])
+        
+        # Create comprehensive day-of-week visualization
+        dow_fig = make_subplots(rows=2, cols=2, 
+                               subplot_titles=('Total Amount by Day', 'Average Claim by Day', 
+                                             'Number of Claims by Day', 'Variability by Day'),
+                               specs=[[{"secondary_y": False}, {"secondary_y": False}],
+                                     [{"secondary_y": False}, {"secondary_y": False}]])
+        
+        # Total amount
+        dow_fig.add_trace(go.Bar(x=dow_analysis.index, y=dow_analysis['total_amount'],
+                               name="Total Amount", marker_color='#1BB64F'),
+                         row=1, col=1)
+        
+        # Average amount
+        dow_fig.add_trace(go.Bar(x=dow_analysis.index, y=dow_analysis['avg_amount'],
+                               name="Avg Amount", marker_color='#3498DB'),
+                         row=1, col=2)
+        
+        # Claim count
+        dow_fig.add_trace(go.Bar(x=dow_analysis.index, y=dow_analysis['claim_count'],
+                               name="Claim Count", marker_color='#9B59B6'),
+                         row=2, col=1)
+        
+        # Variability (std)
+        dow_fig.add_trace(go.Bar(x=dow_analysis.index, y=dow_analysis['std_amount'],
+                               name="Std Deviation", marker_color='#E74C3C'),
+                         row=2, col=2)
+        
+        dow_fig.update_layout(height=600, title=dict(text=f"Deep Day-of-Week Analysis - {filter_text}", x=0.5),
+                            showlegend=False, template='plotly_white')
         context['dow_chart'] = dow_fig.to_html(full_html=False)
 
         # -----------------------------
-        # Month-over-month comparison
+        # 4. MONTHLY DEEP DIVE
         # -----------------------------
         df['month'] = df.index.month_name()
-        monthly = df.groupby('month')['amount'].sum().reindex([
-            'January','February','March','April','May','June',
-            'July','August','September','October','November','December'
-        ]).reset_index()
-        month_fig = px.bar(monthly, x='month', y='amount',
-                           title="Total Claim Amount by Calendar Month",
-                           labels={'amount': 'Total Amount (KES)'}, template='plotly_white')
+        df['month_num'] = df.index.month
+        
+        monthly_analysis = df.groupby('month').agg({
+            'amount': ['sum', 'mean', 'count', 'std', 'max'],
+            'id': 'count'
+        }).round(2)
+        monthly_analysis.columns = ['total_amount', 'avg_amount', 'transaction_count', 'std_amount', 'max_amount', 'claim_count']
+        monthly_analysis = monthly_analysis.reindex([
+            'January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'
+        ])
+        
+        month_fig = go.Figure()
+        month_fig.add_trace(go.Bar(x=monthly_analysis.index, y=monthly_analysis['total_amount'],
+                                 name="Total Amount", marker_color='#1BB64F'))
+        month_fig.add_trace(go.Scatter(x=monthly_analysis.index, y=monthly_analysis['avg_amount'],
+                                     name="Average Amount", line=dict(color='#E74C3C', width=3),
+                                     yaxis='y2'))
+        
+        month_fig.update_layout(title=dict(text=f"Monthly Analysis with Trends - {filter_text}", x=0.5),
+                              xaxis_title="Month",
+                              yaxis_title="Total Amount (KES)",
+                              yaxis2=dict(title="Average Amount (KES)", overlaying='y', side='right'),
+                              template='plotly_white')
         context['month_chart'] = month_fig.to_html(full_html=False)
 
         # -----------------------------
-        # Hour-of-day analysis
+        # 5. HOURLY ANALYSIS (if time data available)
         # -----------------------------
-        if not df.index.floor('H').empty:
+        if 'claim_prov_date' in df.columns and pd.api.types.is_datetime64_any_dtype(df['claim_prov_date']):
             df['hour'] = df.index.hour
-            hour = df.groupby('hour')['amount'].sum().reset_index()
-            hour_fig = px.bar(hour, x='hour', y='amount',
-                              title="Claim Amounts by Hour of Day",
-                              labels={'amount': 'Total Amount (KES)'}, template='plotly_white')
+            hourly_analysis = df.groupby('hour').agg({
+                'amount': ['sum', 'mean', 'count', 'std'],
+                'id': 'count'
+            }).round(2)
+            hourly_analysis.columns = ['total_amount', 'avg_amount', 'transaction_count', 'std_amount', 'claim_count']
+            
+            hour_fig = make_subplots(specs=[[{"secondary_y": True}]])
+            hour_fig.add_trace(go.Bar(x=hourly_analysis.index, y=hourly_analysis['total_amount'],
+                                    name="Total Amount", marker_color='#3498DB'),
+                             secondary_y=False)
+            hour_fig.add_trace(go.Scatter(x=hourly_analysis.index, y=hourly_analysis['avg_amount'],
+                                        name="Average Amount", line=dict(color='#E74C3C', width=3)),
+                             secondary_y=True)
+            
+            hour_fig.update_layout(title=dict(text=f"Hourly Claim Patterns - {filter_text}", x=0.5),
+                                 xaxis_title="Hour of Day",
+                                 template='plotly_white')
+            hour_fig.update_yaxes(title_text="Total Amount (KES)", secondary_y=False)
+            hour_fig.update_yaxes(title_text="Average Amount (KES)", secondary_y=True)
             context['hour_chart'] = hour_fig.to_html(full_html=False)
 
         # -----------------------------
-        # Variability boxplot by month
+        # 6. VARIABILITY AND DISTRIBUTION ANALYSIS
         # -----------------------------
-        box_fig = px.box(df.reset_index(), x=df.index.month_name(), y='amount',
-                         title="Distribution of Claim Amounts by Month",
-                         labels={'amount': 'Claim Amount (KES)', 'x': 'Month'},
-                         template='plotly_white')
+        box_fig = px.box(df.reset_index(), x='month', y='amount',
+                        title=f"Claim Amount Distribution by Month - {filter_text}",
+                        labels={'amount': 'Claim Amount (KES)', 'month': 'Month'},
+                        template='plotly_white')
+        box_fig.update_traces(marker_color='#9B59B6')
         context['boxplot_chart'] = box_fig.to_html(full_html=False)
 
         # -----------------------------
-        # Categorical temporal trends
+        # 7. CATEGORICAL TEMPORAL TRENDS
         # -----------------------------
-        cat_fig = px.histogram(df.reset_index(), x='datetime', color='benefit',
-                               title="Claims by Benefit Type Over Time",
-                               template='plotly_white')
-        cat_fig.update_layout(barmode='stack')
+        # Top 5 benefits for clearer visualization
+        top_benefits = df.groupby('benefit')['amount'].sum().nlargest(5).index
+        df_top_benefits = df[df['benefit'].isin(top_benefits)]
+        
+        categorical_data = df_top_benefits.groupby([pd.Grouper(freq='M'), 'benefit'])['amount'].sum().reset_index()
+        
+        cat_fig = px.area(categorical_data, x='datetime', y='amount', color='benefit',
+                         title=f"Temporal Trends by Top 5 Benefit Types - {filter_text}",
+                         template='plotly_white')
         context['categorical_chart'] = cat_fig.to_html(full_html=False)
 
         # -----------------------------
-        # Heatmap (Month vs Day of Week)
+        # 8. HEATMAP ANALYSIS
         # -----------------------------
-        df['month_num'] = df.index.month
-        heat = df.groupby([df['day_of_week'], df['month_num']])['amount'].sum().reset_index()
-        heatmap_fig = px.density_heatmap(
-            heat, x='month_num', y='day_of_week', z='amount',
-            title="Heatmap of Claim Amounts by Month & Day of Week",
-            labels={'month_num': 'Month', 'day_of_week': 'Day of Week', 'amount': 'Total Amount'},
-            template='plotly_white', nbinsx=12
-        )
+        heatmap_data = df.groupby([df['day_of_week_num'], df['month_num']])['amount'].sum().unstack(fill_value=0)
+        
+        heatmap_fig = go.Figure(data=go.Heatmap(
+            z=heatmap_data.values,
+            x=['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+            y=['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            colorscale='Viridis',
+            hoverongaps=False
+        ))
+        
+        heatmap_fig.update_layout(title=dict(text=f"Claims Heatmap: Day of Week vs Month - {filter_text}", x=0.5),
+                                xaxis_title="Month",
+                                yaxis_title="Day of Week",
+                                template='plotly_white')
         context['heatmap_chart'] = heatmap_fig.to_html(full_html=False)
+
+        # -----------------------------
+        # 9. ADVANCED TIME SERIES ANALYSIS
+        # -----------------------------
+        
+        # Rolling averages with different windows
+        daily_data = df.resample('D')['amount'].sum().reset_index()
+        for window in [7, 30]:
+            daily_data[f'rolling_{window}'] = daily_data['amount'].rolling(window=window).mean()
+        
+        rolling_fig = go.Figure()
+        rolling_fig.add_trace(go.Scatter(x=daily_data['datetime'], y=daily_data['amount'],
+                                       name='Daily Amount', line=dict(color='lightgray')))
+        rolling_fig.add_trace(go.Scatter(x=daily_data['datetime'], y=daily_data['rolling_7'],
+                                       name='7-Day Rolling Avg', line=dict(color='#3498DB', width=3)))
+        rolling_fig.add_trace(go.Scatter(x=daily_data['datetime'], y=daily_data['rolling_30'],
+                                       name='30-Day Rolling Avg', line=dict(color='#E74C3C', width=3)))
+        
+        rolling_fig.update_layout(title=dict(text=f"Rolling Average Analysis - {filter_text}", x=0.5),
+                                xaxis_title="Date",
+                                yaxis_title="Amount (KES)",
+                                template='plotly_white')
+        context['rolling_avg_chart'] = rolling_fig.to_html(full_html=False)
+        
+        # Anomaly detection
+        daily_data['z_score'] = np.abs(stats.zscore(daily_data['amount'].fillna(0)))
+        anomalies = daily_data[daily_data['z_score'] > 3]
+        
+        anomaly_fig = go.Figure()
+        anomaly_fig.add_trace(go.Scatter(x=daily_data['datetime'], y=daily_data['amount'],
+                                       name='Daily Claims', mode='lines',
+                                       line=dict(color='#3498DB')))
+        if not anomalies.empty:
+            anomaly_fig.add_trace(go.Scatter(x=anomalies['datetime'], y=anomalies['amount'],
+                                           name='Anomalies', mode='markers',
+                                           marker=dict(color='red', size=8, symbol='x')))
+        
+        anomaly_fig.update_layout(title=dict(text=f"Anomaly Detection (Z-score > 3) - {filter_text}", x=0.5),
+                                template='plotly_white')
+        context['anomaly_chart'] = anomaly_fig.to_html(full_html=False)
+
+        # -----------------------------
+        # 10. TOP PROVIDERS AND BENEFITS
+        # -----------------------------
+        top_providers = df.groupby('prov_name')['amount'].sum().nlargest(10)
+        providers_fig = px.bar(x=top_providers.values, y=top_providers.index, orientation='h',
+                              title=f"Top 10 Providers by Total Claims - {filter_text}",
+                              labels={'x': 'Total Amount (KES)', 'y': 'Provider'},
+                              template='plotly_white')
+        providers_fig.update_traces(marker_color='#1BB64F')
+        context['providers_chart'] = providers_fig.to_html(full_html=False)
+        
+        top_benefits = df.groupby('benefit')['amount'].sum().nlargest(10)
+        benefits_fig = px.pie(values=top_benefits.values, names=top_benefits.index,
+                             title=f"Top 10 Benefits Distribution - {filter_text}",
+                             template='plotly_white')
+        context['benefits_chart'] = benefits_fig.to_html(full_html=False)
+
+        # -----------------------------
+        # 11. SEASONAL DECOMPOSITION
+        # -----------------------------
+        if len(daily_data) > 30:
+            try:
+                # Ensure we have a regular time series
+                daily_data = daily_data.set_index('datetime').asfreq('D').fillna(0)
+                decomposition = seasonal_decompose(daily_data['amount'], model='additive', period=30)
+                
+                decomp_fig = make_subplots(rows=4, cols=1, subplot_titles=('Original', 'Trend', 'Seasonal', 'Residual'))
+                
+                decomp_fig.add_trace(go.Scatter(x=daily_data.index, y=decomposition.observed, name='Original'), row=1, col=1)
+                decomp_fig.add_trace(go.Scatter(x=daily_data.index, y=decomposition.trend, name='Trend'), row=2, col=1)
+                decomp_fig.add_trace(go.Scatter(x=daily_data.index, y=decomposition.seasonal, name='Seasonal'), row=3, col=1)
+                decomp_fig.add_trace(go.Scatter(x=daily_data.index, y=decomposition.resid, name='Residual'), row=4, col=1)
+                
+                decomp_fig.update_layout(height=800, title=dict(text=f"Time Series Decomposition - {filter_text}", x=0.5),
+                                      showlegend=False, template='plotly_white')
+                context['decomposition_chart'] = decomp_fig.to_html(full_html=False)
+            except Exception as e:
+                print(f"Decomposition error: {e}")
+
+        # -----------------------------
+        # 12. WEEKLY PATTERN ANALYSIS
+        # -----------------------------
+        df['week'] = df.index.isocalendar().week
+        df['year'] = df.index.year
+        weekly_pattern = df.groupby(['year', 'week'])['amount'].sum().reset_index()
+        weekly_pattern['date'] = weekly_pattern.apply(lambda x: datetime.strptime(f"{x['year']}-{x['week']}-1", "%Y-%W-%w"), axis=1)
+        
+        weekly_fig = px.line(weekly_pattern, x='date', y='amount',
+                           title=f"Weekly Claim Patterns - {filter_text}",
+                           template='plotly_white')
+        weekly_fig.update_traces(line=dict(color='#9B59B6', width=2))
+        context['weekly_pattern_chart'] = weekly_fig.to_html(full_html=False)
 
     except Exception as e:
         import traceback
         traceback.print_exc()
-        context['error_message'] = f"An error occurred: {str(e)}"
+        context['error_message'] = f"An error occurred during analysis: {str(e)}"
 
     return render(request, 'myapp/temporal_analysis.html', context)
-
-
-
 
 #####
 ####

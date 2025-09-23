@@ -18,7 +18,7 @@
     --safaricom-dark-gray: #495057;
     --safaricom-border: #E0E0E0;
     --safaricom-card-shadow: 0 4px 12px rgba(27, 182, 79, 0.08);
-    --safaricom-hover-shadow: 0 8px 24px rgba(27, 182, 79, 0.12);
+    --safaricom-hover-shadow: 0 8px 24px rgba(136, 169, 147, 0.12);
     --transition-speed: 0.3s;
 }
 
@@ -500,7 +500,6 @@ footer a:hover {
   </div>
 </div>
 
-
 <!-- Date Range Filter -->
 <div class="date-filter-wrapper">
   <div class="date-filter">
@@ -522,16 +521,30 @@ footer a:hover {
 
 <!-- Dashboard Columns -->
 <div class="dashboard-container">
-  <!-- Claims Over Time Chart -->
+  <!-- Claims Over Time Chart with Trend Lines -->
   <div class="dashboard-card full-width-card">
     <div class="card-header">
-      <i class="fas fa-chart-line"></i> Claims Submitted Over Time
+      <i class="fas fa-chart-line"></i> Claims Submitted Over Time (with Trend Lines)
     </div>
     <div class="chart-container">
       {% if visualizations.claims_time_chart %}
         {{ visualizations.claims_time_chart|safe }}
       {% else %}
         <div class="no-data-message">No claims data available</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Lorenz Chart -->
+  <div class="dashboard-card">
+    <div class="card-header">
+      <i class="fas fa-chart-pie"></i> Claims Distribution (Lorenz Curve)
+    </div>
+    <div class="chart-container">
+      {% if visualizations.lorenz_chart %}
+        {{ visualizations.lorenz_chart|safe }}
+      {% else %}
+        <div class="no-data-message">No distribution data available</div>
       {% endif %}
     </div>
   </div>

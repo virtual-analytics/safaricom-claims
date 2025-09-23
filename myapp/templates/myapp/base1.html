@@ -820,6 +820,9 @@
 
     <script>
       // Toggle sub-tabs when clicking on main tabs
+      // Always prevent default for main tabs so they only expand/collapse
+      // and do not navigate away
+
       document.querySelectorAll(".tab-with-arrow").forEach((tab) => {
         tab.addEventListener("click", function (e) {
           e.preventDefault();

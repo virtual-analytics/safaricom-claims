@@ -1,138 +1,815 @@
 {% extends 'myapp/base1.html' %}
 {% load static %}
 
-{% block title %}Temporal Analysis | Safaricom{% endblock %}
+{% block title %}Advanced Temporal Analysis | Safaricom{% endblock %}
 
 {% block head %}
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 {% endblock %}
 
 {% block content %}
 <style>
-  .dashboard-container { display:grid; grid-template-columns:1fr; gap:25px; padding:30px; }
-  .dashboard-card { background:#fff; border-radius:10px; box-shadow:0 1px 6px rgba(0,0,0,0.06); padding:20px; }
-  .card-header { font-size:1.1rem; font-weight:600; margin-bottom:15px; color:#1BB64F; border-bottom:1px solid #eee; padding-bottom:5px; }
-  .chart-container { height:500px; width:100%; }
-  .filter-controls { display:flex; flex-wrap:wrap; gap:15px; margin:0 30px 20px 30px; }
-  .filter-control { display:flex; flex-direction:column; min-width:200px; flex-grow:1; }
-  .filter-control label { font-size:0.9rem; margin-bottom:5px; color:#555; }
-  .filter-control select { padding:8px 12px; border-radius:6px; border:1px solid #ddd; background:#fff; }
-  .time-unit-selector, .metric-selector { display:flex; gap:10px; margin:0 30px 20px 30px; flex-wrap:wrap; }
-  .time-unit-btn, .metric-btn { padding:8px 16px; background:#f0f0f0; border:none; border-radius:6px; cursor:pointer; transition:all 0.3s ease; }
-  .time-unit-btn:hover, .metric-btn:hover { background:#e0e0e0; }
-  .time-unit-btn.active, .metric-btn.active { background:#1BB64F; color:#fff; }
-  .insights-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:20px; }
-  @media(max-width:768px) { .insights-grid { grid-template-columns:1fr; } .filter-controls { flex-direction:column; } }
+  :root {
+    --primary: #1BB64F;
+    --primary-dark: #16a145;
+    --secondary: #3498DB;
+    --accent: #9B59B6;
+    --danger: #E74C3C;
+    --warning: #F39C12;
+    --success: #27AE60;
+    --dark: #2C3E50;
+    --light: #ECF0F1;
+    --gray: #95A5A6;
+    --bg-light: #F8F9FA;
+  }
+  
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+  
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, var(--bg-light) 0%, #e6f7ed 100%);
+    color: var(--dark);
+    line-height: 1.6;
+  }
+  
+  .dashboard-container { 
+    display: grid; 
+    grid-template-columns: 1fr; 
+    gap: 25px; 
+    padding: 20px; 
+    max-width: 1800px;
+    margin: 0 auto;
+  }
+  
+  .dashboard-card { 
+    background: #fff; 
+    border-radius: 12px; 
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08); 
+    padding: 24px; 
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: 1px solid rgba(0,0,0,0.05);
+  }
+  
+  .dashboard-card:hover { 
+    transform: translateY(-5px); 
+    box-shadow: 0 8px 25px rgba(0,0,0,0.12); 
+  }
+  
+  .card-header { 
+    font-size: 1.3rem; 
+    font-weight: 600; 
+    margin-bottom: 20px; 
+    color: var(--primary); 
+    border-bottom: 1px solid rgba(0,0,0,0.1); 
+    padding-bottom: 12px; 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+  }
+  
+  .card-header .info-icon {
+    color: var(--gray);
+    cursor: pointer;
+    font-size: 1.1rem;
+  }
+  
+  .chart-container { 
+    height: 450px; 
+    width: 100%; 
+  }
+  
+  .compact-chart {
+    height: 350px;
+  }
+  
+  .filter-section { 
+    background: #fff; 
+    padding: 24px; 
+    border-radius: 12px; 
+    margin: 0 20px 20px; 
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    border: 1px solid rgba(0,0,0,0.05);
+  }
+  
+  .filter-controls { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); 
+    gap: 20px; 
+    margin-bottom: 20px;
+  }
+  
+  .filter-control { 
+    display: flex; 
+    flex-direction: column; 
+  }
+  
+  .filter-control label { 
+    font-size: 0.9rem; 
+    margin-bottom: 8px; 
+    color: var(--dark); 
+    font-weight: 500; 
+  }
+  
+  .filter-control select { 
+    padding: 12px 15px; 
+    border-radius: 8px; 
+    border: 1px solid #ddd; 
+    background: #fff; 
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    transition: border 0.3s ease;
+  }
+  
+  .filter-control select:focus {
+    border-color: var(--primary);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(27, 182, 79, 0.1);
+  }
+  
+  .time-unit-selector, .metric-selector { 
+    display: flex; 
+    gap: 10px; 
+    margin: 20px 0; 
+    flex-wrap: wrap; 
+    align-items: center;
+    padding: 0 20px;
+  }
+  
+  .time-unit-btn, .metric-btn { 
+    padding: 12px 20px; 
+    background: #f0f0f0; 
+    border: none; 
+    border-radius: 8px; 
+    cursor: pointer; 
+    transition: all 0.3s ease; 
+    font-weight: 500; 
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .time-unit-btn:hover, .metric-btn:hover { 
+    background: #e0e0e0; 
+  }
+  
+  .time-unit-btn.active, .metric-btn.active { 
+    background: var(--primary); 
+    color: #fff; 
+    box-shadow: 0 4px 10px rgba(27, 182, 79, 0.3);
+  }
+  
+  .insights-grid { 
+    display: grid; 
+    grid-template-columns: 1fr 1fr; 
+    gap: 25px; 
+  }
+  
+  .summary-stats { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); 
+    gap: 20px; 
+    margin: 0 20px 30px;
+  }
+  
+  .stat-card { 
+    background: #fff; 
+    padding: 20px; 
+    border-radius: 12px; 
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08); 
+    text-align: center; 
+    transition: transform 0.3s ease;
+    border: 1px solid rgba(0,0,0,0.05);
+  }
+  
+  .stat-card:hover {
+    transform: translateY(-3px);
+  }
+  
+  .stat-value { 
+    font-size: 1.8rem; 
+    font-weight: 700; 
+    color: var(--primary); 
+    margin: 10px 0; 
+  }
+  
+  .stat-label { 
+    font-size: 0.95rem; 
+    color: var(--gray); 
+    font-weight: 500;
+  }
+  
+  .active-filters { 
+    display: flex; 
+    flex-wrap: wrap; 
+    gap: 12px; 
+    margin: 20px 0; 
+    padding: 0 20px;
+  }
+  
+  .filter-badge { 
+    background: rgba(27, 182, 79, 0.1); 
+    color: var(--primary-dark); 
+    padding: 8px 16px; 
+    border-radius: 20px; 
+    font-size: 0.9rem; 
+    display: flex; 
+    align-items: center; 
+    font-weight: 500;
+    border: 1px solid rgba(27, 182, 79, 0.2);
+  }
+  
+  .filter-badge i { 
+    margin-right: 8px; 
+    font-size: 0.9rem;
+  }
+  
+  @media (max-width: 1200px) { 
+    .insights-grid { grid-template-columns: 1fr; } 
+    .filter-controls { grid-template-columns: 1fr 1fr; } 
+  }
+  
+  @media (max-width: 768px) { 
+    .filter-controls { grid-template-columns: 1fr; } 
+    .summary-stats { grid-template-columns: 1fr 1fr; }
+    .time-unit-selector, .metric-selector { justify-content: center; }
+  }
+  
+  @media (max-width: 576px) {
+    .summary-stats { grid-template-columns: 1fr; }
+  }
+  
+  .apply-btn { 
+    padding: 12px 24px; 
+    background: var(--primary); 
+    color: #fff; 
+    border: none; 
+    border-radius: 8px; 
+    cursor: pointer; 
+    font-weight: 600; 
+    transition: background 0.3s; 
+    align-self: flex-end; 
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    box-shadow: 0 4px 10px rgba(27, 182, 79, 0.3);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .apply-btn:hover { 
+    background: var(--primary-dark); 
+    box-shadow: 0 6px 15px rgba(27, 182, 79, 0.4);
+  }
+  
+  .clear-filters { 
+    margin-top: 15px; 
+    text-align: right; 
+    padding: 0 20px;
+  }
+  
+  .clear-link { 
+    color: var(--primary); 
+    text-decoration: none; 
+    font-size: 0.95rem; 
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .clear-link:hover { 
+    text-decoration: underline; 
+  }
+  
+  .section-title {
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: var(--dark);
+    text-align: center;
+    margin: 30px 0 15px;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  
+  .section-subtitle {
+    font-size: 1.2rem;
+    color: var(--gray);
+    text-align: center;
+    margin-bottom: 40px;
+    font-weight: 400;
+  }
+  
+  .loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    flex-direction: column;
+  }
+  
+  .spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid rgba(27, 182, 79, 0.2);
+    border-radius: 50%;
+    border-top-color: var(--primary);
+    animation: spin 1s ease-in-out infinite;
+  }
+  
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  
+  .tab-container {
+    margin: 20px 0;
+    padding: 0 20px;
+  }
+  
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid #ddd;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  
+  .tab {
+    padding: 12px 24px;
+    cursor: pointer;
+    font-weight: 500;
+    color: var(--gray);
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .tab.active {
+    color: var(--primary);
+    border-bottom: 3px solid var(--primary);
+  }
+  
+  .tab-content {
+    display: none;
+  }
+  
+  .tab-content.active {
+    display: block;
+  }
+  
+  footer {
+    text-align: center; 
+    padding: 30px; 
+    margin-top: 60px; 
+    color: var(--gray); 
+    border-top: 1px solid rgba(0,0,0,0.1);
+    font-size: 0.9rem;
+  }
+  
+  footer a {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 500;
+  }
+  
+  footer a:hover {
+    text-decoration: underline;
+  }
+
+  .insight-badge {
+    background: var(--secondary);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    margin-left: 10px;
+  }
 </style>
 
-<div style="text-align:center; margin-top:2rem;">
-  <h1 style="color:#1BB64F; font-size:2.5rem; font-weight:800;">Temporal Claim Patterns</h1>
-  <p style="font-size:1.2rem; color:#232323; margin-bottom:2.5rem;">Analyze claim patterns over time</p>
+<div class="loading-overlay" id="loadingOverlay" style="display: none;">
+  <div class="spinner"></div>
+  <p style="margin-top: 20px; font-weight: 500;">Processing your data...</p>
 </div>
 
-<form method="GET" class="filter-controls">
-  <div class="filter-control">
-    <label for="time_period">Time Period</label>
-    <select id="time_period" name="time_period" class="searchable-select">
-      <option value="all" {% if request.GET.time_period == 'all' %}selected{% endif %}>All Time</option>
-      <option value="3m" {% if request.GET.time_period == '3m' %}selected{% endif %}>Last 3 Months</option>
-      <option value="6m" {% if request.GET.time_period == '6m' %}selected{% endif %}>Last 6 Months</option>
-      <option value="12m" {% if request.GET.time_period == '12m' %}selected{% endif %}>Last 12 Months</option>
-    </select>
-  </div>
-  <div class="filter-control">
-    <label for="benefit_type">Benefit Type</label>
-    <select id="benefit_type" name="benefit_type" class="searchable-select">
-      <option value="all">All Types</option>
-      {% for type in benefit_types %}<option value="{{ type }}" {% if request.GET.benefit_type == type %}selected{% endif %}>{{ type }}</option>{% endfor %}
-    </select>
-  </div>
-  <div class="filter-control">
-    <label for="provider">Provider</label>
-    <select id="provider" name="provider" class="searchable-select">
-      <option value="all">All Providers</option>
-      {% for p in providers %}<option value="{{ p }}" {% if request.GET.provider == p %}selected{% endif %}>{{ p }}</option>{% endfor %}
-    </select>
-  </div>
-  <div class="filter-control">
-    <label for="cost_center">Cost Center</label>
-    <select id="cost_center" name="cost_center" class="searchable-select">
-      <option value="all">All Centers</option>
-      {% for c in cost_centers %}<option value="{{ c }}" {% if request.GET.cost_center == c %}selected{% endif %}>{{ c }}</option>{% endfor %}
-    </select>
-  </div>
-  <div class="filter-control" style="justify-content:flex-end;">
-    <label>&nbsp;</label>
-    <button type="submit" style="padding:8px 16px; background:#1BB64F; color:#fff; border:none; border-radius:6px;">Apply Filters</button>
-  </div>
-</form>
+<div class="section-title">Advanced Temporal Claim Analysis</div>
+<div class="section-subtitle">Deep insights into claim patterns, trends, and anomalies over time</div>
 
+<div class="filter-section">
+  <h2 style="color: var(--primary); margin-bottom: 20px; display: flex; align-items: center;">
+    <i class="fas fa-filter"></i> Filter Claims Data
+  </h2>
+  
+  <form method="GET" id="filterForm" class="filter-controls">
+    <div class="filter-control">
+      <label for="time_period"><i class="fas fa-calendar"></i> Time Period</label>
+      <select id="time_period" name="time_period" class="searchable-select">
+        <option value="all" {% if request.GET.time_period == 'all' %}selected{% endif %}>All Time</option>
+        <option value="3m" {% if request.GET.time_period == '3m' %}selected{% endif %}>Last 3 Months</option>
+        <option value="6m" {% if request.GET.time_period == '6m' %}selected{% endif %}>Last 6 Months</option>
+        <option value="12m" {% if request.GET.time_period == '12m' %}selected{% endif %}>Last 12 Months</option>
+        {% for year in years %}
+        <option value="{{ year }}" {% if request.GET.time_period == year %}selected{% endif %}>{{ year }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    
+    <div class="filter-control">
+      <label for="benefit_type"><i class="fas fa-tag"></i> Benefit Type</label>
+      <select id="benefit_type" name="benefit_type" class="searchable-select">
+        <option value="all">All Types</option>
+        {% for type in benefit_types %}
+          <option value="{{ type }}" {% if request.GET.benefit_type == type %}selected{% endif %}>{{ type }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    
+    <div class="filter-control">
+      <label for="provider"><i class="fas fa-hospital"></i> Provider</label>
+      <select id="provider" name="provider" class="searchable-select">
+        <option value="all">All Providers</option>
+        {% for p in providers %}
+          <option value="{{ p }}" {% if request.GET.provider == p %}selected{% endif %}>{{ p }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    
+    <div class="filter-control">
+      <label for="cost_center"><i class="fas fa-building"></i> Cost Center</label>
+      <select id="cost_center" name="cost_center" class="searchable-select">
+        <option value="all">All Centers</option>
+        {% for c in cost_centers %}
+          <option value="{{ c }}" {% if request.GET.cost_center == c %}selected{% endif %}>{{ c }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    
+    <div class="filter-control">
+      <label style="opacity: 0;">Apply Filters</label>
+      <button type="submit" class="apply-btn">
+        <i class="fas fa-check"></i> Apply Filters
+      </button>
+    </div>
+    
+    <!-- Hidden fields for time unit and metric -->
+    <input type="hidden" id="time_unit" name="time_unit" value="{{ time_unit }}">
+    <input type="hidden" id="metric" name="metric" value="{{ metric }}">
+  </form>
+  
+  <div class="clear-filters">
+    <a href="{% url 'temporal_analysis' %}" class="clear-link">
+      <i class="fas fa-times"></i> Clear all filters
+    </a>
+  </div>
+</div>
+
+<!-- Active Filters Display -->
+{% if applied_filters and applied_filters.values|join:'' != 'allallallall' %}
+<div class="active-filters">
+  <strong>Active Filters:</strong>
+  {% if applied_filters.time_period != 'all' %}
+    <div class="filter-badge">
+      <i class="fas fa-calendar"></i> Period: {{ applied_filters.time_period }}
+    </div>
+  {% endif %}
+  {% if applied_filters.benefit_type != 'all' %}
+    <div class="filter-badge">
+      <i class="fas fa-tag"></i> Benefit: {{ applied_filters.benefit_type }}
+    </div>
+  {% endif %}
+  {% if applied_filters.provider != 'all' %}
+    <div class="filter-badge">
+      <i class="fas fa-hospital"></i> Provider: {{ applied_filters.provider }}
+    </div>
+  {% endif %}
+  {% if applied_filters.cost_center != 'all' %}
+    <div class="filter-badge">
+      <i class="fas fa-building"></i> Cost Center: {{ applied_filters.cost_center }}
+    </div>
+  {% endif %}
+</div>
+{% endif %}
+
+<!-- Summary Statistics -->
+{% if summary_stats %}
+<div class="summary-stats">
+  <div class="stat-card">
+    <div class="stat-label">Total Claims</div>
+    <div class="stat-value">{{ summary_stats.total_claims }}</div>
+    <div class="stat-desc">Number of claims processed</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Total Amount</div>
+    <div class="stat-value">{{ summary_stats.total_amount }}</div>
+    <div class="stat-desc">Sum of all claims</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Average Claim</div>
+    <div class="stat-value">{{ summary_stats.avg_amount }}</div>
+    <div class="stat-desc">Per claim average</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Max Claim</div>
+    <div class="stat-value">{{ summary_stats.max_amount }}</div>
+    <div class="stat-desc">Highest claim value</div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Time Unit and Metric Selectors -->
 <div class="time-unit-selector">
-  <button class="time-unit-btn {% if time_unit == 'day' %}active{% endif %}" data-unit="day">Daily</button>
-  <button class="time-unit-btn {% if time_unit == 'week' %}active{% endif %}" data-unit="week">Weekly</button>
-  <button class="time-unit-btn {% if time_unit == 'month' %}active{% endif %}" data-unit="month">Monthly</button>
-  <button class="time-unit-btn {% if time_unit == 'quarter' %}active{% endif %}" data-unit="quarter">Quarterly</button>
-  <button class="time-unit-btn {% if time_unit == 'year' %}active{% endif %}" data-unit="year">Yearly</button>
-  <input type="hidden" id="time_unit" name="time_unit" value="{{ time_unit }}">
+  <span style="font-weight: 600; margin-right: 10px; align-self: center; color: var(--dark);">
+    <i class="fas fa-chart-line"></i> Time Unit:
+  </span>
+  <button class="time-unit-btn {% if time_unit == 'day' %}active{% endif %}" data-unit="day">
+    <i class="fas fa-calendar-day"></i> Daily
+  </button>
+  <button class="time-unit-btn {% if time_unit == 'week' %}active{% endif %}" data-unit="week">
+    <i class="fas fa-calendar-week"></i> Weekly
+  </button>
+  <button class="time-unit-btn {% if time_unit == 'month' %}active{% endif %}" data-unit="month">
+    <i class="fas fa-calendar-alt"></i> Monthly
+  </button>
+  <button class="time-unit-btn {% if time_unit == 'quarter' %}active{% endif %}" data-unit="quarter">
+    <i class="fas fa-calendar"></i> Quarterly
+  </button>
+  <button class="time-unit-btn {% if time_unit == 'year' %}active{% endif %}" data-unit="year">
+    <i class="fas fa-calendar-year"></i> Yearly
+  </button>
 </div>
 
 <div class="metric-selector">
-  <button class="metric-btn {% if metric == 'Total Amount' %}active{% endif %}" data-metric="Total Amount">Total Amount</button>
-  <button class="metric-btn {% if metric == 'Claim Count' %}active{% endif %}" data-metric="Claim Count">Claim Count</button>
-  <button class="metric-btn {% if metric == 'Average Amount' %}active{% endif %}" data-metric="Average Amount">Average Amount</button>
-  <input type="hidden" id="metric" name="metric" value="{{ metric }}">
+  <span style="font-weight: 600; margin-right: 10px; align-self: center; color: var(--dark);">
+    <i class="fas fa-ruler"></i> Metric:
+  </span>
+  <button class="metric-btn {% if metric == 'Total Amount' %}active{% endif %}" data-metric="Total Amount">
+    <i class="fas fa-money-bill-wave"></i> Total Amount
+  </button>
+  <button class="metric-btn {% if metric == 'Claim Count' %}active{% endif %}" data-metric="Claim Count">
+    <i class="fas fa-list-ol"></i> Claim Count
+  </button>
+  <button class="metric-btn {% if metric == 'Average Amount' %}active{% endif %}" data-metric="Average Amount">
+    <i class="fas fa-calculator"></i> Average Amount
+  </button>
+  <button class="metric-btn {% if metric == 'Max Amount' %}active{% endif %}" data-metric="Max Amount">
+    <i class="fas fa-arrow-up"></i> Max Amount
+  </button>
+  <button class="metric-btn {% if metric == 'Min Amount' %}active{% endif %}" data-metric="Min Amount">
+    <i class="fas fa-arrow-down"></i> Min Amount
+  </button>
 </div>
 
+<!-- Tab Navigation -->
+<div class="tab-container">
+  <div class="tabs">
+    <div class="tab active" data-tab="overview">
+      <i class="fas fa-chart-area"></i> Overview
+    </div>
+    <div class="tab" data-tab="patterns">
+      <i class="fas fa-wave-square"></i> Patterns
+    </div>
+    <div class="tab" data-tab="deepdive">
+      <i class="fas fa-microscope"></i> Deep Dive
+    </div>
+    <div class="tab" data-tab="advanced">
+      <i class="fas fa-rocket"></i> Advanced
+    </div>
+  </div>
+</div>
+
+<!-- Charts Container -->
 <div class="dashboard-container">
-  <!-- Main Temporal Chart -->
-  <div class="dashboard-card">
-    <div class="card-header">Claims Over Time</div>
-    <div class="chart-container">{% if temporal_chart %}{{ temporal_chart|safe }}{% elif error_message %}<div style="text-align:center; padding:50px 20px; color:#ff6b6b;">{{ error_message }}</div>{% else %}<div style="text-align:center; padding:50px 20px; color:#777;">No temporal data available</div>{% endif %}</div>
+  <!-- Overview Tab -->
+  <div class="tab-content active" id="overview">
+    <!-- Main Temporal Chart -->
+    <div class="dashboard-card">
+      <div class="card-header">
+        Claims Over Time
+        <span class="insight-badge">Trend Analysis</span>
+      </div>
+      <div class="chart-container">
+        {% if temporal_chart %}
+          {{ temporal_chart|safe }}
+        {% elif error_message %}
+          <div style="text-align:center; padding:50px 20px; color:#ff6b6b;">{{ error_message }}</div>
+        {% else %}
+          <div style="text-align:center; padding:50px 20px; color:#777;">No temporal data available</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Cumulative Chart -->
+    <div class="dashboard-card">
+      <div class="card-header">
+        Cumulative Growth
+        <span class="insight-badge">Progress Tracking</span>
+      </div>
+      <div class="chart-container">
+        {% if cumulative_chart %}
+          {{ cumulative_chart|safe }}
+        {% else %}
+          <div style="text-align:center; padding:50px 20px; color:#777;">No cumulative data available</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Day of Week & Month Analysis -->
+    <div class="insights-grid">
+      <div class="dashboard-card">
+        <div class="card-header">
+          Deep Day-of-Week Analysis
+          <span class="insight-badge">Weekly Patterns</span>
+        </div>
+        <div class="chart-container">
+          {% if dow_chart %}
+            {{ dow_chart|safe }}
+          {% else %}
+            <div style="text-align:center; padding:50px 20px; color:#777;">No day-of-week data available</div>
+          {% endif %}
+        </div>
+      </div>
+      <div class="dashboard-card">
+        <div class="card-header">
+          Calendar Month Comparison
+          <span class="insight-badge">Seasonal Trends</span>
+        </div>
+        <div class="chart-container">
+          {% if month_chart %}
+            {{ month_chart|safe }}
+          {% else %}
+            <div style="text-align:center; padding:50px 20px; color:#777;">No monthly data available</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
   </div>
 
-  <!-- Cumulative Chart -->
-  <div class="dashboard-card">
-    <div class="card-header">Cumulative Growth</div>
-    <div class="chart-container">{% if cumulative_chart %}{{ cumulative_chart|safe }}{% endif %}</div>
+  <!-- Patterns Tab -->
+  <div class="tab-content" id="patterns">
+    <!-- Hour of Day & Variability -->
+    <div class="insights-grid">
+      <div class="dashboard-card">
+        <div class="card-header">
+          Hourly Trends
+          <span class="insight-badge">Time Analysis</span>
+        </div>
+        <div class="chart-container">
+          {% if hour_chart %}
+            {{ hour_chart|safe }}
+          {% else %}
+            <div style="text-align:center; padding:50px 20px; color:#777;">No hourly data available</div>
+          {% endif %}
+        </div>
+      </div>
+      <div class="dashboard-card">
+        <div class="card-header">
+          Distribution by Month
+          <span class="insight-badge">Variability</span>
+        </div>
+        <div class="chart-container">
+          {% if boxplot_chart %}
+            {{ boxplot_chart|safe }}
+          {% else %}
+            <div style="text-align:center; padding:50px 20px; color:#777;">No distribution data available</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Benefit Type & Heatmap -->
+    <div class="insights-grid">
+      <div class="dashboard-card">
+        <div class="card-header">
+          Claims by Benefit Type
+          <span class="insight-badge">Categorical</span>
+        </div>
+        <div class="chart-container">
+          {% if categorical_chart %}
+            {{ categorical_chart|safe }}
+          {% else %}
+            <div style="text-align:center; padding:50px 20px; color:#777;">No categorical data available</div>
+          {% endif %}
+        </div>
+      </div>
+      <div class="dashboard-card">
+        <div class="card-header">
+          Heatmap: Month vs Day of Week
+          <span class="insight-badge">Interaction</span>
+        </div>
+        <div class="chart-container">
+          {% if heatmap_chart %}
+            {{ heatmap_chart|safe }}
+          {% else %}
+            <div style="text-align:center; padding:50px 20px; color:#777;">No heatmap data available</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
   </div>
 
-  <!-- Day of Week & Month Analysis -->
-  <div class="insights-grid">
-    <div class="dashboard-card">
-      <div class="card-header">Day-of-Week Pattern</div>
-      <div class="chart-container">{% if dow_chart %}{{ dow_chart|safe }}{% endif %}</div>
+  <!-- Deep Dive Tab -->
+  <div class="tab-content" id="deepdive">
+    <!-- Rolling Average and Anomalies -->
+    <div class="insights-grid">
+      <div class="dashboard-card">
+        <div class="card-header">
+          Rolling Average Trend
+          <span class="insight-badge">Smoothing</span>
+        </div>
+        <div class="chart-container">
+          {% if rolling_avg_chart %}
+            {{ rolling_avg_chart|safe }}
+          {% else %}
+            <div style="text-align:center; padding:50px 20px; color:#777;">No rolling average data available</div>
+          {% endif %}
+        </div>
+      </div>
+      <div class="dashboard-card">
+        <div class="card-header">
+          Anomaly Detection
+          <span class="insight-badge">Outliers</span>
+        </div>
+        <div class="chart-container">
+          {% if anomaly_chart %}
+            {{ anomaly_chart|safe }}
+          {% else %}
+            <div style="text-align:center; padding:50px 20px; color:#777;">No anomaly detection data available</div>
+          {% endif %}
+        </div>
+      </div>
     </div>
-    <div class="dashboard-card">
-      <div class="card-header">Calendar Month Comparison</div>
-      <div class="chart-container">{% if month_chart %}{{ month_chart|safe }}{% endif %}</div>
+
+    <!-- Top Providers and Benefits -->
+    <div class="insights-grid">
+      <div class="dashboard-card">
+        <div class="card-header">
+          Top Providers
+          <span class="insight-badge">Ranking</span>
+        </div>
+        <div class="chart-container">
+          {% if providers_chart %}
+            {{ providers_chart|safe }}
+          {% else %}
+            <div style="text-align:center; padding:50px 20px; color:#777;">No provider data available</div>
+          {% endif %}
+        </div>
+      </div>
+      <div class="dashboard-card">
+        <div class="card-header">
+          Top Benefits
+          <span class="insight-badge">Distribution</span>
+        </div>
+        <div class="chart-container">
+          {% if benefits_chart %}
+            {{ benefits_chart|safe }}
+          {% else %}
+            <div style="text-align:center; padding:50px 20px; color:#777;">No benefits data available</div>
+          {% endif %}
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- Hour of Day & Variability -->
-  <div class="insights-grid">
+  <!-- Advanced Tab -->
+  <div class="tab-content" id="advanced">
+    <!-- Time Series Decomposition -->
+    {% if decomposition_chart %}
     <div class="dashboard-card">
-      <div class="card-header">Hourly Trends</div>
-      <div class="chart-container">{% if hour_chart %}{{ hour_chart|safe }}{% endif %}</div>
+      <div class="card-header">
+        <span>Time Series Decomposition</span>
+        <span class="insight-badge">Statistical</span>
+      </div>
+      <div class="chart-container" style="height: 600px;">
+        {{ decomposition_chart|safe }}
+      </div>
     </div>
-    <div class="dashboard-card">
-      <div class="card-header">Distribution by Month</div>
-      <div class="chart-container">{% if boxplot_chart %}{{ boxplot_chart|safe }}{% endif %}</div>
-    </div>
-  </div>
+    {% endif %}
 
-  <!-- Benefit Type & Heatmap -->
-  <div class="insights-grid">
+    <!-- Weekly Patterns -->
+    {% if weekly_pattern_chart %}
     <div class="dashboard-card">
-      <div class="card-header">Claims by Benefit Type</div>
-      <div class="chart-container">{% if categorical_chart %}{{ categorical_chart|safe }}{% endif %}</div>
+      <div class="card-header">
+        <span>Weekly Pattern Analysis</span>
+        <span class="insight-badge">Cyclical</span>
+      </div>
+      <div class="chart-container">
+        {{ weekly_pattern_chart|safe }}
+      </div>
     </div>
-    <div class="dashboard-card">
-      <div class="card-header">Heatmap: Month vs Day of Week</div>
-      <div class="chart-container">{% if heatmap_chart %}{{ heatmap_chart|safe }}{% endif %}</div>
-    </div>
+    {% endif %}
   </div>
 </div>
 
@@ -144,13 +821,79 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+  // Initialize select2 for searchable dropdowns
   if (typeof $ !== 'undefined') {
-    $('.searchable-select').select2({ placeholder:"Select an option", allowClear:true, width:'100%' });
-    $('.time-unit-btn').click(function(e){ e.preventDefault(); $('.time-unit-btn').removeClass('active'); $(this).addClass('active'); $('#time_unit').val($(this).data('unit')); $('form').submit(); });
-    $('.metric-btn').click(function(e){ e.preventDefault(); $('.metric-btn').removeClass('active'); $(this).addClass('active'); $('#metric').val($(this).data('metric')); $('form').submit(); });
+    $('.searchable-select').select2({ 
+      placeholder: "Select an option", 
+      allowClear: true, 
+      width: '100%' 
+    });
   }
-  const urlParams=new URLSearchParams(window.location.search);
-  ['time_period','benefit_type','provider','cost_center'].forEach(param=>{ const select=document.getElementById(param); if(select && urlParams.has(param)){ select.value=urlParams.get(param); if(typeof $!=='undefined'){ $(select).trigger('change'); } } });
+  
+  // Time unit buttons
+  document.querySelectorAll('.time-unit-btn').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      document.querySelectorAll('.time-unit-btn').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      document.getElementById('time_unit').value = this.dataset.unit;
+      submitForm();
+    });
+  });
+  
+  // Metric buttons
+  document.querySelectorAll('.metric-btn').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      document.querySelectorAll('.metric-btn').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      document.getElementById('metric').value = this.dataset.metric;
+      submitForm();
+    });
+  });
+  
+  // Tab functionality
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', function() {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      
+      this.classList.add('active');
+      document.getElementById(this.dataset.tab).classList.add('active');
+    });
+  });
+  
+  // Form submission with loading indicator
+  const form = document.getElementById('filterForm');
+  form.addEventListener('submit', function() {
+    document.getElementById('loadingOverlay').style.display = 'flex';
+  });
+  
+  // Submit form function
+  function submitForm() {
+    document.getElementById('loadingOverlay').style.display = 'flex';
+    form.submit();
+  }
+  
+  // Add resize event listener to adjust chart sizes
+  window.addEventListener('resize', function() {
+    if (typeof Plotly !== 'undefined') {
+      setTimeout(() => {
+        document.querySelectorAll('.js-plotly-plot').forEach(plot => {
+          Plotly.Plots.resize(plot);
+        });
+      }, 100);
+    }
+  });
+
+  // Auto-resize charts after load
+  setTimeout(() => {
+    if (typeof Plotly !== 'undefined') {
+      document.querySelectorAll('.js-plotly-plot').forEach(plot => {
+        Plotly.Plots.resize(plot);
+      });
+    }
+  }, 500);
 });
 </script>
 {% endblock %}
