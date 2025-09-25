@@ -206,6 +206,21 @@
         margin-right: 0;
         font-size: 1.2rem;
       }
+      /* Sidebar nav hover effect */
+      .nav-tabs a {
+        position: relative;
+        overflow: hidden;
+      }
+
+      .nav-tabs a:hover {
+        color: var(--safaricom-green);
+        border-left-color: var(--safaricom-green);
+        background: rgba(27, 182, 79, 0.05);
+        box-shadow: inset 4px 0 0 var(--safaricom-green);
+        transform: translateX(2px);
+        transition: all var(--transition-speed) ease;
+      }
+
 
       .sidebar-collapsed .sub-tabs {
         position: absolute;
@@ -326,21 +341,10 @@
         border-left-color: var(--safaricom-green);
         font-weight: 600;
       }
-
-      .tab-with-arrow {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
+      .nav-tabs li:hover > .sub-tabs {
+        display: block;
       }
 
-      .tab-with-arrow .arrow {
-        transition: transform var(--transition-speed);
-        font-size: 0.8rem;
-      }
-
-      .tab-with-arrow.active .arrow {
-        transform: rotate(90deg);
-      }
 
       /* About Section Styling */
       .sidebar-about {
@@ -819,86 +823,31 @@
     </div>
 
     <script>
-      // Toggle sub-tabs when clicking on main tabs
-      // Always prevent default for main tabs so they only expand/collapse
-      // and do not navigate away
-
-      document.querySelectorAll(".tab-with-arrow").forEach((tab) => {
-        tab.addEventListener("click", function (e) {
-          e.preventDefault();
-          const parentLi = this.closest("li");
-          const subTabs = parentLi.querySelector(".sub-tabs");
-
-          // Close all other open tabs
-          document.querySelectorAll(".sub-tabs").forEach((st) => {
-            if (
-              st !== subTabs &&
-              !st.closest("li").classList.contains("keep-open")
-            ) {
-              st.style.display = "none";
-              st.previousElementSibling.classList.remove("active");
-            }
-          });
-
-          // Toggle current tab
-          if (subTabs.style.display === "block") {
-            subTabs.style.display = "none";
-            this.classList.remove("active");
-          } else {
-            subTabs.style.display = "block";
-            this.classList.add("active");
-
-            // If in collapsed mode, add keep-open class to maintain visibility
-            if (document.body.classList.contains("sidebar-collapsed")) {
-              parentLi.classList.add("keep-open");
-            }
-          }
-        });
-      });
-
-      // Close submenus when clicking outside in collapsed mode
-      document.addEventListener("click", function (e) {
-        if (document.body.classList.contains("sidebar-collapsed")) {
-          if (
-            !e.target.closest(".nav-tabs li.keep-open") &&
-            !e.target.closest(".sub-tabs")
-          ) {
-            document.querySelectorAll(".sub-tabs").forEach((st) => {
-              st.style.display = "none";
-            });
-            document.querySelectorAll(".nav-tabs li").forEach((li) => {
-              li.classList.remove("keep-open");
-            });
-          }
-        }
-      });
-
-      // Set active tab based on current page
       document.addEventListener("DOMContentLoaded", function () {
-        // Get current path
+        // Highlight active tab based on current page
         const path = window.location.pathname;
 
-        // Find all nav links and check if they match current path
         document.querySelectorAll(".nav-tabs a").forEach((link) => {
           if (link.getAttribute("href") === path) {
             link.classList.add("active");
 
-            // If it's in a sub-tab, also activate the parent tab
+            // If it's in a sub-tab, also highlight the parent
             const parentTab = link.closest(".sub-tabs")?.previousElementSibling;
             if (parentTab) {
               parentTab.classList.add("active");
-              parentTab.nextElementSibling.style.display = "block";
             }
           }
         });
 
-        // Add scroll event listener to header
+        // Header scroll effect
         window.addEventListener("scroll", function () {
           const header = document.querySelector(".safaricom-header");
-          if (window.scrollY > 10) {
-            header.classList.add("scrolled");
-          } else {
-            header.classList.remove("scrolled");
+          if (header) {
+            if (window.scrollY > 10) {
+              header.classList.add("scrolled");
+            } else {
+              header.classList.remove("scrolled");
+            }
           }
         });
 
@@ -921,20 +870,6 @@
             this.querySelector("i").classList.toggle("fa-times");
           });
         }
-      });
-
-      // Close submenus when clicking on a sub-tab item in collapsed mode
-      document.querySelectorAll(".sub-tabs a").forEach((link) => {
-        link.addEventListener("click", function () {
-          if (document.body.classList.contains("sidebar-collapsed")) {
-            document.querySelectorAll(".sub-tabs").forEach((st) => {
-              st.style.display = "none";
-            });
-            document.querySelectorAll(".nav-tabs li").forEach((li) => {
-              li.classList.remove("keep-open");
-            });
-          }
-        });
       });
     </script>
 

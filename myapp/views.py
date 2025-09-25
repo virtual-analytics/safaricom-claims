@@ -2536,36 +2536,36 @@ def diagnostic_patterns_view1(request):
     benefit_type = request.GET.get('benefit_type', 'all')
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
-    diagnosis_filter = request.GET.get('diagnosis')
+    ailment_filter = request.GET.get('ailment')  # 🔄 was diagnosis_filter
     gender_filter = request.GET.get('gender')
     min_amount = request.GET.get('min_amount')
     max_amount = request.GET.get('max_amount')
     age_range = request.GET.get('age_range')
     dependent_type = request.GET.get('dependent_type', '')
 
-    # Chart placeholders - REORDERED to prioritize diagnosis-treatment patterns
+    # Chart placeholders - REORDERED to prioritize ailment-treatment patterns
     charts = {
-        'chart_diagnosis_treatment_patterns': None,  # 🔥 PRIORITY CHART - FIRST
-        'chart1_top_diagnoses': None,
+        'chart_ailment_treatment_patterns': None,  # 🔥 PRIORITY CHART - FIRST
+        'chart1_top_ailments': None,
         'chart2_age_distribution': None,
-        'chart3_diag_network': None,
-        'chart4_gender_diag_heatmap': None,
+        'chart3_ailment_network': None,
+        'chart4_gender_ailment_heatmap': None,
         'chart5_avg_amount_age_group': None,
-        'chart6_diag_seasonality': None,
+        'chart6_ailment_seasonality': None,
         'chart7_claim_dist_by_dependents': None,
-        'chart8_diag_by_provider': None,
+        'chart8_ailment_by_provider': None,
         'chart9_chronic_acute': None,
         'chart10_cost_outliers': None,
-        'chart11_diag_trends': None
+        'chart11_ailment_trends': None
     }
 
     # Dropdown filter lists
-    diagnosis_list = []
+    ailment_list = []
     gender_list = []
     benefit_types = []
     dependent_types = []
     summary_stats = None
-    top_diagnoses_table = None
+    top_ailments_table = None
 
     # ✅ Only proceed if a dataset is selected and exists
     if selected_id and selected_id in dataset_ids:
@@ -2637,14 +2637,14 @@ def diagnostic_patterns_view1(request):
         if dependent_type and 'dependent_type' in df.columns:
             df = df[df['dependent_type'] == dependent_type]
 
-        # --- Diagnosis Column Detection ---
-        diag_cols = [c for c in df.columns if any(keyword in c.lower() for keyword in ['diag', 'icd10', 'ailment'])]
-        print(f"🩺 Diagnosis columns found: {diag_cols}")
+        # --- Ailment Column Detection ---
+        ailment_cols = [c for c in df.columns if any(keyword in c.lower() for keyword in ['ailment'])]
+        print(f"🩺 Ailment columns found: {ailment_cols}")
 
-        if diag_cols:
-            diagnosis_list = sorted(df[diag_cols[0]].dropna().unique().tolist())
-            if diagnosis_filter:
-                df = df[df[diag_cols[0]] == diagnosis_filter]
+        if ailment_cols:
+            ailment_list = sorted(df[ailment_cols[0]].dropna().unique().tolist())
+            if ailment_filter:
+                df = df[df[ailment_cols[0]] == ailment_filter]
 
         # --- Gender Filter ---
         if 'gender' in df.columns:
@@ -2659,83 +2659,47 @@ def diagnostic_patterns_view1(request):
             summary_stats = {
                 'total_claims': len(df),
                 'total_amount': df['amount'].sum(),
-                'unique_diagnoses': df[diag_cols[0]].nunique() if diag_cols else 0,
+                'unique_ailments': df[ailment_cols[0]].nunique() if ailment_cols else 0,
                 'avg_claim': df['amount'].mean(),
-                'top_diagnosis': df[diag_cols[0]].mode().iloc[0] if diag_cols and len(df[diag_cols[0]].mode()) > 0 else 'N/A',
+                'top_ailment': df[ailment_cols[0]].mode().iloc[0] if ailment_cols and len(df[ailment_cols[0]].mode()) > 0 else 'N/A',
                 'avg_age': df['age'].mean() if 'age' in df.columns else 0
             }
 
         # ---------------- CHARTS - REORDERED ---------------- #
 
-        # 🔥 PRIORITY: Diagnosis-Treatment Patterns Heatmap (FIRST)
-        if diag_cols:
-            # Look for treatment/procedure columns
+        # 🔥 PRIORITY: Ailment-Treatment Patterns Heatmap
+        if ailment_cols:
             treatment_cols = [c for c in df.columns if any(keyword in c.lower() 
-                            for keyword in ['treatment', 'procedure', 'service', 'therapy', 'medication'])]
+                                for keyword in ['treatment', 'procedure', 'service', 'therapy', 'medication', 'claim'])]
+
             
             if treatment_cols:
-                # Create diagnosis-treatment frequency heatmap
-                dt_df = df.groupby([diag_cols[0], treatment_cols[0]]).size().reset_index(name='frequency')
-                
-                # Get top diagnoses and treatments for better visualization
-                top_diags = df[diag_cols[0]].value_counts().head(15).index
+                dt_df = df.groupby([ailment_cols[0], treatment_cols[0]]).size().reset_index(name='frequency')
+                top_ailments = df[ailment_cols[0]].value_counts().head(15).index
                 top_treatments = df[treatment_cols[0]].value_counts().head(20).index
-                
-                dt_filtered = dt_df[
-                    (dt_df[diag_cols[0]].isin(top_diags)) & 
-                    (dt_df[treatment_cols[0]].isin(top_treatments))
-                ]
+                dt_filtered = dt_df[(dt_df[ailment_cols[0]].isin(top_ailments)) & (dt_df[treatment_cols[0]].isin(top_treatments))]
                 
                 if len(dt_filtered) > 0:
                     fig_dt = px.density_heatmap(
-                        dt_filtered, 
-                        x=treatment_cols[0], 
-                        y=diag_cols[0], 
-                        z='frequency',
-                        title="Diagnosis-Treatment Patterns",
-                        color_continuous_scale='Blues',
-                        height=600
+                        dt_filtered, x=treatment_cols[0], y=ailment_cols[0], z='frequency',
+                        title="Ailment-Treatment Patterns", color_continuous_scale='Blues', height=600
                     )
-                    fig_dt.update_layout(
-                        xaxis_title="Treatment/Procedure",
-                        yaxis_title="Diagnosis",
-                        xaxis={'tickangle': 45}
-                    )
-                    charts['chart_diagnosis_treatment_patterns'] = fig_dt.to_html(full_html=False)
-            else:
-                # Fallback: Diagnosis frequency heatmap by month if no treatment column
-                if 'datetime' in df.columns:
-                    df['month'] = df['datetime'].dt.strftime('%Y-%m')
-                    top_diags = df[diag_cols[0]].value_counts().head(15).index
-                    monthly_diag = df[df[diag_cols[0]].isin(top_diags)].groupby(['month', diag_cols[0]]).size().reset_index(name='frequency')
-                    
-                    fig_dt = px.density_heatmap(
-                        monthly_diag,
-                        x='month',
-                        y=diag_cols[0],
-                        z='frequency',
-                        title="Diagnosis Patterns Over Time",
-                        color_continuous_scale='Blues',
-                        height=600
-                    )
-                    charts['chart_diagnosis_treatment_patterns'] = fig_dt.to_html(full_html=False)
+                    fig_dt.update_layout(xaxis_title="Treatment/Procedure", yaxis_title="Ailment", xaxis={'tickangle': 45})
+                    charts['chart_ailment_treatment_patterns'] = fig_dt.to_html(full_html=False)
 
-        # 1️⃣ Top Diagnoses by Claim Amount
-        if diag_cols:
-            top_diag = df.groupby(diag_cols[0]).agg({
-                'amount': ['sum', 'count', 'mean']
-            }).reset_index()
-            top_diag.columns = ['diagnosis', 'total_amount', 'claim_count', 'avg_amount']
-            top_diag['percentage'] = (top_diag['total_amount'] / top_diag['total_amount'].sum()) * 100
-            top_diag = top_diag.nlargest(15, 'total_amount').sort_values('total_amount')
+        # 1️⃣ Top Ailments by Claim Amount
+        if ailment_cols:
+            top_ailment = df.groupby(ailment_cols[0]).agg({'amount': ['sum', 'count', 'mean']}).reset_index()
+            top_ailment.columns = ['ailment', 'total_amount', 'claim_count', 'avg_amount']
+            top_ailment['percentage'] = (top_ailment['total_amount'] / top_ailment['total_amount'].sum()) * 100
+            top_ailment = top_ailment.nlargest(15, 'total_amount').sort_values('total_amount')
             
-            top_diagnoses_table = top_diag.nlargest(20, 'total_amount').to_dict('records')
-            
-            fig1 = px.bar(top_diag, x='total_amount', y='diagnosis', orientation='h',
-                          title="Top 15 Diagnoses by Claim Amount",
+            top_ailments_table = top_ailment.nlargest(20, 'total_amount').to_dict('records')
+            fig1 = px.bar(top_ailment, x='total_amount', y='ailment', orientation='h',
+                          title="Top 15 Ailments by Claim Amount",
                           color='total_amount', color_continuous_scale='Blues')
             fig1.update_layout(height=500)
-            charts['chart1_top_diagnoses'] = fig1.to_html(full_html=False)
+            charts['chart1_top_ailments'] = fig1.to_html(full_html=False)
 
         # 2️⃣ Age Distribution
         if 'age' in df.columns:
@@ -2744,8 +2708,8 @@ def diagnostic_patterns_view1(request):
             charts['chart2_age_distribution'] = fig2.to_html(full_html=False)
 
         # 3️⃣ Diagnosis Co-occurrence Network
-        if diag_cols:
-            primary_diag_col = diag_cols[0]
+        if ailment_cols:
+            primary_diag_col = ailment_cols[0]
             patient_id_col = 'admit_id' if 'admit_id' in df.columns else df.index
 
             diag_pairs = (
@@ -2792,12 +2756,12 @@ def diagnostic_patterns_view1(request):
                 charts['chart3_diag_network'] = fig3.to_html(full_html=False)
 
         # 4️⃣ Gender × Diagnosis Heatmap
-        if diag_cols and 'gender' in df.columns:
-            heat_df = df.groupby(['gender', diag_cols[0]]).size().reset_index(name='count')
-            top_diags_gender = df[diag_cols[0]].value_counts().head(10).index
-            heat_df = heat_df[heat_df[diag_cols[0]].isin(top_diags_gender)]
+        if ailment_cols and 'gender' in df.columns:
+            heat_df = df.groupby(['gender', ailment_cols[0]]).size().reset_index(name='count')
+            top_diags_gender = df[ailment_cols[0]].value_counts().head(10).index
+            heat_df = heat_df[heat_df[ailment_cols[0]].isin(top_diags_gender)]
             
-            fig4 = px.density_heatmap(heat_df, x='gender', y=diag_cols[0], z='count',
+            fig4 = px.density_heatmap(heat_df, x='gender', y=ailment_cols[0], z='count',
                                       color_continuous_scale='Blues',
                                       title="Gender × Diagnosis Distribution")
             charts['chart4_gender_diag_heatmap'] = fig4.to_html(full_html=False)
@@ -2814,47 +2778,47 @@ def diagnostic_patterns_view1(request):
             charts['chart5_avg_amount_age_group'] = fig5.to_html(full_html=False)
 
         # 6️⃣ Diagnosis Seasonality
-        if diag_cols and 'datetime' in df.columns:
+        if ailment_cols and 'datetime' in df.columns:
             df['month'] = df['datetime'].dt.month_name()
-            monthly_diag = df.groupby(['month', diag_cols[0]]).size().reset_index(name='count')
-            top_diags_season = df[diag_cols[0]].value_counts().head(8).index
-            monthly_diag = monthly_diag[monthly_diag[diag_cols[0]].isin(top_diags_season)]
+            monthly_diag = df.groupby(['month', ailment_cols[0]]).size().reset_index(name='count')
+            top_diags_season = df[ailment_cols[0]].value_counts().head(8).index
+            monthly_diag = monthly_diag[monthly_diag[ailment_cols[0]].isin(top_diags_season)]
             
-            fig6 = px.line(monthly_diag, x='month', y='count', color=diag_cols[0],
+            fig6 = px.line(monthly_diag, x='month', y='count', color=ailment_cols[0],
                           title="Diagnosis Seasonality Trends",
                           category_orders={"month": ["January", "February", "March", "April", "May", "June",
                                                    "July", "August", "September", "October", "November", "December"]})
             charts['chart6_diag_seasonality'] = fig6.to_html(full_html=False)
 
         # 7️⃣ Claim Distribution by Dependent Type
-        if diag_cols and 'dependent_type' in df.columns:
-            dep_diag = df.groupby(['dependent_type', diag_cols[0]]).size().reset_index(name='count')
-            top_diags_dep = df[diag_cols[0]].value_counts().head(10).index
-            dep_diag = dep_diag[dep_diag[diag_cols[0]].isin(top_diags_dep)]
+        if ailment_cols and 'dependent_type' in df.columns:
+            dep_diag = df.groupby(['dependent_type', ailment_cols[0]]).size().reset_index(name='count')
+            top_diags_dep = df[ailment_cols[0]].value_counts().head(10).index
+            dep_diag = dep_diag[dep_diag[ailment_cols[0]].isin(top_diags_dep)]
             
-            fig7 = px.sunburst(dep_diag, path=['dependent_type', diag_cols[0]], values='count',
+            fig7 = px.sunburst(dep_diag, path=['dependent_type', ailment_cols[0]], values='count',
                               title="Claim Distribution by Dependent Type & Diagnosis")
             charts['chart7_claim_dist_by_dependents'] = fig7.to_html(full_html=False)
 
         # 8️⃣ Diagnosis by Provider Type
-        if diag_cols and 'prov_name' in df.columns:
-            prov_diag = df.groupby(['prov_name', diag_cols[0]]).size().reset_index(name='count')
+        if ailment_cols and 'prov_name' in df.columns:
+            prov_diag = df.groupby(['prov_name', ailment_cols[0]]).size().reset_index(name='count')
             top_provs = df['prov_name'].value_counts().head(5).index
-            top_diags_prov = df[diag_cols[0]].value_counts().head(10).index
+            top_diags_prov = df[ailment_cols[0]].value_counts().head(10).index
             prov_diag = prov_diag[
                 (prov_diag['prov_name'].isin(top_provs)) & 
-                (prov_diag[diag_cols[0]].isin(top_diags_prov))
+                (prov_diag[ailment_cols[0]].isin(top_diags_prov))
             ]
             
-            fig8 = px.bar(prov_diag, x='prov_name', y='count', color=diag_cols[0],
+            fig8 = px.bar(prov_diag, x='prov_name', y='count', color=ailment_cols[0],
                          title="Diagnosis Distribution by Provider")
             charts['chart8_diag_by_provider'] = fig8.to_html(full_html=False)
 
         # 9️⃣ Chronic vs Acute Conditions (simplified)
-        if diag_cols:
+        if ailment_cols:
             # Simple classification based on diagnosis name
             chronic_keywords = ['chronic', 'diabetes', 'hypertension', 'asthma', 'arthritis', 'heart disease']
-            df['condition_type'] = df[diag_cols[0]].apply(
+            df['condition_type'] = df[ailment_cols[0]].apply(
                 lambda x: 'Chronic' if any(keyword in str(x).lower() for keyword in chronic_keywords) else 'Acute'
             )
             
@@ -2864,9 +2828,9 @@ def diagnostic_patterns_view1(request):
             charts['chart9_chronic_acute'] = fig9.to_html(full_html=False)
 
         # 🔟 Diagnosis Cost Outliers
-        if diag_cols:
+        if ailment_cols:
             # Calculate outliers using IQR method
-            diag_stats = df.groupby(diag_cols[0])['amount'].agg(['mean', 'std', 'count']).reset_index()
+            diag_stats = df.groupby(ailment_cols[0])['amount'].agg(['mean', 'std', 'count']).reset_index()
             diag_stats = diag_stats[diag_stats['count'] > 5]  # Only consider diagnoses with enough data
             
             # Identify outliers (mean + 2*std)
@@ -2875,19 +2839,19 @@ def diagnostic_patterns_view1(request):
             # Get top 10 diagnoses with highest outlier potential
             diag_stats = diag_stats.nlargest(10, 'upper_bound')
             
-            fig10 = px.bar(diag_stats, x=diag_cols[0], y='upper_bound',
+            fig10 = px.bar(diag_stats, x=ailment_cols[0], y='upper_bound',
                           title="Diagnosis Cost Outlier Potential (Mean + 2σ)",
                           color='upper_bound', color_continuous_scale='Reds')
             charts['chart10_cost_outliers'] = fig10.to_html(full_html=False)
 
         # 1️⃣1️⃣ Diagnosis Trend Over Time
-        if diag_cols and 'datetime' in df.columns:
+        if ailment_cols and 'datetime' in df.columns:
             df['month_year'] = df['datetime'].dt.to_period('M').astype(str)
-            top_diags_trend = df[diag_cols[0]].value_counts().head(5).index
-            trend_data = df[df[diag_cols[0]].isin(top_diags_trend)]
-            trend_data = trend_data.groupby(['month_year', diag_cols[0]]).size().reset_index(name='count')
+            top_diags_trend = df[ailment_cols[0]].value_counts().head(5).index
+            trend_data = df[df[ailment_cols[0]].isin(top_diags_trend)]
+            trend_data = trend_data.groupby(['month_year', ailment_cols[0]]).size().reset_index(name='count')
             
-            fig11 = px.line(trend_data, x='month_year', y='count', color=diag_cols[0],
+            fig11 = px.line(trend_data, x='month_year', y='count', color=ailment_cols[0],
                            title="Top 5 Diagnosis Trends Over Time")
             charts['chart11_diag_trends'] = fig11.to_html(full_html=False)
 
@@ -2898,18 +2862,18 @@ def diagnostic_patterns_view1(request):
         'benefit_type': benefit_type,
         'start_date': start_date,
         'end_date': end_date,
-        'diagnosis_list': diagnosis_list,
+        'ailment_list': ailment_list,
         'gender_list': gender_list,
         'benefit_types': benefit_types,
         'dependent_types': dependent_types,
-        'diagnosis_filter': diagnosis_filter,
+        'ailment_filter': ailment_filter,
         'gender_filter': gender_filter,
         'min_amount': min_amount,
         'max_amount': max_amount,
         'age_range': age_range,
         'dependent_type': dependent_type,
         'summary_stats': summary_stats,
-        'top_diagnoses_table': top_diagnoses_table,
+        'top_ailments_table': top_ailments_table,
         **charts
     })
 
@@ -7471,7 +7435,7 @@ def diagnosis_patterns(request):
 
         # Pull minimal columns used by the original fraud logic
         queryset = ClaimRecord.objects.values(
-            'icd10_code', 'amount', 'claim_prov_date', 'prov_name'
+            'ailment', 'amount', 'claim_prov_date', 'prov_name'
         )
         df_fraud = pd.DataFrame(list(queryset))
 
@@ -7483,7 +7447,7 @@ def diagnosis_patterns(request):
         df_fraud['fraud_flag'] = np.random.choice([0, 1], size=len(df_fraud), p=[0.9, 0.1])
 
         # keep original column name behavior
-        df_fraud.rename(columns={'icd10_code': 'Diagnosis'}, inplace=True)
+        df_fraud.rename(columns={'ailment': 'Diagnosis'}, inplace=True)
 
         diagnosis_fraud = df_fraud.groupby('Diagnosis').agg({
             'amount': 'sum',
@@ -7514,7 +7478,7 @@ def diagnosis_patterns(request):
         # -------------------------
         # Pull a wider set of fields for in-depth analysis
         cols = [
-            'icd10_code', 'amount', 'claim_prov_date', 'prov_name', 'gender', 'dob',
+            'ailment', 'amount', 'claim_prov_date', 'prov_name', 'gender', 'dob',
             'claim_me', 'benefit', 'benefit_desc', 'cost_center', 'admit_id'
         ]
         queryset_all = ClaimRecord.objects.values(*cols)
@@ -7526,7 +7490,7 @@ def diagnosis_patterns(request):
             return render(request, 'diagnosis_patterns1.html', context)
 
         # Standardize column name
-        df.rename(columns={'icd10_code': 'Diagnosis', 'claim_prov_date': 'claim_prov_date_raw'}, inplace=True)
+        df.rename(columns={'ailment': 'Diagnosis', 'claim_prov_date': 'claim_prov_date_raw'}, inplace=True)
 
         # Clean amounts robustly
         df['amount'] = pd.to_numeric(
