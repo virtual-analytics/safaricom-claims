@@ -5434,16 +5434,18 @@ def claim_distribution(request):
     # ---- Summary stats ----
     total_amount = data['amount'].sum() if 'amount' in data.columns else 0
     unique_members = data['claim_me'].nunique() if 'claim_me' in data.columns else 0
-    
+    total_claims = data['claim_ce'].nunique() if 'claim_ce' in data.columns else 0
+
     visualizations = {
         'summary_stats': {
-            'total_claims': len(data),
+            # ✅ total claims now based on unique claim_ce values
+            'total_claims': total_claims,
             'total_amount': total_amount,
             # ✅ avg_claim = total amount ÷ unique members
             'avg_claim': (total_amount / unique_members) if unique_members > 0 else 0,
             'unique_members': unique_members,
             'unique_providers': data['prov_name'].nunique() if 'prov_name' in data.columns else 0,
-            'claims_per_member': len(data)/unique_members if unique_members > 0 else 0,
+            'claims_per_member': (total_claims / unique_members) if unique_members > 0 else 0,
         },
         'benefit_types': sorted(data['benefit'].unique().tolist()) if 'benefit' in data.columns else [],
         'providers': sorted(data['prov_name'].unique().tolist()) if 'prov_name' in data.columns else [],
@@ -5652,7 +5654,7 @@ def temporal_analysis(request):
         # Summary statistics
         # -----------------------------
         summary_data = claims.aggregate(
-            total_claims=Count("claim_me", distinct=True),  # unique claim_me
+            total_claims=Count("claim_ce", distinct=True),  # ✅ unique claim_ce
             total_amount=Sum("amount"),
             max_amount=Max("amount"),
             min_amount=Min("amount"),
@@ -7403,12 +7405,9 @@ def minet_suspicious_providers(request):
 
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
-from django.utils import timezone
-from datetime import timedelta
 import numpy as np
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 
 from myapp.models import ClaimRecord
 
@@ -7433,7 +7432,6 @@ def diagnosis_patterns(request):
         # -------------------------
         min_claims = int(request.GET.get('min_claims', 5))
 
-        # Pull minimal columns used by the original fraud logic
         queryset = ClaimRecord.objects.values(
             'ailment', 'amount', 'claim_prov_date', 'prov_name'
         )
@@ -7446,7 +7444,6 @@ def diagnosis_patterns(request):
         # simulated fraud flag (original)
         df_fraud['fraud_flag'] = np.random.choice([0, 1], size=len(df_fraud), p=[0.9, 0.1])
 
-        # keep original column name behavior
         df_fraud.rename(columns={'ailment': 'Diagnosis'}, inplace=True)
 
         diagnosis_fraud = df_fraud.groupby('Diagnosis').agg({
@@ -7454,7 +7451,6 @@ def diagnosis_patterns(request):
             'fraud_flag': ['sum', 'count']
         }).reset_index()
 
-        # flatten multiindex columns to match original code exactly
         diagnosis_fraud.columns = ['Diagnosis', 'Total Amount', 'Fraud Count', 'Total Claims']
         diagnosis_fraud['Fraud Rate'] = diagnosis_fraud['Fraud Count'] / diagnosis_fraud['Total Claims']
 
@@ -7476,20 +7472,17 @@ def diagnosis_patterns(request):
         # -------------------------
         # Deep descriptive analysis (additional, non-fraud)
         # -------------------------
-        # Pull a wider set of fields for in-depth analysis
         cols = [
             'ailment', 'amount', 'claim_prov_date', 'prov_name', 'gender', 'dob',
-            'claim_me', 'benefit', 'benefit_desc', 'cost_center', 'admit_id'
+            'claim_me', 'claim_ce', 'benefit', 'benefit_desc', 'cost_center', 'admit_id'
         ]
         queryset_all = ClaimRecord.objects.values(*cols)
         df = pd.DataFrame(list(queryset_all))
 
-        # If no data for deeper analysis, return with what we already have (fraud)
         if df.empty:
             context['deep_error'] = "No additional claims data available for deeper diagnosis analysis."
             return render(request, 'diagnosis_patterns1.html', context)
 
-        # Standardize column name
         df.rename(columns={'ailment': 'Diagnosis', 'claim_prov_date': 'claim_prov_date_raw'}, inplace=True)
 
         # Clean amounts robustly
@@ -7498,32 +7491,30 @@ def diagnosis_patterns(request):
             errors='coerce'
         ).fillna(0.0)
 
-        # Parse dates: claim date and dob (dob may be missing)
+        # Parse dates
         df['claim_prov_date'] = pd.to_datetime(df['claim_prov_date_raw'], errors='coerce')
         df['dob'] = pd.to_datetime(df['dob'], errors='coerce')
 
-        # Drop records without a diagnosis or claim date (can't analyze)
+        # Drop invalids
         df = df.dropna(subset=['Diagnosis', 'claim_prov_date'])
         if df.empty:
             context['deep_error'] = "No valid dated claims to analyze."
             return render(request, 'diagnosis_patterns1.html', context)
 
-        # Derived fields: year, month, weekday, week, age (if dob available)
+        # Derived fields
         df['year'] = df['claim_prov_date'].dt.year
         df['month'] = df['claim_prov_date'].dt.month
         df['month_name'] = df['claim_prov_date'].dt.strftime('%b')
         df['month_period'] = df['claim_prov_date'].dt.to_period('M').astype(str)
         df['week'] = df['claim_prov_date'].dt.isocalendar().week
         df['day_of_week'] = df['claim_prov_date'].dt.day_name()
-
-        # Age at time of claim (if dob present)
         df['Age'] = (df['claim_prov_date'].dt.year - df['dob'].dt.year).where(df['dob'].notna())
 
-        # SUMMARY: overall totals
-        total_claims = len(df)
+        # SUMMARY: overall totals using unique claim_ce
+        total_claims = df['claim_ce'].nunique() if 'claim_ce' in df.columns else 0
         total_amount = float(df['amount'].sum())
         unique_diagnoses = df['Diagnosis'].nunique()
-        avg_claim = float(df['amount'].mean())
+        avg_claim = (total_amount / total_claims) if total_claims > 0 else 0.0
 
         context['deep_summary'] = {
             'total_claims': int(total_claims),
@@ -7533,34 +7524,43 @@ def diagnosis_patterns(request):
         }
 
         # -------------------------
-        # Diagnosis-level summary stats (counts, sums, mean, median, std, quantiles)
+        # Diagnosis-level summary stats
         # -------------------------
-        diag_stats = df.groupby('Diagnosis').agg(
-            Total_Claims=('Diagnosis', 'count'),
-            Total_Amount=('amount', 'sum'),
-            Mean_Amount=('amount', 'mean'),
-            Median_Amount=('amount', 'median'),
-            Std_Amount=('amount', 'std')
-        ).reset_index()
+        # Ensure claim_ce exists
+        if 'claim_ce' in df.columns:
+            diag_stats = df.groupby('Diagnosis').agg(
+                Total_Claims=('claim_ce', 'nunique'),   # ✅ unique claim_ce per diagnosis
+                Total_Amount=('amount', 'sum'),
+                Mean_Amount=('amount', 'mean'),
+                Median_Amount=('amount', 'median'),
+                Std_Amount=('amount', 'std')
+            ).reset_index()
+        else:
+            diag_stats = df.groupby('Diagnosis').agg(
+                Total_Claims=('Diagnosis', 'count'),
+                Total_Amount=('amount', 'sum'),
+                Mean_Amount=('amount', 'mean'),
+                Median_Amount=('amount', 'median'),
+                Std_Amount=('amount', 'std')
+            ).reset_index()
 
-        # quantiles per diagnosis (25,50,75,90)
+        # Quantiles
         q = df.groupby('Diagnosis')['amount'].quantile([0.25, 0.5, 0.75, 0.9]).reset_index()
         q.columns = ['Diagnosis', 'quantile', 'amt_q']
         q_pivot = q.pivot(index='Diagnosis', columns='quantile', values='amt_q').reset_index().rename(
             columns={0.25: 'q25', 0.5: 'q50', 0.75: 'q75', 0.9: 'q90'}
         )
-        # Merge quantiles into diag_stats
         diag_stats = diag_stats.merge(q_pivot, on='Diagnosis', how='left')
 
-        # contribution percentages
+        # Contributions
         diag_stats['Pct_of_Claims'] = (diag_stats['Total_Claims'] / diag_stats['Total_Claims'].sum()) * 100
         diag_stats['Pct_of_Amount'] = (diag_stats['Total_Amount'] / diag_stats['Total_Amount'].sum()) * 100
         diag_stats['IQR'] = diag_stats['q75'] - diag_stats['q25']
 
-        # sort by total claims
+        # Sort
         diag_stats = diag_stats.sort_values('Total_Claims', ascending=False).reset_index(drop=True)
 
-        # Save table for template
+        # Save table
         context['deep_tables']['diagnosis_stats'] = diag_stats.head(200).to_dict('records')
 
         # -------------------------
