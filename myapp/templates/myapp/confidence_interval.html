@@ -1,105 +1,1447 @@
 {% extends "base1.html" %}
+{% load humanize %}
 
-{% block title %}Confidence Intervals - Safaricom Portal{% endblock %}
+{% block title %}Advanced Confidence Interval Analysis - Safaricom Portal{% endblock %}
+
+{% block head %}
+{{ block.super }}
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+{% endblock %}
 
 {% block content %}
-<div class="content-header">
-    <h1><i class="fas fa-chart-area"></i> Prediction Confidence Intervals</h1>
-    <p>Statistical confidence ranges for claims predictions</p>
-</div>
+<div class="confidence-dashboard">
+    <!-- Header Section -->
+    <div class="dashboard-header">
+        <div class="header-content">
+            <div class="header-icon">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <div class="header-text">
+                <h1>Advanced Confidence Interval Analysis</h1>
+                <p>Statistical uncertainty quantification and risk assessment for claims forecasting</p>
+            </div>
+            <div class="header-actions">
+                <button class="btn btn-outline" id="export-analysis">
+                    <i class="fas fa-download"></i> Export Report
+                </button>
+            </div>
+        </div>
+    </div>
 
-<div class="content-body">
-    <!-- Chart -->
-    <div class="card">
+    {% if error %}
+    <div class="alert alert-danger">
+        <div class="alert-icon">
+            <i class="fas fa-exclamation-circle"></i>
+        </div>
+        <div class="alert-content">
+            <h4>Analysis Error</h4>
+            <p>{{ error }}</p>
+        </div>
+        <button class="alert-close" onclick="this.parentElement.style.display='none'">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+    {% endif %}
+
+    <!-- Analysis Controls -->
+    <div class="card control-section">
         <div class="card-header">
-            <h3>Monthly Claims with Confidence Intervals</h3>
-            <div class="card-actions">
-                <select id="confidence-level" class="form-select">
-                    <option value="95" {% if selected_confidence == 95 %}selected{% endif %}>95% Confidence</option>
-                    <option value="90" {% if selected_confidence == 90 %}selected{% endif %}>90% Confidence</option>
-                    <option value="99" {% if selected_confidence == 99 %}selected{% endif %}>99% Confidence</option>
-                </select>
+            <h3><i class="fas fa-sliders-h"></i> Analysis Parameters</h3>
+            <div class="header-badge">
+                <span class="badge badge-primary">Advanced Statistics</span>
             </div>
         </div>
         <div class="card-body">
-            {% if visualizations.confidence_intervals %}
-                {{ visualizations.confidence_intervals|safe }}
-            {% else %}
-                <div class="alert alert-warning">No confidence interval data available</div>
+            <form method="GET" id="ci-analysis-form">
+                <div class="control-grid">
+                    <div class="control-group">
+                        <label for="confidence"><i class="fas fa-percentage"></i> Confidence Level</label>
+                        <select id="confidence" name="confidence" class="searchable-select">
+                            {% for level in confidence_levels %}
+                            <option value="{{ level }}" {% if selected_confidence == level %}selected{% endif %}>{{ level }}% Confidence</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <label for="metric"><i class="fas fa-calculator"></i> Analysis Metric</label>
+                        <select id="metric" name="metric" class="searchable-select">
+                            {% for value, label in metrics %}
+                            <option value="{{ value }}" {% if selected_metric == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <label for="frequency"><i class="fas fa-calendar-alt"></i> Aggregation Period</label>
+                        <select id="frequency" name="frequency" class="searchable-select">
+                            {% for value, label in frequencies %}
+                            <option value="{{ value }}" {% if selected_frequency == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <label for="method"><i class="fas fa-cogs"></i> Statistical Method</label>
+                        <select id="method" name="method" class="searchable-select">
+                            {% for value, label in methods %}
+                            <option value="{{ value }}" {% if selected_method == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <label for="benefit"><i class="fas fa-stethoscope"></i> Benefit Type</label>
+                        <select id="benefit" name="benefit" class="searchable-select">
+                            <option value="all" {% if selected_benefit == 'all' %}selected{% endif %}>All Benefits</option>
+                            {% for benefit in benefit_types %}
+                            <option value="{{ benefit }}" {% if selected_benefit == benefit %}selected{% endif %}>{{ benefit }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <label for="provider"><i class="fas fa-hospital"></i> Provider</label>
+                        <select id="provider" name="provider" class="searchable-select">
+                            <option value="all" {% if selected_provider == 'all' %}selected{% endif %}>All Providers</option>
+                            {% for provider in providers %}
+                            <option value="{{ provider }}" {% if selected_provider == provider %}selected{% endif %}>{{ provider }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <label for="time_period"><i class="fas fa-clock"></i> Time Period</label>
+                        <select id="time_period" name="time_period">
+                            <option value="3m" {% if time_period == '3m' %}selected{% endif %}>Last 3 Months</option>
+                            <option value="6m" {% if time_period == '6m' %}selected{% endif %}>Last 6 Months</option>
+                            <option value="12m" {% if time_period == '12m' %}selected{% endif %}>Last 12 Months</option>
+                            <option value="24m" {% if time_period == '24m' %}selected{% endif %}>Last 24 Months</option>
+                            <option value="36m" {% if time_period == '36m' %}selected{% endif %}>Last 36 Months</option>
+                            <option value="all" {% if time_period == 'all' %}selected{% endif %}>All Time</option>
+                        </select>
+                    </div>
+
+                    <div class="control-actions">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-rocket"></i> Run Analysis
+                        </button>
+                        <button type="button" class="btn btn-secondary" id="reset-controls">
+                            <i class="fas fa-redo"></i> Reset
+                        </button>
+                    </div>
+                </div>
+
+                <div class="advanced-controls">
+                    <div class="control-checkbox">
+                        <input type="checkbox" id="show_trend" name="show_trend" {% if show_trend %}checked{% endif %}>
+                        <label for="show_trend">Show Trend Analysis</label>
+                    </div>
+                    <div class="control-checkbox">
+                        <input type="checkbox" id="compare_groups" name="compare_groups" {% if compare_groups %}checked{% endif %}>
+                        <label for="compare_groups">Compare Segments</label>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <h3>Running Statistical Analysis</h3>
+            <p>Calculating confidence intervals and risk metrics...</p>
+        </div>
+    </div>
+
+    {% if statistical_summary %}
+    <div class="analysis-results">
+        <!-- Key Metrics -->
+        <div class="metrics-section">
+            <div class="metric-card primary">
+                <div class="metric-icon">
+                    <i class="fas fa-bullseye"></i>
+                </div>
+                <div class="metric-content">
+                    <div class="metric-value">{{ statistical_summary.coverage_rate }}%</div>
+                    <div class="metric-label">CI Coverage Rate</div>
+                    <div class="metric-detail">Expected: {{ selected_confidence }}%</div>
+                </div>
+            </div>
+
+            <div class="metric-card success">
+                <div class="metric-icon">
+                    <i class="fas fa-ruler-combined"></i>
+                </div>
+                <div class="metric-content">
+                    <div class="metric-value">{{ statistical_summary.avg_ci_width|floatformat:2 }}</div>
+                    <div class="metric-label">Average CI Width</div>
+                    <div class="metric-detail">± {{ statistical_summary.avg_ci_width|floatformat:2 }}</div>
+                </div>
+            </div>
+
+            <div class="metric-card warning">
+                <div class="metric-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="metric-content">
+                    <div class="metric-value">{{ outlier_analysis.outlier_count }}</div>
+                    <div class="metric-label">Recent Outliers</div>
+                    <div class="metric-detail">{{ outlier_analysis.outlier_rate }}% of periods</div>
+                </div>
+            </div>
+
+            <div class="metric-card info">
+                <div class="metric-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <div class="metric-content">
+                    <div class="metric-value">{{ statistical_summary.data_variability }}%</div>
+                    <div class="metric-label">Data Variability</div>
+                    <div class="metric-detail">Coefficient of Variation</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Visualization Tabs -->
+        <div class="card visualization-section">
+            <div class="card-header">
+                <h3><i class="fas fa-chart-area"></i> Statistical Visualizations</h3>
+                <div class="tab-nav" id="visualization-tabs">
+                    <button class="tab-link active" data-tab="main">Main Analysis</button>
+                    <button class="tab-link" data-tab="width">CI Width</button>
+                    <button class="tab-link" data-tab="coverage">Coverage</button>
+                    <button class="tab-link" data-tab="volatility">Volatility</button>
+                    {% if visualizations.method_comparison %}
+                    <button class="tab-link" data-tab="methods">Method Comparison</button>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="main-tab" class="tab-content active">
+                    {% if visualizations.main_ci_chart %}
+                        {{ visualizations.main_ci_chart|safe }}
+                    {% else %}
+                        <div class="empty-state">
+                            <i class="fas fa-chart-line"></i>
+                            <h3>No CI Data Available</h3>
+                            <p>Adjust your parameters and run the analysis</p>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div id="width-tab" class="tab-content">
+                    {% if visualizations.ci_width_chart %}
+                        {{ visualizations.ci_width_chart|safe }}
+                    {% else %}
+                        <div class="empty-state">
+                            <i class="fas fa-ruler-horizontal"></i>
+                            <h3>CI Width Analysis Not Available</h3>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div id="coverage-tab" class="tab-content">
+                    {% if visualizations.coverage_chart %}
+                        {{ visualizations.coverage_chart|safe }}
+                    {% else %}
+                        <div class="empty-state">
+                            <i class="fas fa-chart-pie"></i>
+                            <h3>Coverage Analysis Not Available</h3>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div id="volatility-tab" class="tab-content">
+                    {% if visualizations.volatility_chart %}
+                        {{ visualizations.volatility_chart|safe }}
+                    {% else %}
+                        <div class="empty-state">
+                            <i class="fas fa-wave-square"></i>
+                            <h3>Volatility Analysis Not Available</h3>
+                        </div>
+                    {% endif %}
+                </div>
+
+                {% if visualizations.method_comparison %}
+                <div id="methods-tab" class="tab-content">
+                    {{ visualizations.method_comparison|safe }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Insights Section -->
+        <div class="insights-section">
+            <!-- Statistical Summary -->
+            <div class="card summary-card">
+                <div class="card-header">
+                    <h3><i class="fas fa-chart-bar"></i> Statistical Summary</h3>
+                </div>
+                <div class="card-body">
+                    <div class="summary-grid">
+                        <div class="summary-item">
+                            <div class="summary-label">Total Periods Analyzed</div>
+                            <div class="summary-value">{{ statistical_summary.total_periods }}</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">Periods Within CI</div>
+                            <div class="summary-value">{{ statistical_summary.periods_within_ci }}</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">Max CI Width</div>
+                            <div class="summary-value">{{ statistical_summary.max_ci_width }}</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">Min CI Width</div>
+                            <div class="summary-value">{{ statistical_summary.min_ci_width }}</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">CI Width Std Dev</div>
+                            <div class="summary-value">{{ statistical_summary.ci_width_std }}</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">Data Variability</div>
+                            <div class="summary-value">{{ statistical_summary.data_variability }}%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Risk Assessment -->
+            <div class="card risk-card">
+                <div class="card-header">
+                    <h3><i class="fas fa-shield-alt"></i> Risk Assessment</h3>
+                    <span class="risk-badge {{ risk_assessment.risk_category|lower }}">{{ risk_assessment.risk_category }} Risk</span>
+                </div>
+                <div class="card-body">
+                    <div class="risk-metrics">
+                        <div class="risk-item">
+                            <div class="risk-label">Volatility Level</div>
+                            <div class="risk-value {{ risk_assessment.volatility_level|lower }}">{{ risk_assessment.volatility_level }}</div>
+                        </div>
+                        <div class="risk-item">
+                            <div class="risk-label">Predictability Score</div>
+                            <div class="risk-value">{{ risk_assessment.predictability_score }}%</div>
+                        </div>
+                        <div class="risk-item">
+                            <div class="risk-label">Outlier Rate</div>
+                            <div class="risk-value">{{ outlier_analysis.outlier_rate }}%</div>
+                        </div>
+                    </div>
+
+                    {% if risk_assessment.recommendations %}
+                    <div class="recommendations">
+                        <h4>Recommendations</h4>
+                        <div class="recommendations-list">
+                            {% for rec in risk_assessment.recommendations %}
+                            <div class="recommendation-item {{ rec.type }}">
+                                <div class="recommendation-icon">
+                                    <i class="fas fa-{% if rec.type == 'high' %}exclamation-triangle{% elif rec.type == 'medium' %}info-circle{% else %}check-circle{% endif %}"></i>
+                                </div>
+                                <div class="recommendation-content">
+                                    <h5>{{ rec.title }}</h5>
+                                    <p>{{ rec.message }}</p>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Outlier Analysis -->
+            {% if outlier_analysis.outliers %}
+            <div class="card outlier-card">
+                <div class="card-header">
+                    <h3><i class="fas fa-exclamation-circle"></i> Outlier Detection</h3>
+                    <span class="outlier-count">{{ outlier_analysis.outlier_count }} outliers found</span>
+                </div>
+                <div class="card-body">
+                    <div class="outlier-stats">
+                        <div class="outlier-stat">
+                            <div class="stat-value">{{ outlier_analysis.avg_deviation|floatformat:1 }}%</div>
+                            <div class="stat-label">Average Deviation</div>
+                        </div>
+                        <div class="outlier-stat">
+                            <div class="stat-value">{{ outlier_analysis.max_deviation|floatformat:1 }}%</div>
+                            <div class="stat-label">Max Deviation</div>
+                        </div>
+                    </div>
+
+                    <div class="outliers-list">
+                        <h4>Recent Outliers (Last 12 Periods)</h4>
+                        {% for outlier in outlier_analysis.outliers %}
+                        <div class="outlier-item {{ outlier.type }}">
+                            <div class="outlier-date">{{ outlier.date }}</div>
+                            <div class="outlier-details">
+                                <span class="outlier-value">{{ outlier.value }}</span>
+                                <span class="outlier-deviation {% if outlier.type == 'above_upper' %}positive{% else %}negative{% endif %}">
+                                    {{ outlier.deviation_pct }}% {% if outlier.type == 'above_upper' %}above{% else %}below{% endif %} CI
+                                </span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Trend Analysis -->
+            {% if trend_analysis %}
+            <div class="card trend-card">
+                <div class="card-header">
+                    <h3><i class="fas fa-trending-up"></i> Trend Analysis</h3>
+                    <span class="trend-badge {% if trend_analysis.trend_direction == 'increasing' %}positive{% else %}negative{% endif %}">
+                        {{ trend_analysis.trend_direction|title }}
+                    </span>
+                </div>
+                <div class="card-body">
+                    <div class="trend-metrics">
+                        <div class="trend-item">
+                            <div class="trend-label">Trend Direction</div>
+                            <div class="trend-value {% if trend_analysis.trend_direction == 'increasing' %}positive{% else %}negative{% endif %}">
+                                {{ trend_analysis.trend_direction|title }}
+                            </div>
+                        </div>
+                        <div class="trend-item">
+                            <div class="trend-label">Total Change</div>
+                            <div class="trend-value {% if trend_analysis.trend_percentage > 0 %}positive{% else %}negative{% endif %}">
+                                {{ trend_analysis.trend_percentage }}%
+                            </div>
+                        </div>
+                        <div class="trend-item">
+                            <div class="trend-label">R² Score</div>
+                            <div class="trend-value">{{ trend_analysis.r_squared|floatformat:3 }}</div>
+                        </div>
+                        <div class="trend-item">
+                            <div class="trend-label">Significant Trend</div>
+                            <div class="trend-value {% if trend_analysis.trend_significant %}positive{% else %}neutral{% endif %}">
+                                {{ trend_analysis.trend_significant|yesno:"Yes,No" }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
             {% endif %}
         </div>
-    </div>
 
-    <div class="row">
-        <!-- Confidence Band Analysis -->
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header"><h3>Confidence Band Analysis</h3></div>
-                <div class="card-body">
-                    <div class="stat-card">
-                        <div class="stat-value">± KES {{ avg_ci_range|default:"0" }}</div>
-                        <div class="stat-label">Average Monthly Range</div>
-                    </div>
-                    <p>The confidence band shows the range within which we expect actual claims to fall {{ selected_confidence }}% of the time.</p>
-                    <p>A wider band indicates higher uncertainty in our predictions.</p>
+        <!-- Method Explanation -->
+        <div class="card method-card">
+            <div class="card-header">
+                <h3><i class="fas fa-graduation-cap"></i> Statistical Method Explanation</h3>
+            </div>
+            <div class="card-body">
+                <div class="method-explanation">
+                    {% if selected_method == "standard" %}
+                    <h4>Standard Confidence Intervals</h4>
+                    <p>Uses the Central Limit Theorem to calculate intervals based on sample mean and standard deviation. Assumes normal distribution of sample means.</p>
+                    <ul>
+                        <li><strong>Formula:</strong> Mean ± Z × (σ/√n)</li>
+                        <li><strong>Best for:</strong> Large sample sizes, normally distributed data</li>
+                        <li><strong>Limitations:</strong> Sensitive to outliers, assumes normality</li>
+                    </ul>
+                    {% elif selected_method == "bootstrap" %}
+                    <h4>Bootstrap Confidence Intervals</h4>
+                    <p>Uses resampling with replacement to estimate sampling distribution. Makes fewer assumptions about underlying distribution.</p>
+                    <ul>
+                        <li><strong>Method:</strong> Percentile bootstrap with 1000 resamples</li>
+                        <li><strong>Best for:</strong> Small samples, non-normal data</li>
+                        <li><strong>Limitations:</strong> Computationally intensive</li>
+                    </ul>
+                    {% elif selected_method == "bayesian" %}
+                    <h4>Bayesian Credible Intervals</h4>
+                    <p>Uses Bayesian inference with conjugate priors to calculate probability intervals. Incorporates prior knowledge about parameters.</p>
+                    <ul>
+                        <li><strong>Method:</strong> Normal-inverse-gamma conjugate prior</li>
+                        <li><strong>Best for:</strong> Incorporating prior knowledge, sequential analysis</li>
+                        <li><strong>Limitations:</strong> Choice of prior can influence results</li>
+                    </ul>
+                    {% elif selected_method == "prediction" %}
+                    <h4>Prediction Intervals</h4>
+                    <p>Wider than confidence intervals, designed to contain future observations rather than population parameters.</p>
+                    <ul>
+                        <li><strong>Formula:</strong> Mean ± Z × σ × √(1 + 1/n)</li>
+                        <li><strong>Best for:</strong> Forecasting future values</li>
+                        <li><strong>Limitations:</strong> Very wide intervals for small samples</li>
+                    </ul>
+                    {% endif %}
                 </div>
             </div>
         </div>
-
-        <!-- Outlier Detection -->
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header"><h3>Outlier Detection</h3></div>
-                <div class="card-body">
-                    <div class="outlier-metric">
-                        <span class="outlier-value">{{ outlier_count|default:"0" }}</span>
-                        <span class="outlier-label">Months outside confidence band (last 12 months)</span>
-                    </div>
-                    <div class="outlier-list">
-                        {% if outliers %}
-                            {% for o in outliers %}
-                                <div class="outlier-item">
-                                    <span class="outlier-date">{{ o.date }}</span>
-                                    <span class="outlier-amount">{{ o.amount }}</span>
-                                </div>
-                            {% endfor %}
-                        {% else %}
-                            <div class="alert alert-info">No outliers detected in the last 12 months.</div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
+    </div>
+    {% else %}
+    <!-- Empty State -->
+    <div class="empty-dashboard">
+        <div class="empty-content">
+            <i class="fas fa-chart-line"></i>
+            <h2>No Analysis Results</h2>
+            <p>Configure your analysis parameters and run the confidence interval analysis</p>
+            <button class="btn btn-primary" onclick="document.getElementById('ci-analysis-form').submit()">
+                <i class="fas fa-rocket"></i> Run Analysis
+            </button>
         </div>
     </div>
+    {% endif %}
 </div>
 
 <style>
-    .content-header { margin-bottom: 2rem; }
-    .content-header h1 { color: #1BB64F; margin-bottom: 0.5rem; }
-    .content-header p { color: #666; }
-    .card { background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 2rem; border: 1px solid #e3e8ee; }
-    .card-header { padding: 1.5rem; border-bottom: 1px solid #e3e8ee; display: flex; justify-content: space-between; align-items: center; }
-    .card-body { padding: 1.5rem; }
-    .form-select { padding: 0.5rem 1rem; border-radius: 6px; border: 1px solid #ddd; background-color: #f9f9f9; }
-    .stat-card { background: #f7fdf9; padding: 1.5rem; border-radius: 8px; text-align: center; border: 1px solid #e3e8ee; margin-bottom: 1.5rem; }
-    .stat-value { font-size: 1.5rem; font-weight: 700; color: #1BB64F; margin-bottom: 0.5rem; }
-    .stat-label { color: #666; font-size: 0.9rem; }
-    .stat-description p { color: #666; margin-bottom: 0.5rem; }
-    .outlier-metric { margin-bottom: 1.5rem; }
-    .outlier-value { font-size: 1.5rem; font-weight: 700; color: #1BB64F; margin-right: 0.5rem; }
-    .outlier-label { color: #666; }
-    .outlier-list { border-top: 1px solid #e3e8ee; padding-top: 1rem; }
-    .outlier-item { display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #f0f0f0; }
-    .outlier-date { font-weight: 500; }
-    .outlier-amount { color: #666; }
+/* Base Styles */
+.confidence-dashboard {
+    max-width: 1800px;
+    margin: 0 auto;
+    padding: 0 20px;
+    font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+    background-color: #f8fafc;
+    color: #2d3748;
+    line-height: 1.6;
+}
+
+/* Header Styles */
+.dashboard-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 12px;
+    margin: 1.5rem 0;
+    color: white;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 2rem;
+}
+
+.header-icon {
+    font-size: 3rem;
+    opacity: 0.9;
+}
+
+.header-text h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.header-text p {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    margin: 0.5rem 0 0 0;
+}
+
+.header-actions .btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+
+.header-actions .btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+}
+
+/* Alert Styles */
+.alert {
+    display: flex;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    border-left: 4px solid;
+}
+
+.alert-danger {
+    background-color: #fef5f5;
+    border-color: #f56565;
+    color: #c53030;
+}
+
+.alert-icon {
+    font-size: 1.5rem;
+    margin-right: 1rem;
+}
+
+.alert-content {
+    flex: 1;
+}
+
+.alert-content h4 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1.1rem;
+}
+
+.alert-content p {
+    margin: 0;
+}
+
+.alert-close {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.3s;
+}
+
+.alert-close:hover {
+    opacity: 1;
+}
+
+/* Card Styles */
+.card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    margin-bottom: 1.5rem;
+    border: 1px solid #e2e8f0;
+    transition: all 0.3s;
+    overflow: hidden;
+}
+
+.card:hover {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+
+.card-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: #2d3748;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+/* Control Styles */
+.control-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 1rem;
+}
+
+.control-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.control-group label {
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+    color: #4a5568;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.control-group select, .control-group input {
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    border: 1px solid #cbd5e0;
+    background-color: white;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.3s;
+}
+
+.control-group select:focus, .control-group input:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    outline: none;
+}
+
+.control-actions {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-end;
+}
+
+.btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: none;
+}
+
+.btn-primary {
+    background: #667eea;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #5a67d8;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.btn-secondary {
+    background: #e2e8f0;
+    color: #4a5568;
+}
+
+.btn-secondary:hover {
+    background: #cbd5e0;
+    transform: translateY(-2px);
+}
+
+.btn-outline {
+    background: transparent;
+    border: 1px solid #cbd5e0;
+    color: #4a5568;
+}
+
+.btn-outline:hover {
+    background: #f7fafc;
+    border-color: #a0aec0;
+}
+
+.advanced-controls {
+    display: flex;
+    gap: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e2e8f0;
+}
+
+.control-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.control-checkbox input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+}
+
+.control-checkbox label {
+    margin: 0;
+    font-weight: 500;
+}
+
+/* Badge Styles */
+.badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.badge-primary {
+    background: #ebf8ff;
+    color: #3182ce;
+}
+
+.header-badge {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* Loading Overlay */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.95);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    display: none;
+}
+
+.loading-content {
+    text-align: center;
+    max-width: 400px;
+}
+
+.loading-spinner {
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid #667eea;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1.5rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading-content h3 {
+    margin: 0 0 0.5rem 0;
+    color: #2d3748;
+}
+
+.loading-content p {
+    margin: 0;
+    color: #718096;
+}
+
+/* Metrics Section */
+.metrics-section {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.metric-card {
+    display: flex;
+    align-items: center;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s;
+    border-left: 4px solid;
+}
+
+.metric-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.metric-card.primary {
+    background: linear-gradient(135deg, #ebf8ff 0%, #bee3f8 100%);
+    border-left-color: #3182ce;
+}
+
+.metric-card.success {
+    background: linear-gradient(135deg, #f0fff4 0%, #c6f6d5 100%);
+    border-left-color: #38a169;
+}
+
+.metric-card.warning {
+    background: linear-gradient(135deg, #fffaf0 0%, #feebc8 100%);
+    border-left-color: #dd6b20;
+}
+
+.metric-card.info {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border-left-color: #0369a1;
+}
+
+.metric-icon {
+    font-size: 2.5rem;
+    margin-right: 1rem;
+    opacity: 0.8;
+}
+
+.metric-content {
+    flex: 1;
+}
+
+.metric-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+}
+
+.metric-label {
+    font-size: 0.9rem;
+    color: #4a5568;
+    margin-bottom: 0.5rem;
+}
+
+.metric-detail {
+    font-size: 0.85rem;
+    color: #718096;
+}
+
+/* Tab Navigation */
+.tab-nav {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.tab-link {
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    background: #e2e8f0;
+    border: none;
+    font-weight: 600;
+    color: #4a5568;
+    cursor: pointer;
+    transition: all 0.3s;
+    white-space: nowrap;
+}
+
+.tab-link.active {
+    background: #667eea;
+    color: white;
+}
+
+.tab-link:hover:not(.active) {
+    background: #cbd5e0;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* Empty States */
+.empty-state, .empty-dashboard {
+    text-align: center;
+    padding: 3rem 2rem;
+}
+
+.empty-state i, .empty-dashboard i {
+    font-size: 4rem;
+    color: #cbd5e0;
+    margin-bottom: 1.5rem;
+}
+
+.empty-state h3, .empty-dashboard h2 {
+    color: #4a5568;
+    margin-bottom: 0.5rem;
+}
+
+.empty-state p, .empty-dashboard p {
+    color: #718096;
+    margin-bottom: 1.5rem;
+}
+
+/* Summary Grid */
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+}
+
+.summary-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: #f7fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.summary-label {
+    font-weight: 600;
+    color: #4a5568;
+}
+
+.summary-value {
+    font-weight: 700;
+    color: #2d3748;
+}
+
+/* Risk Assessment */
+.risk-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.risk-badge.high {
+    background: #fed7d7;
+    color: #c53030;
+}
+
+.risk-badge.medium {
+    background: #feebcb;
+    color: #dd6b20;
+}
+
+.risk-badge.low {
+    background: #c6f6d5;
+    color: #276749;
+}
+
+.risk-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.risk-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: #f7fafc;
+    border-radius: 8px;
+}
+
+.risk-label {
+    font-weight: 600;
+    color: #4a5568;
+}
+
+.risk-value {
+    font-weight: 700;
+}
+
+.risk-value.high {
+    color: #e53e3e;
+}
+
+.risk-value.medium {
+    color: #dd6b20;
+}
+
+.risk-value.low {
+    color: #38a169;
+}
+
+.recommendations h4 {
+    margin: 0 0 1rem 0;
+    color: #2d3748;
+}
+
+.recommendations-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.recommendation-item {
+    display: flex;
+    align-items: flex-start;
+    padding: 1rem;
+    border-radius: 8px;
+    border-left: 4px solid;
+}
+
+.recommendation-item.high {
+    background: #fff5f5;
+    border-left-color: #fc8181;
+}
+
+.recommendation-item.medium {
+    background: #fffaf0;
+    border-left-color: #f6ad55;
+}
+
+.recommendation-item.info {
+    background: #ebf8ff;
+    border-left-color: #63b3ed;
+}
+
+.recommendation-icon {
+    font-size: 1.25rem;
+    margin-right: 1rem;
+    margin-top: 0.25rem;
+}
+
+.recommendation-item.high .recommendation-icon {
+    color: #e53e3e;
+}
+
+.recommendation-item.medium .recommendation-icon {
+    color: #dd6b20;
+}
+
+.recommendation-item.info .recommendation-icon {
+    color: #3182ce;
+}
+
+.recommendation-content h5 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1rem;
+}
+
+.recommendation-content p {
+    margin: 0;
+    color: #4a5568;
+}
+
+/* Outlier Analysis */
+.outlier-count {
+    padding: 0.25rem 0.75rem;
+    background: #fed7d7;
+    color: #c53030;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.outlier-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.outlier-stat {
+    text-align: center;
+    padding: 1rem;
+    background: #f7fafc;
+    border-radius: 8px;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #2d3748;
+    display: block;
+}
+
+.stat-label {
+    font-size: 0.85rem;
+    color: #718096;
+}
+
+.outliers-list h4 {
+    margin: 0 0 1rem 0;
+    color: #2d3748;
+}
+
+.outlier-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+    border-radius: 8px;
+    border-left: 4px solid;
+}
+
+.outlier-item.above_upper {
+    background: #fff5f5;
+    border-left-color: #fc8181;
+}
+
+.outlier-item.below_lower {
+    background: #f0fff4;
+    border-left-color: #9ae6b4;
+}
+
+.outlier-date {
+    font-weight: 600;
+    color: #2d3748;
+}
+
+.outlier-details {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.25rem;
+}
+
+.outlier-value {
+    font-weight: 700;
+    color: #2d3748;
+}
+
+.outlier-deviation {
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.outlier-deviation.positive {
+    color: #e53e3e;
+}
+
+.outlier-deviation.negative {
+    color: #38a169;
+}
+
+/* Trend Analysis */
+.trend-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.trend-badge.positive {
+    background: #c6f6d5;
+    color: #276749;
+}
+
+.trend-badge.negative {
+    background: #fed7d7;
+    color: #c53030;
+}
+
+.trend-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+}
+
+.trend-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: #f7fafc;
+    border-radius: 8px;
+}
+
+.trend-label {
+    font-weight: 600;
+    color: #4a5568;
+}
+
+.trend-value {
+    font-weight: 700;
+}
+
+.trend-value.positive {
+    color: #38a169;
+}
+
+.trend-value.negative {
+    color: #e53e3e;
+}
+
+.trend-value.neutral {
+    color: #718096;
+}
+
+/* Method Explanation */
+.method-explanation h4 {
+    margin: 0 0 1rem 0;
+    color: #2d3748;
+}
+
+.method-explanation p {
+    color: #4a5568;
+    margin-bottom: 1.5rem;
+    line-height: 1.7;
+}
+
+.method-explanation ul {
+    color: #4a5568;
+    padding-left: 1.5rem;
+}
+
+.method-explanation li {
+    margin-bottom: 0.5rem;
+    line-height: 1.6;
+}
+
+.method-explanation strong {
+    color: #2d3748;
+}
+
+/* Insights Section */
+.insights-section {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+    .header-content {
+        flex-direction: column;
+        text-align: center;
+        gap: 1.5rem;
+    }
+    
+    .control-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .metrics-section {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .insights-section {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .confidence-dashboard {
+        padding: 0 15px;
+    }
+    
+    .header-text h1 {
+        font-size: 2rem;
+    }
+    
+    .control-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .metrics-section {
+        grid-template-columns: 1fr;
+    }
+    
+    .card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    
+    .tab-nav {
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .summary-grid, .risk-metrics, .trend-metrics {
+        grid-template-columns: 1fr;
+    }
+    
+    .advanced-controls {
+        flex-direction: column;
+        gap: 1rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .header-content {
+        padding: 1.5rem;
+    }
+    
+    .header-text h1 {
+        font-size: 1.75rem;
+    }
+    
+    .header-text p {
+        font-size: 1rem;
+    }
+    
+    .metric-card {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .metric-icon {
+        margin-right: 0;
+        margin-bottom: 1rem;
+    }
+    
+    .control-actions {
+        flex-direction: column;
+    }
+    
+    .outlier-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    
+    .outlier-details {
+        align-items: flex-start;
+    }
+}
 </style>
 
 <script>
-document.getElementById('confidence-level').addEventListener('change', function() {
-    const level = this.value;
-    const url = new URL(window.location.href);
-    url.searchParams.set('confidence', level);
-    window.location.href = url.toString();
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Select2
+    $('.searchable-select').select2({
+        placeholder: "Select an option",
+        allowClear: true,
+        width: '100%',
+        minimumResultsForSearch: 5,
+        dropdownAutoWidth: true
+    });
+
+    // Handle form submission with loading indicator
+    const form = document.getElementById('ci-analysis-form');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    
+    form.addEventListener('submit', function(e) {
+        loadingOverlay.style.display = 'flex';
+        
+        // Add a small delay to show the loading animation
+        setTimeout(function() {
+            // The form will submit normally after this
+        }, 100);
+    });
+    
+    // Reset controls
+    document.getElementById('reset-controls').addEventListener('click', function() {
+        form.reset();
+        $('.searchable-select').val(null).trigger('change');
+    });
+    
+    // Tab functionality
+    const tabLinks = document.querySelectorAll('.tab-link');
+    const tabContents = document.querySelectorAll('.tab-content');
+    
+    tabLinks.forEach(link => {
+        link.addEventListener('click', function() {
+            const tabId = this.getAttribute('data-tab');
+            
+            // Update active tab
+            tabLinks.forEach(tab => tab.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Show active content
+            tabContents.forEach(content => {
+                content.classList.remove('active');
+                if (content.id === `${tabId}-tab`) {
+                    content.classList.add('active');
+                }
+            });
+        });
+    });
+    
+    // Export functionality
+    document.getElementById('export-analysis').addEventListener('click', function() {
+        // In a real implementation, this would generate a PDF report
+        alert('Export functionality would generate a detailed statistical analysis report here.');
+    });
+    
+    // Real-time parameter updates
+    const dynamicParams = ['confidence', 'metric', 'frequency', 'method'];
+    dynamicParams.forEach(param => {
+        const element = document.getElementById(param);
+        if (element) {
+            element.addEventListener('change', function() {
+                // Update any dynamic elements that depend on these parameters
+                updateDynamicContent();
+            });
+        }
+    });
+    
+    function updateDynamicContent() {
+        // Update elements that show the current confidence level
+        document.querySelectorAll('.confidence-level').forEach(el => {
+            el.textContent = document.getElementById('confidence').value + '%';
+        });
+    }
+    
+    // Initialize dynamic content
+    updateDynamicContent();
 });
 </script>
 {% endblock %}

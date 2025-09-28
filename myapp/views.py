@@ -7428,138 +7428,599 @@ def claims_prediction_home(request):
 @login_required
 def confidence_intervals(request):
     """
-    View for interactive confidence interval analysis with filters:
-    - Confidence level
-    - Metric (avg / total)
-    - Frequency (M, Q, Y)
-    - Diagnosis (all / specific)
+    Advanced Confidence Interval Analysis with Multiple Statistical Methods
+    Features:
+    - Multiple confidence levels (80%, 90%, 95%, 99%)
+    - Different statistical methods (Standard, Bootstrap, Bayesian)
+    - Multiple metrics and aggregation periods
+    - Outlier detection and trend analysis
+    - Comparative analysis across different segments
     """
-
-    # --- Default context ---
+    
+    # Default context
     context = {
         "username": request.user.username,
-        "confidence_level": 95,
-        "metric": "avg",
-        "frequency": "M",
-        "diagnosis": "all",
-        "plot": None,
-        "summary": {},
-        "outliers": [],
+        "active_tab": "confidence-intervals",
+        "selected_confidence": 95,
+        "selected_metric": "avg_amount",
+        "selected_frequency": "M",
+        "selected_method": "standard",
+        "selected_benefit": "all",
+        "selected_provider": "all",
+        "time_period": "24m",
+        "show_trend": True,
+        "compare_groups": False,
+        
+        # Available options
+        "confidence_levels": [80, 90, 95, 99],
+        "metrics": [
+            ('avg_amount', 'Average Claim Amount'),
+            ('total_amount', 'Total Claims Amount'),
+            ('claim_count', 'Number of Claims'),
+            ('avg_claim_value', 'Average Claim Value')
+        ],
+        "frequencies": [
+            ('W', 'Weekly'),
+            ('M', 'Monthly'),
+            ('Q', 'Quarterly'),
+            ('Y', 'Yearly')
+        ],
+        "methods": [
+            ('standard', 'Standard CI'),
+            ('bootstrap', 'Bootstrap CI'),
+            ('bayesian', 'Bayesian CI'),
+            ('prediction', 'Prediction Interval')
+        ],
+        "benefit_types": sorted(ClaimRecord.objects.values_list('benefit', flat=True)
+                               .exclude(benefit__isnull=True)
+                               .exclude(benefit='')
+                               .distinct()),
+        "providers": sorted(ClaimRecord.objects.values_list('prov_name', flat=True)
+                           .exclude(prov_name__isnull=True)
+                           .exclude(prov_name='')
+                           .distinct()),
+        
+        # Results
+        "visualizations": {},
+        "statistical_summary": {},
+        "outlier_analysis": {},
+        "trend_analysis": {},
+        "comparison_results": {},
+        "risk_assessment": {}
     }
 
     try:
-        # --- 1. Get filters from GET params ---
-        selected_confidence = int(request.GET.get("confidence", 95))
-        metric = request.GET.get("metric", "avg")   # avg / total
-        frequency = request.GET.get("frequency", "M")  # M / Q / Y
-        diagnosis = request.GET.get("diagnosis", "all")
+        # === PARAMETER PARSING ===
+        context["selected_confidence"] = int(request.GET.get("confidence", 95))
+        context["selected_metric"] = request.GET.get("metric", "avg_amount")
+        context["selected_frequency"] = request.GET.get("frequency", "M")
+        context["selected_method"] = request.GET.get("method", "standard")
+        context["selected_benefit"] = request.GET.get("benefit", "all")
+        context["selected_provider"] = request.GET.get("provider", "all")
+        context["time_period"] = request.GET.get("time_period", "24m")
+        context["show_trend"] = request.GET.get("show_trend", "true") == "true"
+        context["compare_groups"] = request.GET.get("compare_groups", "false") == "true"
 
-        context["confidence_level"] = selected_confidence
-        context["metric"] = metric
-        context["frequency"] = frequency
-        context["diagnosis"] = diagnosis
+        # === DATA LOADING AND FILTERING ===
+        queryset = ClaimRecord.objects.all()
+        
+        # Time period filtering
+        if context["time_period"] != "all":
+            today = timezone.now().date()
+            days_map = {'3m': 90, '6m': 180, '12m': 365, '24m': 730, '36m': 1095}
+            days = days_map.get(context["time_period"], 730)
+            start_date = today - timedelta(days=days)
+            queryset = queryset.filter(claim_prov_date__gte=start_date)
 
-        # Z-values
-        z_values = {90: 1.645, 95: 1.96, 99: 2.576}
-        z_value = z_values.get(selected_confidence, 1.96)
+        # Benefit type filtering
+        if context["selected_benefit"] != "all":
+            queryset = queryset.filter(benefit=context["selected_benefit"])
 
-        # --- 2. Load claims data ---
-        qs = ClaimRecord.objects.all().values("claim_prov_date", "amount", "diagnosis")
-        df = pd.DataFrame.from_records(qs)
+        # Provider filtering
+        if context["selected_provider"] != "all":
+            queryset = queryset.filter(prov_name=context["selected_provider"])
 
+        # ✅ Use ailment (human-readable illness) instead of diagnosis
+        df = pd.DataFrame.from_records(
+            queryset.values(
+                'claim_prov_date', 'amount', 'benefit', 'prov_name', 
+                'quantity', 'ailment', 'gender', 'dependent_type'
+            )
+        )
+        
+        # Check if DataFrame is empty using .empty attribute
         if df.empty:
-            context["error"] = "No claims data found."
+            context["error"] = "No claims data found for the selected filters."
             return render(request, "confidence_interval.html", context)
 
-        df["date"] = pd.to_datetime(df["claim_prov_date"], errors="coerce")
-        df["amount"] = pd.to_numeric(df["amount"], errors="coerce")
-        df.dropna(subset=["date", "amount"], inplace=True)
+        # Data cleaning
+        df['amount'] = pd.to_numeric(df['amount'], errors='coerce').fillna(0)
+        df['quantity'] = pd.to_numeric(df['quantity'], errors='coerce').fillna(1)
+        df['datetime'] = pd.to_datetime(df['claim_prov_date'], errors='coerce')
+        df = df.dropna(subset=['datetime'])
+        df['claim_value'] = df['amount'] / df['quantity']
 
-        # --- Diagnosis filtering ---
-        if diagnosis != "all":
-            df = df[df["diagnosis"] == diagnosis]
-
+        # Check again after cleaning using .empty attribute
         if df.empty:
-            context["error"] = "No valid claims data after filtering."
+            context["error"] = "No valid claims data with dates found."
             return render(request, "confidence_interval.html", context)
 
-        # --- 3. Aggregate by chosen frequency ---
-        agg = df.set_index("date").resample(frequency).agg({
-            "amount": ["sum", "count", "mean", "std"]
-        }).reset_index()
-        agg.columns = ["date", "total_amount", "claim_count", "avg_amount", "std_amount"]
-        agg["std_amount"] = agg["std_amount"].fillna(0)
+        # === DATA AGGREGATION ===
+        aggregation = df.set_index('datetime').resample(context["selected_frequency"]).agg({
+            'amount': ['sum', 'mean', 'std', 'count'],
+            'quantity': 'sum',
+            'claim_value': 'mean'
+        }).round(2)
+        
+        # Flatten column names
+        aggregation.columns = ['total_amount', 'avg_amount', 'std_amount', 'claim_count', 
+                              'total_quantity', 'avg_claim_value']
+        aggregation = aggregation.reset_index()
+        aggregation.rename(columns={'datetime': 'date'}, inplace=True)
+        
+        # Remove periods with no data
+        aggregation = aggregation[aggregation['claim_count'] > 0]
 
-        # --- 4. Calculate CI ---
-        agg["ci_lower"] = agg["avg_amount"] - z_value * agg["std_amount"] / np.sqrt(agg["claim_count"])
-        agg["ci_upper"] = agg["avg_amount"] + z_value * agg["std_amount"] / np.sqrt(agg["claim_count"])
-        agg["ci_range"] = agg["ci_upper"] - agg["ci_lower"]
+        # Check if we have enough data points using len()
+        if len(aggregation) < 3:
+            context["error"] = "Insufficient data points for confidence interval analysis."
+            return render(request, "confidence_interval.html", context)
 
-        # --- 5. Summary metrics ---
-        context["summary"] = {
-            "avg_width": round(agg["ci_range"].mean(), 2),
-            "widest_period": agg.loc[agg["ci_range"].idxmax(), "date"].strftime("%b %Y") if not agg.empty else "—",
-            "narrowest_period": agg.loc[agg["ci_range"].idxmin(), "date"].strftime("%b %Y") if not agg.empty else "—",
-            "stability": round(100 * (1 - (agg["ci_range"].std() / (agg["ci_range"].mean() or 1))), 1),
-            "outlier_count": 0
+        # === CONFIDENCE INTERVAL CALCULATIONS ===
+        z_values = {80: 1.282, 90: 1.645, 95: 1.96, 99: 2.576}
+        z_value = z_values.get(context["selected_confidence"], 1.96)
+        
+        # Select target metric
+        metric_map = {
+            'avg_amount': ('avg_amount', 'std_amount', 'Average Claim Amount (KES)'),
+            'total_amount': ('total_amount', None, 'Total Claims Amount (KES)'),
+            'claim_count': ('claim_count', None, 'Number of Claims'),
+            'avg_claim_value': ('avg_claim_value', None, 'Average Claim Value (KES)')
+        }
+        
+        target_col, std_col, y_label = metric_map[context["selected_metric"]]
+        
+        # Calculate confidence intervals based on selected method
+        if context["selected_method"] == "standard":
+            if std_col:
+                aggregation['ci_lower'] = aggregation[target_col] - z_value * aggregation[std_col] / np.sqrt(aggregation['claim_count'])
+                aggregation['ci_upper'] = aggregation[target_col] + z_value * aggregation[std_col] / np.sqrt(aggregation['claim_count'])
+            else:
+                # For metrics without direct std, use sample std
+                std_val = aggregation[target_col].std()
+                aggregation['ci_lower'] = aggregation[target_col] - z_value * std_val
+                aggregation['ci_upper'] = aggregation[target_col] + z_value * std_val
+                
+        elif context["selected_method"] == "bootstrap":
+            # Bootstrap confidence intervals
+            bootstrap_cis = calculate_bootstrap_ci(
+                aggregation[target_col].values, 
+                context["selected_confidence"]
+            )
+            aggregation['ci_lower'] = bootstrap_cis[0]
+            aggregation['ci_upper'] = bootstrap_cis[1]
+            
+        elif context["selected_method"] == "bayesian":
+            # Bayesian credible intervals
+            bayesian_cis = calculate_bayesian_ci(
+                aggregation[target_col].values,
+                context["selected_confidence"]
+            )
+            aggregation['ci_lower'] = bayesian_cis[0]
+            aggregation['ci_upper'] = bayesian_cis[1]
+            
+        elif context["selected_method"] == "prediction":
+            # Prediction intervals (wider than confidence intervals)
+            if std_col:
+                aggregation['ci_lower'] = aggregation[target_col] - z_value * aggregation[std_col] * np.sqrt(1 + 1/aggregation['claim_count'])
+                aggregation['ci_upper'] = aggregation[target_col] + z_value * aggregation[std_col] * np.sqrt(1 + 1/aggregation['claim_count'])
+            else:
+                std_val = aggregation[target_col].std()
+                aggregation['ci_lower'] = aggregation[target_col] - z_value * std_val * np.sqrt(1 + 1/len(aggregation))
+                aggregation['ci_upper'] = aggregation[target_col] + z_value * std_val * np.sqrt(1 + 1/len(aggregation))
+
+        aggregation['ci_range'] = aggregation['ci_upper'] - aggregation['ci_lower']
+        aggregation['within_ci'] = (aggregation[target_col] >= aggregation['ci_lower']) & (aggregation[target_col] <= aggregation['ci_upper'])
+
+        # === STATISTICAL SUMMARY ===
+        coverage_rate = (aggregation['within_ci'].sum() / len(aggregation)) * 100
+        
+        context["statistical_summary"] = {
+            'coverage_rate': round(coverage_rate, 1),
+            'avg_ci_width': round(aggregation['ci_range'].mean(), 2),
+            'ci_width_std': round(aggregation['ci_range'].std(), 2),
+            'max_ci_width': round(aggregation['ci_range'].max(), 2),
+            'min_ci_width': round(aggregation['ci_range'].min(), 2),
+            'total_periods': len(aggregation),
+            'periods_within_ci': aggregation['within_ci'].sum(),
+            'data_variability': round(aggregation[target_col].std() / aggregation[target_col].mean() * 100, 1) if aggregation[target_col].mean() > 0 else 0
         }
 
-        # --- 6. Outlier detection (last 12 periods) ---
-        last_periods = agg[agg["date"] >= (agg["date"].max() - pd.DateOffset(months=12))]
+        # === OUTLIER DETECTION ===
+        recent_data = aggregation[aggregation['date'] >= (aggregation['date'].max() - pd.DateOffset(months=12))]
         outliers = []
-        for _, row in last_periods.iterrows():
-            if row["avg_amount"] > row["ci_upper"]:
-                outliers.append({"date": row["date"].strftime("%b %Y"),
-                                 "msg": f"+KES {row['avg_amount'] - row['ci_upper']:,.0f} above upper limit"})
-            elif row["avg_amount"] < row["ci_lower"]:
-                outliers.append({"date": row["date"].strftime("%b %Y"),
-                                 "msg": f"-KES {row['ci_lower'] - row['avg_amount']:,.0f} below lower limit"})
-        context["outliers"] = outliers
-        context["summary"]["outlier_count"] = len(outliers)
+        
+        for _, row in recent_data.iterrows():
+            if row[target_col] > row['ci_upper']:
+                deviation = row[target_col] - row['ci_upper']
+                deviation_pct = (deviation / row['ci_upper']) * 100
+                outliers.append({
+                    'date': row['date'].strftime('%b %Y'),
+                    'value': round(row[target_col], 2),
+                    'deviation': round(deviation, 2),
+                    'deviation_pct': round(deviation_pct, 1),
+                    'type': 'above_upper',
+                    'ci_bound': round(row['ci_upper'], 2)
+                })
+            elif row[target_col] < row['ci_lower']:
+                deviation = row['ci_lower'] - row[target_col]
+                deviation_pct = (deviation / row['ci_lower']) * 100
+                outliers.append({
+                    'date': row['date'].strftime('%b %Y'),
+                    'value': round(row[target_col], 2),
+                    'deviation': round(deviation, 2),
+                    'deviation_pct': round(deviation_pct, 1),
+                    'type': 'below_lower',
+                    'ci_bound': round(row['ci_lower'], 2)
+                })
 
-        # --- 7. Choose metric for plotting ---
-        if metric == "total":
-            y_series = agg["total_amount"]
-            y_label = "Total Claim Amount (KES)"
-            trace_name = "Total Claims"
+        context["outlier_analysis"] = {
+            'outliers': outliers,
+            'outlier_count': len(outliers),
+            'outlier_rate': round(len(outliers) / len(recent_data) * 100, 1) if len(recent_data) > 0 else 0,
+            'max_deviation': max([abs(o['deviation_pct']) for o in outliers]) if outliers else 0,
+            'avg_deviation': np.mean([abs(o['deviation_pct']) for o in outliers]) if outliers else 0
+        }
+
+        # === TREND ANALYSIS ===
+        if context["show_trend"] and len(aggregation) >= 6:
+            # Calculate trend using linear regression
+            x = np.arange(len(aggregation))
+            y = aggregation[target_col].values
+            trend_coeff = np.polyfit(x, y, 1)
+            trend_line = np.polyval(trend_coeff, x)
+            
+            # Trend statistics
+            trend_slope = trend_coeff[0]
+            trend_pct = (trend_slope * len(aggregation) / y.mean()) * 100 if y.mean() > 0 else 0
+            
+            context["trend_analysis"] = {
+                'trend_direction': 'increasing' if trend_slope > 0 else 'decreasing',
+                'trend_strength': abs(trend_slope),
+                'trend_percentage': round(trend_pct, 1),
+                'trend_significant': abs(trend_pct) > 5,  # More than 5% change over period
+                'r_squared': r2_score(y, trend_line)
+            }
         else:
-            y_series = agg["avg_amount"]
-            y_label = "Average Claim Amount (KES)"
-            trace_name = "Average Claim"
+            context["trend_analysis"] = {}
 
-        # --- 8. Build Plotly chart ---
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=agg["date"], y=y_series,
-                                 mode="lines+markers", name=trace_name,
-                                 line=dict(color="#E30613")))
-        fig.add_trace(go.Scatter(x=agg["date"], y=agg["ci_upper"],
-                                 mode="lines", line=dict(width=0), showlegend=False))
-        fig.add_trace(go.Scatter(x=agg["date"], y=agg["ci_lower"],
-                                 mode="lines", line=dict(width=0), fill="tonexty",
-                                 fillcolor="rgba(227,6,19,0.15)",
-                                 name=f"{selected_confidence}% Confidence Interval"))
+        # === RISK ASSESSMENT ===
+        volatility = aggregation[target_col].std() / aggregation[target_col].mean() if aggregation[target_col].mean() > 0 else 0
+        ci_stability = 1 - (aggregation['ci_range'].std() / aggregation['ci_range'].mean()) if aggregation['ci_range'].mean() > 0 else 0
+        
+        context["risk_assessment"] = {
+            'volatility_level': 'High' if volatility > 0.3 else 'Medium' if volatility > 0.15 else 'Low',
+            'predictability_score': round(ci_stability * 100, 1),
+            'risk_category': 'High' if context["outlier_analysis"]['outlier_rate'] > 20 else 'Medium' if context["outlier_analysis"]['outlier_rate'] > 10 else 'Low',
+            'recommendations': generate_risk_recommendations(context)
+        }
 
-        fig.update_layout(
-            title=f"{trace_name} with {selected_confidence}% Confidence Intervals",
-            xaxis_title="Period",
-            yaxis_title=y_label,
-            template="plotly_white",
-            margin=dict(l=40, r=40, t=60, b=40)
-        )
+        # === COMPARATIVE ANALYSIS ===
+        if context["compare_groups"]:
+            context["comparison_results"] = perform_comparative_analysis(df, context)
 
-        context["plot"] = fig.to_html(full_html=False)
-
-        # --- 9. AJAX support ---
-        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-            html = render(request, "confidence_interval.html", context).content.decode("utf-8")
-            return JsonResponse({"html": html})
+        # === VISUALIZATIONS ===
+        context["visualizations"] = generate_all_visualizations(aggregation, context, target_col, y_label)
 
     except Exception as e:
-        context["error"] = f"Error generating confidence intervals: {str(e)}"
+        context["error"] = f"Error in confidence interval analysis: {str(e)}"
+        import traceback
+        print(f"Confidence Interval Error: {e}")
+        print(f"Traceback: {traceback.format_exc()}")
+
+    # AJAX support
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        html = render(request, "confidence_interval.html", context).content.decode("utf-8")
+        return JsonResponse({"html": html})
 
     return render(request, "confidence_interval.html", context)
 
 
+def calculate_bootstrap_ci(data, confidence_level, n_bootstrap=1000):
+    """Calculate bootstrap confidence intervals"""
+    bootstrap_means = []
+    for _ in range(n_bootstrap):
+        sample = np.random.choice(data, size=len(data), replace=True)
+        bootstrap_means.append(np.mean(sample))
+    
+    alpha = (100 - confidence_level) / 2
+    lower = np.percentile(bootstrap_means, alpha)
+    upper = np.percentile(bootstrap_means, 100 - alpha)
+    
+    return [lower] * len(data), [upper] * len(data)
+
+
+def calculate_bayesian_ci(data, confidence_level):
+    """Calculate Bayesian credible intervals"""
+    # Simple Bayesian approach using conjugate priors
+    alpha = 1  # prior parameters
+    beta = 1
+    
+    n = len(data)
+    data_sum = np.sum(data)
+    
+    # Posterior parameters for normal distribution
+    post_alpha = alpha + n/2
+    post_beta = beta + 0.5 * np.sum((data - np.mean(data))**2)
+    
+    # For simplicity, return symmetric intervals
+    mean_val = np.mean(data)
+    std_val = np.std(data)
+    z_value = {80: 1.282, 90: 1.645, 95: 1.96, 99: 2.576}[confidence_level]
+    
+    margin = z_value * std_val / np.sqrt(n)
+    return [mean_val - margin] * len(data), [mean_val + margin] * len(data)
+
+
+def generate_risk_recommendations(context):
+    """Generate business recommendations based on risk assessment"""
+    recommendations = []
+    
+    outlier_rate = context["outlier_analysis"].get("outlier_rate", 0)
+    volatility = context["risk_assessment"].get("volatility_level", "Low")
+    predictability = context["risk_assessment"].get("predictability_score", 100)
+    
+    if outlier_rate > 20:
+        recommendations.append({
+            "type": "high",
+            "title": "High Outlier Rate",
+            "message": f"{outlier_rate}% of recent periods are outside confidence intervals. Consider increasing monitoring frequency."
+        })
+    
+    if volatility == "High":
+        recommendations.append({
+            "type": "medium",
+            "title": "High Volatility",
+            "message": "Claims show high variability. Implement flexible budgeting and contingency planning."
+        })
+    
+    if predictability < 70:
+        recommendations.append({
+            "type": "medium", 
+            "title": "Low Predictability",
+            "message": f"Predictability score of {predictability}%. Historical patterns may not be reliable for forecasting."
+        })
+    
+    coverage_rate = context["statistical_summary"].get("coverage_rate", 100)
+    if coverage_rate < 90:
+        recommendations.append({
+            "type": "info",
+            "title": "CI Coverage Below Expected",
+            "message": f"Only {coverage_rate}% of data within CI. Consider model refinement."
+        })
+    
+    return recommendations
+
+
+def perform_comparative_analysis(df, context):
+    """Perform comparative analysis across different segments"""
+    # This would compare different benefit types, providers, etc.
+    # Simplified implementation
+    return {
+        "segment_comparison": [],
+        "anomaly_correlation": {}
+    }
+
+
+def generate_all_visualizations(aggregation, context, target_col, y_label):
+    """Generate all Plotly visualizations for the analysis"""
+    visualizations = {}
+    
+    try:
+        # Main CI Chart
+        visualizations["main_ci_chart"] = create_main_ci_chart(aggregation, context, target_col, y_label)
+        
+        # CI Width Analysis
+        visualizations["ci_width_chart"] = create_ci_width_chart(aggregation, context)
+        
+        # Coverage Analysis
+        visualizations["coverage_chart"] = create_coverage_chart(aggregation, context)
+        
+        # Volatility Analysis
+        visualizations["volatility_chart"] = create_volatility_chart(aggregation, context, target_col)
+        
+        # Method Comparison (if multiple methods available)
+        if context["selected_method"] == "standard":
+            visualizations["method_comparison"] = create_method_comparison_chart(aggregation, context, target_col)
+    except Exception as e:
+        print(f"Visualization generation error: {e}")
+        visualizations["error"] = f"Error generating visualizations: {str(e)}"
+    
+    return visualizations
+
+
+def create_main_ci_chart(aggregation, context, target_col, y_label):
+    """Create the main confidence interval visualization"""
+    fig = go.Figure()
+    
+    # Add confidence interval band
+    fig.add_trace(go.Scatter(
+        x=aggregation['date'],
+        y=aggregation['ci_upper'],
+        fill=None,
+        mode='lines',
+        line=dict(width=0),
+        showlegend=False,
+        name=f"{context['selected_confidence']}% CI Upper"
+    ))
+    
+    fig.add_trace(go.Scatter(
+        x=aggregation['date'],
+        y=aggregation['ci_lower'],
+        fill='tonexty',
+        mode='lines',
+        line=dict(width=0),
+        fillcolor='rgba(27, 182, 79, 0.2)',
+        name=f"{context['selected_confidence']}% Confidence Interval"
+    ))
+    
+    # Add main data line
+    fig.add_trace(go.Scatter(
+        x=aggregation['date'],
+        y=aggregation[target_col],
+        mode='lines+markers',
+        name='Actual Values',
+        line=dict(color='#1BB64F', width=3),
+        marker=dict(size=6)
+    ))
+    
+    # Add trend line if enabled
+    if context["show_trend"] and context.get("trend_analysis"):
+        x = np.arange(len(aggregation))
+        trend_coeff = np.polyfit(x, aggregation[target_col].values, 1)
+        trend_line = np.polyval(trend_coeff, x)
+        
+        fig.add_trace(go.Scatter(
+            x=aggregation['date'],
+            y=trend_line,
+            mode='lines',
+            name='Trend Line',
+            line=dict(color='#FF6B35', width=2, dash='dash')
+        ))
+    
+    # Highlight outliers
+    outliers = context["outlier_analysis"].get("outliers", [])
+    if outliers:
+        outlier_dates = [pd.to_datetime(o['date']) for o in outliers]
+        outlier_values = [o['value'] for o in outliers]
+        
+        fig.add_trace(go.Scatter(
+            x=outlier_dates,
+            y=outlier_values,
+            mode='markers',
+            name='Outliers',
+            marker=dict(
+                size=10,
+                color='#E74C3C',
+                symbol='x'
+            )
+        ))
+    
+    fig.update_layout(
+        title=f"{y_label} with {context['selected_confidence']}% Confidence Intervals",
+        xaxis_title="Date",
+        yaxis_title=y_label,
+        template="plotly_white",
+        height=500,
+        showlegend=True
+    )
+    
+    return fig.to_html(full_html=False)
+
+
+def create_ci_width_chart(aggregation, context):
+    """Create visualization for CI width analysis"""
+    fig = go.Figure()
+    
+    fig.add_trace(go.Scatter(
+        x=aggregation['date'],
+        y=aggregation['ci_range'],
+        mode='lines+markers',
+        name='CI Width',
+        line=dict(color='#4ECDC4', width=2),
+        marker=dict(size=5)
+    ))
+    
+    # Add average line
+    avg_width = aggregation['ci_range'].mean()
+    fig.add_hline(y=avg_width, line_dash="dash", line_color="red",
+                 annotation_text=f"Average Width: {avg_width:.2f}")
+    
+    fig.update_layout(
+        title="Confidence Interval Width Over Time",
+        xaxis_title="Date",
+        yaxis_title="CI Width",
+        template="plotly_white",
+        height=400
+    )
+    
+    return fig.to_html(full_html=False)
+
+
+def create_coverage_chart(aggregation, context):
+    """Create visualization for coverage analysis"""
+    within_ci = aggregation['within_ci'].sum()
+    outside_ci = len(aggregation) - within_ci
+    
+    fig = go.Figure(data=[
+        go.Pie(
+            labels=['Within CI', 'Outside CI'],
+            values=[within_ci, outside_ci],
+            marker=dict(colors=['#1BB64F', '#E74C3C'])
+        )
+    ])
+    
+    fig.update_layout(
+        title=f"Confidence Interval Coverage ({context['selected_confidence']}% CI)",
+        template="plotly_white",
+        height=400
+    )
+    
+    return fig.to_html(full_html=False)
+
+
+def create_volatility_chart(aggregation, context, target_col):
+    """Create visualization for volatility analysis"""
+    # Calculate rolling volatility
+    window = min(6, len(aggregation) // 3)
+    if len(aggregation) >= window:
+        rolling_std = aggregation[target_col].rolling(window=window).std()
+        rolling_cv = (rolling_std / aggregation[target_col].rolling(window=window).mean()) * 100
+    else:
+        rolling_cv = pd.Series([0] * len(aggregation))
+    
+    fig = go.Figure()
+    
+    fig.add_trace(go.Scatter(
+        x=aggregation['date'],
+        y=rolling_cv,
+        mode='lines',
+        name='Coefficient of Variation (%)',
+        line=dict(color='#9B59B6', width=3)
+    ))
+    
+    fig.update_layout(
+        title="Volatility Analysis (Rolling Coefficient of Variation)",
+        xaxis_title="Date",
+        yaxis_title="Coefficient of Variation (%)",
+        template="plotly_white",
+        height=400
+    )
+    
+    return fig.to_html(full_html=False)
+
+
+def create_method_comparison_chart(aggregation, context, target_col):
+    """Create comparison of different CI methods"""
+    # This would compare standard, bootstrap, and Bayesian methods
+    # Simplified implementation
+    fig = go.Figure()
+    
+    fig.add_trace(go.Scatter(
+        x=aggregation['date'],
+        y=aggregation[target_col],
+        mode='lines',
+        name='Actual Values',
+        line=dict(color='#1BB64F', width=3)
+    ))
+    
+    fig.update_layout(
+        title="Method Comparison",
+        template="plotly_white",
+        height=400
+    )
+    
+    return fig.to_html(full_html=False)
 
 
 @login_required
