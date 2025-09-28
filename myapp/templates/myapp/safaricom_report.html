@@ -318,6 +318,28 @@ body {
     margin: 0.5rem 0 0 0;
 }
 
+.segment-info {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin: 10px 0;
+    border-left: 4px solid var(--safaricom-green);
+}
+
+.segment-info h4 {
+    margin: 0 0 10px 0;
+    color: var(--safaricom-green);
+}
+
+.segment-info ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.segment-info li {
+    margin-bottom: 5px;
+}
+
 footer {
     background-color: #f8f9fa;
     color: #333;
@@ -462,10 +484,26 @@ footer a:hover {
     <p class="dashboard-subtitle">Deep insights into claims patterns and relationships</p>
 </div>
 
-
+<!-- Navigation Tabs -->
+<div class="analysis-tabs">
+    <a href="?tab=claim_distribution" class="tab-link {% if active_tab == 'claim_distribution' %}active{% endif %}">
+        <i class="fas fa-chart-pie"></i> Claim Distribution
+    </a>
+    <a href="?tab=temporal_analysis" class="tab-link {% if active_tab == 'temporal_analysis' %}active{% endif %}">
+        <i class="fas fa-calendar-alt"></i> Temporal Analysis
+    </a>
+    <a href="?tab=service_analysis" class="tab-link {% if active_tab == 'service_analysis' %}active{% endif %}">
+        <i class="fas fa-stethoscope"></i> Service Analysis
+    </a>
+    <a href="?tab=provider_analysis" class="tab-link {% if active_tab == 'provider_analysis' %}active{% endif %}">
+        <i class="fas fa-hospital"></i> Provider Analysis
+    </a>
+</div>
 
 <!-- Filter Controls -->
-<form method="GET" class="filter-controls" onsubmit="showLoading()">
+<form method="GET" class="filter-controls" id="mainFilterForm">
+    <input type="hidden" name="tab" value="{{ active_tab }}">
+    
     <div class="filter-control">
         <label for="time_period">Time Period</label>
         <select id="time_period" name="time_period" class="searchable-select">
@@ -475,6 +513,7 @@ footer a:hover {
             <option value="12m" {% if request.GET.time_period == '12m' %}selected{% endif %}>Last 12 Months</option>
         </select>
     </div>
+    
     <div class="filter-control">
         <label for="benefit_type">Benefit Type</label>
         <select id="benefit_type" name="benefit_type" class="searchable-select">
@@ -484,6 +523,7 @@ footer a:hover {
             {% endfor %}
         </select>
     </div>
+    
     <div class="filter-control">
         <label for="provider">Provider</label>
         <select id="provider" name="provider" class="searchable-select">
@@ -493,6 +533,7 @@ footer a:hover {
             {% endfor %}
         </select>
     </div>
+    
     <div class="filter-control">
         <label for="cost_center">Cost Center</label>
         <select id="cost_center" name="cost_center" class="searchable-select">
@@ -502,16 +543,21 @@ footer a:hover {
             {% endfor %}
         </select>
     </div>
+    
     <div class="filter-button">
         <button type="submit">
             <i class="fas fa-filter"></i> Apply Filters
+        </button>
+        <button type="button" onclick="resetFilters()" style="background: #6c757d; margin-left: 10px;">
+            <i class="fas fa-redo"></i> Reset
         </button>
     </div>
 </form>
 
 <!-- Interactive Claim Distribution Controls -->
 {% if active_tab == 'claim_distribution' %}
-<form method="GET" class="filter-controls">
+<form method="GET" class="filter-controls" id="distributionForm">
+    <input type="hidden" name="tab" value="{{ active_tab }}">
     <input type="hidden" name="time_period" value="{{ request.GET.time_period }}">
     <input type="hidden" name="benefit_type" value="{{ request.GET.benefit_type }}">
     <input type="hidden" name="provider" value="{{ request.GET.provider }}">
@@ -519,16 +565,19 @@ footer a:hover {
     
     <div class="filter-control">
         <label for="category">Group claims by</label>
-        <select id="category" name="category" class="searchable-select" onchange="this.form.submit()">
+        <select id="category" name="category" class="searchable-select">
+            <option value="">Select a category</option>
             {% for col in visualizations.categorical_columns %}
-            <option value="{{ col }}" {% if col == visualizations.current_category %}selected{% endif %}>{{ col }}</option>
+            <option value="{{ col }}" {% if col == visualizations.current_category %}selected{% endif %}>
+                {{ col|title }}
+            </option>
             {% endfor %}
         </select>
     </div>
     
     <div class="filter-control">
         <label for="metric">Analysis metric</label>
-        <select id="metric" name="metric" onchange="this.form.submit()">
+        <select id="metric" name="metric">
             <option value="Count" {% if visualizations.current_metric == 'Count' %}selected{% endif %}>Count</option>
             <option value="Sum of Amount" {% if visualizations.current_metric == 'Sum of Amount' %}selected{% endif %}>Sum of Amount</option>
             <option value="Average Amount" {% if visualizations.current_metric == 'Average Amount' %}selected{% endif %}>Average Amount</option>
@@ -537,10 +586,10 @@ footer a:hover {
     
     <div class="filter-control">
         <label for="filter_col">Filter by</label>
-        <select id="filter_col" name="filter_col" onchange="this.form.submit()">
+        <select id="filter_col" name="filter_col">
             <option value="None" {% if visualizations.current_filter_col == 'None' %}selected{% endif %}>None</option>
             {% for col in visualizations.categorical_columns %}
-            <option value="{{ col }}" {% if col == visualizations.current_filter_col %}selected{% endif %}>{{ col }}</option>
+            <option value="{{ col }}" {% if col == visualizations.current_filter_col %}selected{% endif %}>{{ col|title }}</option>
             {% endfor %}
         </select>
     </div>
@@ -548,13 +597,19 @@ footer a:hover {
     {% if visualizations.current_filter_col != 'None' %}
     <div class="filter-control">
         <label for="filter_values">Select values</label>
-        <select id="filter_values" name="filter_values" multiple class="searchable-select" onchange="this.form.submit()">
+        <select id="filter_values" name="filter_values" multiple class="searchable-select">
             {% for value in visualizations.categorical_values|get_item:visualizations.current_filter_col %}
             <option value="{{ value }}" {% if value in visualizations.current_filter_values %}selected{% endif %}>{{ value }}</option>
             {% endfor %}
         </select>
     </div>
     {% endif %}
+    
+    <div class="filter-button">
+        <button type="submit">
+            <i class="fas fa-sync-alt"></i> Update Charts
+        </button>
+    </div>
 </form>
 {% endif %}
 
@@ -563,45 +618,43 @@ footer a:hover {
 </div>
 
 <!-- Summary Statistics -->
-<div class="stats-container" style="display: flex; flex-wrap: wrap; gap: 10px;">
-    <div class="stat-card" style="flex: 1; min-width: 120px; padding: 6px; border-radius: 6px; background: #f9f9f9; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
-        <div class="stat-label" style="font-size: 10px; font-weight: 600; color: #555;">Total Claims</div>
-        <div class="stat-value" style="font-size: 14px; font-weight: bold; color: #1e3a8a;">{{ visualizations.summary_stats.total_claims|floatformat:0|intcomma }}</div>
-        <div class="stat-subtext" style="font-size: 9px; color: #777;">Unique claims (claim_ce)</div>
+<div class="stats-container">
+    <div class="stat-card">
+        <div class="stat-label">Total Claims</div>
+        <div class="stat-value">{{ visualizations.summary_stats.total_claims|intcomma }}</div>
+        <div class="stat-subtext">Unique claims (claim_ce)</div>
     </div>
 
-    <div class="stat-card" style="flex: 1; min-width: 120px; padding: 6px; border-radius: 6px; background: #f9f9f9; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
-        <div class="stat-label" style="font-size: 10px; font-weight: 600; color: #555;">Total Amount</div>
-        <div class="stat-value" style="font-size: 14px; font-weight: bold; color: #1e3a8a;">KES {{ visualizations.summary_stats.total_amount|floatformat:2|intcomma }}</div>
-        <div class="stat-subtext" style="font-size: 9px; color: #777;">Total value of claims</div>
+    <div class="stat-card">
+        <div class="stat-label">Total Amount</div>
+        <div class="stat-value">KES {{ visualizations.summary_stats.total_amount|floatformat:0|intcomma }}</div>
+        <div class="stat-subtext">Total value of claims</div>
     </div>
 
-    <div class="stat-card" style="flex: 1; min-width: 120px; padding: 6px; border-radius: 6px; background: #f9f9f9; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
-        <div class="stat-label" style="font-size: 10px; font-weight: 600; color: #555;">Avg. Claim</div>
-        <div class="stat-value" style="font-size: 14px; font-weight: bold; color: #1e3a8a;">KES {{ visualizations.summary_stats.avg_claim|floatformat:2|intcomma }}</div>
-        <div class="stat-subtext" style="font-size: 9px; color: #777;">Per unique claim</div>
+    <div class="stat-card">
+        <div class="stat-label">Avg. Claim</div>
+        <div class="stat-value">KES {{ visualizations.summary_stats.avg_claim|floatformat:0|intcomma }}</div>
+        <div class="stat-subtext">Per unique member</div>
     </div>
 
-    <div class="stat-card" style="flex: 1; min-width: 120px; padding: 6px; border-radius: 6px; background: #f9f9f9; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
-        <div class="stat-label" style="font-size: 10px; font-weight: 600; color: #555;">Unique Members</div>
-        <div class="stat-value" style="font-size: 14px; font-weight: bold; color: #1e3a8a;">{{ visualizations.summary_stats.unique_members|floatformat:0|intcomma }}</div>
-        <div class="stat-subtext" style="font-size: 9px; color: #777;">Members with claims</div>
+    <div class="stat-card">
+        <div class="stat-label">Unique Members</div>
+        <div class="stat-value">{{ visualizations.summary_stats.unique_members|intcomma }}</div>
+        <div class="stat-subtext">Members with claims</div>
     </div>
 
-    <div class="stat-card" style="flex: 1; min-width: 120px; padding: 6px; border-radius: 6px; background: #f9f9f9; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
-        <div class="stat-label" style="font-size: 10px; font-weight: 600; color: #555;">Providers</div>
-        <div class="stat-value" style="font-size: 14px; font-weight: bold; color: #1e3a8a;">{{ visualizations.summary_stats.unique_providers|floatformat:0|intcomma }}</div>
-        <div class="stat-subtext" style="font-size: 9px; color: #777;">Healthcare providers</div>
+    <div class="stat-card">
+        <div class="stat-label">Providers</div>
+        <div class="stat-value">{{ visualizations.summary_stats.unique_providers|intcomma }}</div>
+        <div class="stat-subtext">Healthcare providers</div>
     </div>
 
-    <div class="stat-card" style="flex: 1; min-width: 120px; padding: 6px; border-radius: 6px; background: #f9f9f9; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
-        <div class="stat-label" style="font-size: 10px; font-weight: 600; color: #555;">Claims/Member</div>
-        <div class="stat-value" style="font-size: 14px; font-weight: bold; color: #1e3a8a;">{{ visualizations.summary_stats.claims_per_member|floatformat:1|intcomma }}</div>
-        <div class="stat-subtext" style="font-size: 9px; color: #777;">Avg. unique claims per member</div>
+    <div class="stat-card">
+        <div class="stat-label">Claims/Member</div>
+        <div class="stat-value">{{ visualizations.summary_stats.claims_per_member|floatformat:1 }}</div>
+        <div class="stat-subtext">Avg. claims per member</div>
     </div>
 </div>
-
-
 
 <!-- Main Content -->
 <div class="dashboard-container">
@@ -609,10 +662,14 @@ footer a:hover {
         <!-- Claim Distribution Content -->
         <div class="dashboard-card full-width-card">
             <div class="card-header">
-                <i class="fas fa-chart-pie"></i> Claim Distribution by {{ visualizations.current_category }}
+                <i class="fas fa-chart-pie"></i> Claim Distribution by {{ visualizations.current_category|title }}
             </div>
             <div class="chart-container">
-                {{ visualizations.claim_distribution|safe }}
+                {% if visualizations.claim_distribution %}
+                    {{ visualizations.claim_distribution|safe }}
+                {% else %}
+                    <div class="no-data-message">Select a category to view distribution</div>
+                {% endif %}
             </div>
         </div>
         
@@ -621,7 +678,11 @@ footer a:hover {
                 <i class="fas fa-chart-line"></i> Cost Distribution by Percentile
             </div>
             <div class="chart-container">
-                {{ visualizations.cost_percentiles|safe }}
+                {% if visualizations.cost_percentiles %}
+                    {{ visualizations.cost_percentiles|safe }}
+                {% else %}
+                    <div class="no-data-message">No percentile data available</div>
+                {% endif %}
             </div>
         </div>
         
@@ -629,8 +690,21 @@ footer a:hover {
             <div class="card-header">
                 <i class="fas fa-users"></i> Member Spending Segments
             </div>
+            <div class="segment-info">
+                <h4>Segment Definitions:</h4>
+                <ul>
+                    <li><strong>Low:</strong> Bottom 25% of spenders</li>
+                    <li><strong>Medium:</strong> 25-50% of spenders</li>
+                    <li><strong>High:</strong> 50-75% of spenders</li>
+                    <li><strong>Very High:</strong> Top 25% of spenders</li>
+                </ul>
+            </div>
             <div class="chart-container">
-                {{ visualizations.member_segmentation|safe }}
+                {% if visualizations.member_segmentation %}
+                    {{ visualizations.member_segmentation|safe }}
+                {% else %}
+                    <div class="no-data-message">No member spending data available</div>
+                {% endif %}
             </div>
         </div>
         
@@ -639,7 +713,11 @@ footer a:hover {
                 <i class="fas fa-chart-bar"></i> Claim Amount Distribution
             </div>
             <div class="chart-container">
-                {{ visualizations.amount_distribution|safe }}
+                {% if visualizations.amount_distribution %}
+                    {{ visualizations.amount_distribution|safe }}
+                {% else %}
+                    <div class="no-data-message">No amount distribution data available</div>
+                {% endif %}
             </div>
         </div>
         
@@ -648,7 +726,25 @@ footer a:hover {
                 <i class="fas fa-building"></i> Top 10 Cost Centers
             </div>
             <div class="chart-container">
-                {{ visualizations.cost_center_analysis|safe }}
+                {% if visualizations.cost_center_analysis %}
+                    {{ visualizations.cost_center_analysis|safe }}
+                {% else %}
+                    <div class="no-data-message">No cost center data available</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Service Type Analysis -->
+        <div class="dashboard-card full-width-card">
+            <div class="card-header">
+                <i class="fas fa-stethoscope"></i> Service Type Analysis
+            </div>
+            <div class="chart-container">
+                {% if visualizations.service_type_analysis %}
+                    {{ visualizations.service_type_analysis|safe }}
+                {% else %}
+                    <div class="no-data-message">No service type data available</div>
+                {% endif %}
             </div>
         </div>
 
@@ -656,19 +752,14 @@ footer a:hover {
         <!-- Temporal Analysis Content -->
         <div class="dashboard-card full-width-card">
             <div class="card-header">
-                <i class="fas fa-clock"></i> Claims by Time of Day
-            </div>
-            <div class="chart-container">
-                {{ visualizations.hourly_claims|safe }}
-            </div>
-        </div>
-        
-        <div class="dashboard-card">
-            <div class="card-header">
                 <i class="fas fa-calendar-alt"></i> Monthly Claims Trend
             </div>
             <div class="chart-container">
-                {{ visualizations.monthly_trend|safe }}
+                {% if visualizations.monthly_trend %}
+                    {{ visualizations.monthly_trend|safe }}
+                {% else %}
+                    <div class="no-data-message">No temporal data available</div>
+                {% endif %}
             </div>
         </div>
         
@@ -677,74 +768,67 @@ footer a:hover {
                 <i class="fas fa-calendar-day"></i> Claims by Day of Week
             </div>
             <div class="chart-container">
-                {{ visualizations.day_of_week_analysis|safe }}
-            </div>
-        </div>
-        
-        <div class="dashboard-card full-width-card">
-            <div class="card-header">
-                <i class="fas fa-chart-line"></i> Daily Claims Over Time
-            </div>
-            <div class="chart-container">
-                {{ visualizations.time_series|safe }}
+                {% if visualizations.day_of_week_analysis %}
+                    {{ visualizations.day_of_week_analysis|safe }}
+                {% else %}
+                    <div class="no-data-message">No day-of-week data available</div>
+                {% endif %}
             </div>
         </div>
 
-    {% elif active_tab == 'provider_efficiency' %}
-        <!-- Provider Efficiency Content -->
+    {% elif active_tab == 'service_analysis' %}
+        <!-- Service Analysis Content -->
         <div class="dashboard-card full-width-card">
             <div class="card-header">
-                <i class="fas fa-network-wired"></i> Provider Network Analysis
+                <i class="fas fa-stethoscope"></i> Service Type Analysis
             </div>
             <div class="chart-container">
-                {{ visualizations.provider_network|safe }}
-            </div>
-        </div>
-        
-        <div class="dashboard-card full-width-card">
-            <div class="card-header">
-                <i class="fas fa-tachometer-alt"></i> Provider Efficiency Analysis
-            </div>
-            <div class="chart-container">
-                {{ visualizations.provider_efficiency|safe }}
-            </div>
-        </div>
-
-    {% elif active_tab == 'diagnosis_patterns' %}
-        <!-- Diagnosis Patterns Content -->
-        <div class="dashboard-card full-width-card">
-            <div class="card-header">
-                <i class="fas fa-heartbeat"></i> Top 10 Ailments
-            </div>
-            <div class="chart-container">
-                {{ visualizations.top_ailments|safe }}
-            </div>
-        </div>
-        
-        <div class="dashboard-card full-width-card">
-            <div class="card-header">
-                <i class="fas fa-brain"></i> Age-Service Relationships
-            </div>
-            <div class="chart-container">
-                {{ visualizations.age_service_matrix|safe }}
+                {% if visualizations.service_type_analysis %}
+                    {{ visualizations.service_type_analysis|safe }}
+                {% else %}
+                    <div class="no-data-message">No service type data available</div>
+                {% endif %}
             </div>
         </div>
         
         <div class="dashboard-card">
             <div class="card-header">
-                <i class="fas fa-venus-mars"></i> Claims by Gender
+                <i class="fas fa-chart-bar"></i> Claim Amount Distribution
             </div>
             <div class="chart-container">
-                {{ visualizations.gender_stats|safe }}
+                {% if visualizations.amount_distribution %}
+                    {{ visualizations.amount_distribution|safe }}
+                {% else %}
+                    <div class="no-data-message">No amount distribution data available</div>
+                {% endif %}
+            </div>
+        </div>
+
+    {% elif active_tab == 'provider_analysis' %}
+        <!-- Provider Analysis Content -->
+        <div class="dashboard-card full-width-card">
+            <div class="card-header">
+                <i class="fas fa-hospital"></i> Top Providers Analysis
+            </div>
+            <div class="chart-container">
+                {% if visualizations.provider_analysis %}
+                    {{ visualizations.provider_analysis|safe }}
+                {% else %}
+                    <div class="no-data-message">No provider data available</div>
+                {% endif %}
             </div>
         </div>
         
-        <div class="dashboard-card full-width-card">
+        <div class="dashboard-card">
             <div class="card-header">
-                <i class="fas fa-project-diagram"></i> Data Correlation Matrix
+                <i class="fas fa-building"></i> Top Cost Centers
             </div>
             <div class="chart-container">
-                {{ visualizations.correlation_matrix|safe }}
+                {% if visualizations.cost_center_analysis %}
+                    {{ visualizations.cost_center_analysis|safe }}
+                {% else %}
+                    <div class="no-data-message">No cost center data available</div>
+                {% endif %}
             </div>
         </div>
     {% endif %}
@@ -763,23 +847,41 @@ document.addEventListener('DOMContentLoaded', function() {
         placeholder: "Select an option",
         allowClear: true,
         width: '100%',
-        minimumResultsForSearch: 5,
-        dropdownAutoWidth: true,
-        templateResult: formatOption,
-        templateSelection: formatOption
+        minimumResultsForSearch: 5
     });
 
-    function formatOption(option) {
-        if (!option.id) return option.text;
-        if (option.text.length > 50) {
-            return $('<span>' + option.text.substring(0, 47) + '...</span>');
+    // Auto-submit forms when select values change
+    $('#category, #metric, #filter_col').change(function() {
+        if ($(this).val()) {
+            $('#distributionForm').submit();
         }
-        return option.text;
-    }
+    });
 
-    // Set initial filter values from URL params
+    // Handle filter values change with debounce
+    let filterTimeout;
+    $('#filter_values').change(function() {
+        clearTimeout(filterTimeout);
+        filterTimeout = setTimeout(() => {
+            $('#distributionForm').submit();
+        }, 500);
+    });
+
+    // Set initial values from URL params
     const urlParams = new URLSearchParams(window.location.search);
-    ['time_period', 'benefit_type', 'provider', 'cost_center', 'category', 'metric', 'filter_col'].forEach(param => {
+    
+    // Set values for main form
+    ['time_period', 'benefit_type', 'provider', 'cost_center'].forEach(param => {
+        if (urlParams.has(param)) {
+            const select = document.getElementById(param);
+            if (select) {
+                select.value = urlParams.get(param);
+                $(select).trigger('change');
+            }
+        }
+    });
+
+    // Set values for distribution form
+    ['category', 'metric', 'filter_col'].forEach(param => {
         if (urlParams.has(param)) {
             const select = document.getElementById(param);
             if (select) {
@@ -835,5 +937,25 @@ document.addEventListener('DOMContentLoaded', function() {
 function showLoading() {
     document.getElementById('loadingOverlay').style.display = 'flex';
 }
+
+function resetFilters() {
+    // Clear all form values
+    document.getElementById('mainFilterForm').reset();
+    
+    // Reset Select2 fields
+    $('.searchable-select').val(null).trigger('change');
+    
+    // Submit the form to reload with no filters
+    document.getElementById('mainFilterForm').submit();
+}
+
+// Handle form submissions
+document.getElementById('mainFilterForm').addEventListener('submit', function(e) {
+    showLoading();
+});
+
+document.getElementById('distributionForm')?.addEventListener('submit', function(e) {
+    showLoading();
+});
 </script>
 {% endblock %}

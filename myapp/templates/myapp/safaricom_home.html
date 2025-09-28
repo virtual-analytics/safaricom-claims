@@ -277,6 +277,18 @@ body {
     transform: translateY(-2px);
 }
 
+.filter-active-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background-color: rgba(27, 182, 79, 0.1);
+    color: var(--safaricom-green);
+    border-radius: 8px;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
 /* Login Message */
 .login-success {
     background: linear-gradient(90deg, var(--safaricom-green) 0%, var(--safaricom-dark-green) 100%);
@@ -437,6 +449,26 @@ footer a:hover {
         width: 100%;
     }
 }
+
+/* Improve chart axis labels */
+ .js-plotly-plot .plotly .xaxis-title, 
+ .js-plotly-plot .plotly .yaxis-title {
+    font-weight: 600;
+    font-size: 12px;
+    color: #333;
+}
+
+/* Reduce sunburst font sizes */
+ .sunburstpath text {
+    font-size: 10px !important;
+}
+
+/* Better hover labels */
+ .hovertext {
+    font-size: 12px !important;
+    font-family: 'Inter', sans-serif !important;
+}
+
 </style>
 
 <!-- Login Message -->
@@ -471,6 +503,12 @@ footer a:hover {
       {% endif %}
     </div>
   </div>
+  {% if visualizations.debug.applied_filters.has_filters %}
+  <div class="data-summary-item">
+    <i class="fas fa-filter" style="color: var(--safaricom-green);"></i>
+    <div><strong>Filtered:</strong> {{ visualizations.debug.applied_filters.start_date|default:"" }} to {{ visualizations.debug.applied_filters.end_date|default:"" }}</div>
+  </div>
+  {% endif %}
 </div>
 
 <!-- Summary Statistics -->
@@ -500,23 +538,25 @@ footer a:hover {
   </div>
 </div>
 
-<!-- Date Range Filter -->
+<!-- Update the Date Filter Section -->
 <div class="date-filter-wrapper">
   <div class="date-filter">
     <label for="startDate">From:</label>
-    <input type="date" id="startDate">
+    <input type="date" id="startDate" value="{{ visualizations.debug.applied_filters.start_date|default:'' }}">
     <label for="endDate">To:</label>
-    <input type="date" id="endDate">
+    <input type="date" id="endDate" value="{{ visualizations.debug.applied_filters.end_date|default:'' }}">
     <button id="applyDateFilter" class="btn-apply">
-      <i class="fas fa-filter"></i> Apply
+      <i class="fas fa-filter"></i> Apply Filters
     </button>
     <button id="resetDateFilter" class="btn-reset">
       <i class="fas fa-redo"></i> Reset
     </button>
+    {% if visualizations.debug.applied_filters.has_filters %}
+    <div class="filter-active-indicator">
+      <i class="fas fa-check-circle"></i> Filters Active
+    </div>
+    {% endif %}
   </div>
-  <button id="exportClaimsData" class="btn-export">
-    <i class="fas fa-download"></i> Export Data
-  </button>
 </div>
 
 <!-- Dashboard Columns -->
@@ -524,7 +564,12 @@ footer a:hover {
   <!-- Claims Over Time Chart with Trend Lines -->
   <div class="dashboard-card full-width-card">
     <div class="card-header">
-      <i class="fas fa-chart-line"></i> Claims Submitted Over Time (with Trend Lines)
+      <i class="fas fa-chart-line"></i> 
+      {% if visualizations.debug.applied_filters.has_filters %}
+        Filtered Claims Over Time (with Trend Lines)
+      {% else %}
+        Claims Submitted Over Time (with Trend Lines)
+      {% endif %}
     </div>
     <div class="chart-container">
       {% if visualizations.claims_time_chart %}
@@ -535,10 +580,15 @@ footer a:hover {
     </div>
   </div>
 
-  <!-- Lorenz Chart -->
+  <!-- Lorenz Chart Card -->
   <div class="dashboard-card">
     <div class="card-header">
       <i class="fas fa-chart-pie"></i> Claims Distribution (Lorenz Curve)
+    </div>
+    <div style="padding: 0 15px 10px 15px; font-size: 0.9rem; color: #666;">
+      <strong>What this shows:</strong> How evenly claims amounts are distributed among members. 
+      A curved line indicates inequality (few members account for most claims). 
+      The straight diagonal represents perfect equality.
     </div>
     <div class="chart-container">
       {% if visualizations.lorenz_chart %}
@@ -563,14 +613,31 @@ footer a:hover {
     </div>
   </div>
 
-  <!-- Sunburst Chart -->
+  <!-- Update Sunburst Chart with smaller font styling -->
   <div class="dashboard-card">
     <div class="card-header">
       <i class="fas fa-circle-notch"></i> Claim Amounts Breakdown (Sunburst)
     </div>
     <div class="chart-container">
       {% if visualizations.sunburst %}
-        {{ visualizations.sunburst|safe }}
+        <div id="sunburst-chart">{{ visualizations.sunburst|safe }}</div>
+        <script>
+          // Reduce font size in sunburst chart
+          document.addEventListener('DOMContentLoaded', function() {
+            const sunburstChart = document.getElementById('sunburst-chart');
+            if (sunburstChart) {
+              // This will apply after the chart is rendered
+              setTimeout(() => {
+                const textElements = sunburstChart.querySelectorAll('text');
+                textElements.forEach(text => {
+                  if (text.getAttribute('data-notex') === '1') {
+                    text.style.fontSize = '10px';
+                  }
+                });
+              }, 1000);
+            }
+          });
+        </script>
       {% else %}
         <div class="no-data-message">No sunburst data available</div>
       {% endif %}
@@ -622,10 +689,15 @@ footer a:hover {
     </div>
   </div>
 
-  <!-- Claim Frequency Distribution -->
+  <!-- Update Claim Frequency Distribution with better description -->
   <div class="dashboard-card full-width-card">
     <div class="card-header">
       <i class="fas fa-wave-square"></i> Claim Frequency Distribution
+    </div>
+    <div style="padding: 0 15px 10px 15px; font-size: 0.9rem; color: #666;">
+      <strong>What this shows:</strong> How often members submit claims. 
+      Shows the number of members who submitted 1 claim, 2 claims, etc. 
+      Helps identify usage patterns across your member base.
     </div>
     <div class="chart-container">
       {% if visualizations.claim_freq %}
@@ -645,6 +717,113 @@ footer a:hover {
 </footer>
 
 <script>
+// ===== IMPROVED DATE FILTER FUNCTIONALITY =====
+document.addEventListener('DOMContentLoaded', function() {
+    // Set max date to today for end date filter
+    const today = new Date().toISOString().split('T')[0];
+    const endDateInput = document.getElementById('endDate');
+    const startDateInput = document.getElementById('startDate');
+    
+    if (endDateInput) {
+        endDateInput.max = today;
+    }
+    
+    // Set max for start date based on end date if end date is set
+    if (startDateInput && endDateInput && endDateInput.value) {
+        startDateInput.max = endDateInput.value;
+    }
+    
+    // Update max dates when values change
+    if (endDateInput) {
+        endDateInput.addEventListener('change', function() {
+            if (startDateInput) {
+                startDateInput.max = this.value;
+                // If start date is after new end date, clear it
+                if (startDateInput.value && startDateInput.value > this.value) {
+                    startDateInput.value = '';
+                }
+            }
+        });
+    }
+    
+    if (startDateInput) {
+        startDateInput.addEventListener('change', function() {
+            if (endDateInput && endDateInput.value && this.value > endDateInput.value) {
+                alert('Start date cannot be after end date');
+                this.value = '';
+            }
+        });
+    }
+    
+    // Apply filter functionality
+    document.getElementById('applyDateFilter').addEventListener('click', function() {
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+        
+        // Validate dates
+        if (startDate && endDate && startDate > endDate) {
+            alert('Start date cannot be after end date');
+            return;
+        }
+        
+        // Build URL with parameters
+        const url = new URL(window.location.href);
+        if (startDate) {
+            url.searchParams.set('start_date', startDate);
+        } else {
+            url.searchParams.delete('start_date');
+        }
+        
+        if (endDate) {
+            url.searchParams.set('end_date', endDate);
+        } else {
+            url.searchParams.delete('end_date');
+        }
+        
+        // Reload page with filters
+        window.location.href = url.toString();
+    });
+    
+    // Reset filter functionality
+    document.getElementById('resetDateFilter').addEventListener('click', function() {
+        // Clear dates and reload without filters
+        const url = new URL(window.location.href);
+        url.searchParams.delete('start_date');
+        url.searchParams.delete('end_date');
+        window.location.href = url.toString();
+    });
+    
+    // Keyboard shortcuts for filters
+    document.addEventListener('keydown', function(e) {
+        // Ctrl + Enter to apply filters
+        if (e.ctrlKey && e.key === 'Enter') {
+            const applyBtn = document.getElementById('applyDateFilter');
+            if (applyBtn) {
+                e.preventDefault();
+                applyBtn.click();
+            }
+        }
+        
+        // Escape to reset filters
+        if (e.key === 'Escape') {
+            const resetBtn = document.getElementById('resetDateFilter');
+            if (resetBtn && (document.getElementById('startDate').value || document.getElementById('endDate').value)) {
+                e.preventDefault();
+                resetBtn.click();
+            }
+        }
+    });
+    
+    // Show current filter status
+    const urlParams = new URLSearchParams(window.location.search);
+    const startDate = urlParams.get('start_date');
+    const endDate = urlParams.get('end_date');
+    
+    if (startDate || endDate) {
+        console.log('Filters active:', { startDate, endDate });
+    }
+});
+
 // Smooth number animation
 function animateValue(element, start, end, duration) {
     let startTime = null;
@@ -745,26 +924,86 @@ document.querySelectorAll('.stat-card').forEach(card => {
   });
 });
 
-// Date filter functionality
-document.getElementById('applyDateFilter').addEventListener('click', function() {
-    const startDate = document.getElementById('startDate').value;
-    const endDate = document.getElementById('endDate').value;
-    if (startDate && endDate) {
-        alert(`Filtering from ${startDate} to ${endDate}`);
+// Add loading state for filters
+function setFilterLoadingState(loading) {
+    const applyBtn = document.getElementById('applyDateFilter');
+    const resetBtn = document.getElementById('resetDateFilter');
+    
+    if (loading) {
+        applyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Applying...';
+        applyBtn.disabled = true;
+        resetBtn.disabled = true;
     } else {
-        alert('Please select both start and end dates');
+        applyBtn.innerHTML = '<i class="fas fa-filter"></i> Apply Filters';
+        applyBtn.disabled = false;
+        resetBtn.disabled = false;
     }
+}
+
+// Enhanced filter application with loading state
+document.getElementById('applyDateFilter').addEventListener('click', function() {
+    setFilterLoadingState(true);
+    
+    // Small delay to show loading state
+    setTimeout(() => {
+        // The actual filter logic is handled in the DOMContentLoaded event above
+    }, 100);
 });
 
-document.getElementById('resetDateFilter').addEventListener('click', function() {
-    document.getElementById('startDate').value = '';
-    document.getElementById('endDate').value = '';
-    alert('Filters reset');
+// Improve all chart axis labels dynamically
+document.addEventListener('DOMContentLoaded', function() {
+    // This will run after Plotly charts are rendered
+    setTimeout(() => {
+        document.querySelectorAll('.js-plotly-plot').forEach(chart => {
+            // Ensure proper axis labels
+            const xAxisTitles = chart.querySelectorAll('.xtitle');
+            const yAxisTitles = chart.querySelectorAll('.ytitle');
+            
+            xAxisTitles.forEach(title => {
+                title.style.fontWeight = '600';
+                title.style.fontSize = '12px';
+            });
+            
+            yAxisTitles.forEach(title => {
+                title.style.fontWeight = '600';
+                title.style.fontSize = '12px';
+            });
+        });
+        
+        // Reduce sunburst chart font sizes
+        const sunburstChart = document.querySelector('#sunburst-chart');
+        if (sunburstChart) {
+            setTimeout(() => {
+                const textElements = sunburstChart.querySelectorAll('text');
+                textElements.forEach(text => {
+                    if (text.getAttribute('data-notex') === '1') {
+                        text.style.fontSize = '10px';
+                    }
+                });
+            }, 1000);
+        }
+    }, 2000);
 });
 
-document.getElementById('exportClaimsData').addEventListener('click', function() {
-    alert('Exporting data...');
-});
+// Responsive behavior for filters
+function handleFilterResponsive() {
+    const filterWrapper = document.querySelector('.date-filter-wrapper');
+    const filterContainer = document.querySelector('.date-filter');
+    
+    if (window.innerWidth < 768) {
+        filterContainer.style.flexDirection = 'column';
+        filterContainer.style.alignItems = 'flex-start';
+        filterContainer.style.gap = '10px';
+    } else {
+        filterContainer.style.flexDirection = 'row';
+        filterContainer.style.alignItems = 'center';
+        filterContainer.style.gap = '0.8rem';
+    }
+}
+
+// Initialize responsive behavior
+document.addEventListener('DOMContentLoaded', handleFilterResponsive);
+window.addEventListener('resize', handleFilterResponsive);
 </script>
 
 {% endblock %}
