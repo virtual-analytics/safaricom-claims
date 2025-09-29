@@ -702,22 +702,27 @@
             <ul class="sub-tabs">
               <li>
                 <a href="{% url 'forecasted_volume' %}"
-                  ><i class="fas fa-chart-area"></i> Forecasted Volume</a
+                  ><i class="fas fa-chart-area"></i> Basic view</a
+                >
+              </li>
+              <li>
+                <a href="{% url 'forecasted_volume' %}"
+                  ><i class="fas fa-chart-area"></i> Advanced Forecast</a
                 >
               </li>
               <li>
                 <a href="{% url 'confidence_intervals' %}"
-                  ><i class="fas fa-ruler-combined"></i> Confidence Intervals</a
+                  ><i class="fas fa-ruler-combined"></i> Prediction Intervals</a
                 >
               </li>
               <li>
                 <a href="{% url 'impact_simulation' %}"
-                  ><i class="fas fa-project-diagram"></i> Impact Simulation</a
+                  ><i class="fas fa-project-diagram"></i> scenario Simulation</a
                 >
               </li>
               <li>
                 <a href="{% url 'explainability' %}"
-                  ><i class="fas fa-lightbulb"></i> Explainability</a
+                  ><i class="fas fa-lightbulb"></i> Model  Explainability</a
                 >
               </li>
             </ul>

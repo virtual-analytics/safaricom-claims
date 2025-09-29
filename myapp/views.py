@@ -5437,13 +5437,13 @@ def claim_distribution(request):
     
     # Apply time period filter
     if time_period != 'all':
-        now = datetime.now()
+        today = now().date()
         if time_period == '3m':
-            cutoff_date = now - timedelta(days=90)
+            cutoff_date = today - timedelta(days=90)
         elif time_period == '6m':
-            cutoff_date = now - timedelta(days=180)
+            cutoff_date = today - timedelta(days=180)
         elif time_period == '12m':
-            cutoff_date = now - timedelta(days=365)
+            cutoff_date = today - timedelta(days=365)
         queryset = queryset.filter(claim_prov_date__gte=cutoff_date)
     
     # Apply other filters
@@ -5469,9 +5469,11 @@ def claim_distribution(request):
     # Clean and prepare data
     data = clean_claims_data(data)
     
-    # Get categorical columns - FIXED: Include more relevant columns
-    relevant_columns = ['benefit', 'prov_name', 'cost_center', 'service_type', 'benefit_desc', 
-                       'gender', 'dependent_type', 'ailment', 'claim_pod']
+    # Get categorical columns - Include more relevant columns
+    relevant_columns = [
+        'benefit', 'prov_name', 'cost_center', 'service_type', 'benefit_desc', 
+        'gender', 'dependent_type', 'ailment', 'claim_pod'
+    ]
     cat_cols = [col for col in relevant_columns if col in data.columns and data[col].nunique() < 50]
     
     # Prepare categorical values dictionary
@@ -5489,18 +5491,26 @@ def claim_distribution(request):
     if filter_col != 'None' and filter_values:
         data = data[data[filter_col].astype(str).isin(filter_values)]
     
-    # ---- Summary stats ----
-    total_amount = data['amount'].sum() if 'amount' in data.columns else 0
-    unique_members = data['claim_me'].nunique() if 'claim_me' in data.columns else 0
-    total_claims = data['claim_ce'].nunique() if 'claim_ce' in data.columns else 0
+    # ---- Summary stats (from DB for accuracy) ----
+    db_stats = queryset.aggregate(
+        total_amount=Sum('amount'),
+        total_claims=Count('claim_ce', distinct=True),
+        unique_members=Count('claim_me', distinct=True),
+        unique_providers=Count('prov_name', distinct=True),
+    )
+
+    total_amount = db_stats['total_amount'] or 0
+    total_claims = db_stats['total_claims'] or 0
+    unique_members = db_stats['unique_members'] or 0
+    unique_providers = db_stats['unique_providers'] or 0
 
     visualizations = {
         'summary_stats': {
             'total_claims': total_claims,
-            'total_amount': total_amount,
+            'total_amount': float(total_amount),  # Convert Decimal to float for safe JSON serialization
             'avg_claim': (total_amount / unique_members) if unique_members > 0 else 0,
             'unique_members': unique_members,
-            'unique_providers': data['prov_name'].nunique() if 'prov_name' in data.columns else 0,
+            'unique_providers': unique_providers,
             'claims_per_member': (total_claims / unique_members) if unique_members > 0 else 0,
         },
         'benefit_types': sorted(data['benefit'].unique().tolist()) if 'benefit' in data.columns else [],
