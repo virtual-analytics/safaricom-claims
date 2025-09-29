@@ -9792,9 +9792,217 @@ def claim_prediction3_view(request):
 
 #######
 
+@login_required
+def safaricom_basic_forecast(request):
+    # === Collect filter values ===
+    selected_time_period = request.GET.get('time_period', 'all')
+    selected_benefit_type = request.GET.get('benefit_type', 'all')
+    selected_provider = request.GET.get('provider', 'all')
+
+    # Default forecast horizon (in months)
+    selected_forecast_months = int(request.GET.get('forecast_months', 6))
+
+    # === Predefined forecast horizon options ===
+    forecast_horizon_options = [3, 6, 8, 12, 18, 24, 36]  # months
+
+    # === Base context ===
+    context = {
+        'username': request.user.username,
+        'active_tab': 'claims-prediction',
+        'visualizations': {},
+        'benefit_types': sorted(ClaimRecord.objects.values_list('benefit', flat=True)
+                                 .exclude(benefit__isnull=True)
+                                 .exclude(benefit='')
+                                 .distinct()),
+        'providers': sorted(ClaimRecord.objects.values_list('prov_name', flat=True)
+                             .exclude(prov_name__isnull=True)
+                             .exclude(prov_name='')
+                             .distinct()),
+        'forecast_horizon_options': forecast_horizon_options,
+        'selected_time_period': selected_time_period,
+        'selected_benefit_type': selected_benefit_type,
+        'selected_provider': selected_provider,
+        'selected_forecast_months': selected_forecast_months,
+        'forecast_next_month': None,
+        'forecast_growth': None,
+        'forecast_accuracy': None,
+        'forecast_r2': None,
+        'forecast_mae': None,
+        'forecast_rmse': None,
+        'forecast_mape': None,
+        'forecast_smape': None,
+        'forecast_trend': None
+    }
+
+    try:
+        # === FILTER DATA ===
+        queryset = ClaimRecord.objects.all()
+
+        if selected_time_period != 'all':
+            today = timezone.now().date()
+            days_map = {'3m': 90, '6m': 180, '12m': 365, '24m': 730}
+            days = days_map.get(selected_time_period, 0)
+            if days > 0:
+                start_date = today - timedelta(days=days)
+                queryset = queryset.filter(claim_prov_date__gte=start_date)
+
+        if selected_benefit_type != 'all':
+            queryset = queryset.filter(benefit=selected_benefit_type)
+
+        if selected_provider != 'all':
+            queryset = queryset.filter(prov_name=selected_provider)
+
+        # === LOAD DATA ===
+        df = pd.DataFrame.from_records(queryset.values('claim_prov_date', 'amount'))
+        if df.empty:
+            context['error'] = "No claims data found for the selected filters."
+            return render(request, 'myapp/forecasted_volume.html', context)
+
+        df['amount'] = pd.to_numeric(df['amount'], errors='coerce').fillna(0)
+        df['datetime'] = pd.to_datetime(df['claim_prov_date'], errors='coerce')
+        df = df.dropna(subset=['datetime'])
+
+        if df.empty:
+            context['error'] = "No valid claims data with dates found."
+            return render(request, 'myapp/forecasted_volume.html', context)
+
+        # === MONTHLY AGGREGATION ===
+        monthly_data = df.groupby(pd.Grouper(key='datetime', freq='M'))['amount'].sum().reset_index()
+        monthly_data.rename(columns={'datetime': 'date'}, inplace=True)
+
+        # === Debug chart ===
+        debug_fig = px.bar(
+            monthly_data, x='date', y='amount',
+            title="Raw Monthly Aggregated Data",
+            labels={'amount': 'Total Amount (KES)', 'date': 'Month'},
+            text='amount'
+        )
+        debug_fig.update_traces(texttemplate='%{text:.0f}', textposition='outside')
+        context['visualizations']['raw_monthly_data'] = debug_fig.to_html(full_html=False)
+
+        if len(monthly_data) < 3:
+            context['error'] = "Insufficient historical data (need at least 3 months) for forecasting."
+            return render(request, 'myapp/forecasted_volume.html', context)
+
+        # === FORECASTING ===
+        last_date = monthly_data['date'].max()
+        forecast_months = selected_forecast_months
+
+        try:
+            # Primary model: ARIMA
+            model = ARIMA(monthly_data['amount'], order=(1, 1, 1))
+            model_fit = model.fit()
+            forecast = model_fit.forecast(steps=forecast_months)
+            forecast_dates = pd.date_range(start=last_date + pd.DateOffset(months=1),
+                                           periods=forecast_months, freq='M')
+            predictions = model_fit.predict(start=1, end=len(monthly_data))
+        except Exception as e:
+            try:
+                # Backup model: Exponential Smoothing
+                model = ExponentialSmoothing(monthly_data['amount'], trend='add', seasonal=None)
+                model_fit = model.fit()
+                forecast = model_fit.forecast(forecast_months)
+                forecast_dates = pd.date_range(start=last_date + pd.DateOffset(months=1),
+                                               periods=forecast_months, freq='M')
+                predictions = model_fit.fittedvalues
+            except:
+                # Last fallback: Linear Regression
+                x = np.arange(len(monthly_data))
+                y = monthly_data['amount'].values
+                coeffs = np.polyfit(x, y, 1)
+                forecast = np.polyval(coeffs, np.arange(len(monthly_data), len(monthly_data) + forecast_months))
+                predictions = np.polyval(coeffs, x)
+                forecast_dates = pd.date_range(start=last_date + pd.DateOffset(months=1),
+                                               periods=forecast_months, freq='M')
+
+        # === METRICS ===
+        actuals = np.array(monthly_data['amount'], dtype=float)
+        predictions = np.array(predictions, dtype=float)
+
+        if np.all(actuals == actuals[0]):
+            r2 = np.nan
+        else:
+            r2 = r2_score(actuals, predictions)
+
+        mae = mean_absolute_error(actuals, predictions)
+        mse = mean_squared_error(actuals, predictions)
+        rmse = np.sqrt(mse)
+
+        non_zero_mask = actuals != 0
+        if np.any(non_zero_mask):
+            mape = np.mean(np.abs((actuals[non_zero_mask] - predictions[non_zero_mask]) / actuals[non_zero_mask])) * 100
+            smape = np.mean(2.0 * np.abs(predictions - actuals) / (np.abs(actuals) + np.abs(predictions))) * 100
+            confidence = max(0, min(100, 100 - mape))
+        else:
+            mape = smape = confidence = np.nan
+
+        # Trend detection
+        if len(actuals) > 1:
+            if actuals[-1] > np.mean(actuals):
+                trend = "Upward"
+            else:
+                trend = "Downward"
+        else:
+            trend = "Stable"
+
+        # Save metrics
+        context.update({
+            'forecast_accuracy': None if np.isnan(confidence) else round(confidence, 1),
+            'forecast_r2': None if np.isnan(r2) else round(r2, 3),
+            'forecast_mae': None if np.isnan(mae) else round(mae, 2),
+            'forecast_rmse': None if np.isnan(rmse) else round(rmse, 2),
+            'forecast_mape': None if np.isnan(mape) else round(mape, 2),
+            'forecast_smape': None if np.isnan(smape) else round(smape, 2),
+            'forecast_trend': trend
+        })
+
+        # === COMBINE HISTORICAL & FORECAST ===
+        forecast_df = pd.DataFrame({'date': forecast_dates, 'amount': forecast, 'type': 'Forecast'})
+        historical_df = monthly_data.copy()
+        historical_df['type'] = 'Historical'
+        combined_df = pd.concat([historical_df, forecast_df])
+
+        # === FORECAST CHART ===
+        fig = px.line(combined_df, x='date', y='amount', color='type',
+                      title=f'Monthly Claims Volume with {forecast_months}-Month Forecast',
+                      labels={'amount': 'Total Amount (KES)', 'date': 'Month'},
+                      markers=True)
+
+        fig.add_vrect(x0=last_date, x1=forecast_dates[-1], fillcolor="lightgray",
+                      opacity=0.2, line_width=0, annotation_text="Forecast Period",
+                      annotation_position="top left")
+
+        # Add confidence intervals if available
+        if 'model_fit' in locals() and hasattr(model_fit, "get_forecast"):
+            conf_int = model_fit.get_forecast(steps=forecast_months).conf_int()
+            fig.add_trace(go.Scatter(x=forecast_dates, y=conf_int.iloc[:, 0], fill=None,
+                                     mode='lines', line=dict(width=0), showlegend=False))
+            fig.add_trace(go.Scatter(x=forecast_dates, y=conf_int.iloc[:, 1], fill='tonexty',
+                                     mode='lines', line=dict(width=0),
+                                     fillcolor='rgba(27, 182, 79, 0.2)',
+                                     name='Confidence Interval'))
+
+        context['visualizations']['forecast_volume'] = fig.to_html(full_html=False)
+
+        # Save growth calculation
+        context['forecast_next_month'] = float(forecast[0]) if len(forecast) > 0 else None
+        if len(forecast) > 0 and monthly_data['amount'].iloc[-1] != 0:
+            context['forecast_growth'] = round(((forecast[0] - monthly_data['amount'].iloc[-1]) /
+                                               monthly_data['amount'].iloc[-1] * 100), 2)
+
+    except Exception as e:
+        context['error'] = f"Error processing forecast: {str(e)}"
+
+    return render(request, 'myapp/safaricom_basic_forecast.html', context)
+
+
+
+
+
+###################
 
 ##### Minet 
-
+###################
 @login_required
 def minet_forecast_volume(request):
     selected_time_period = request.GET.get('time_period', 'all')

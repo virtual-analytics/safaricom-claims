@@ -38,6 +38,7 @@ urlpatterns = [
     path('safaricom/diagnosis-patterns/', views.diagnosis_patterns, name='safaricom_diagnosis_patterns'),
     
     # Claims Prediction URLs
+    path('safaricom_basic_forecast/', views.safaricom_basic_forecast, name='safaricom_basic_forecast'),
     path('claims-prediction/', views.claims_prediction_home, name='claims_prediction'),
     path('claims-prediction/forecasted-volume/', views.claims_prediction_home, name='forecasted_volume'),
     path('claims-prediction/confidence-intervals/', views.confidence_intervals, name='confidence_intervals'),
