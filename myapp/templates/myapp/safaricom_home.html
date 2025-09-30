@@ -568,7 +568,7 @@ footer a:hover {
       {% if visualizations.debug.applied_filters.has_filters %}
         Filtered Claims Over Time (with Trend Lines)
       {% else %}
-        Claims Submitted Over Time (with Trend Lines)
+        Claims Submitted Over Time 
       {% endif %}
     </div>
     <div class="chart-container">
@@ -585,11 +585,9 @@ footer a:hover {
     <div class="card-header">
       <i class="fas fa-chart-pie"></i> Claims Distribution (Lorenz Curve)
     </div>
-    <div style="padding: 0 15px 10px 15px; font-size: 0.9rem; color: #666;">
-      <strong>What this shows:</strong> How evenly claims amounts are distributed among members. 
-      A curved line indicates inequality (few members account for most claims). 
-      The straight diagonal represents perfect equality.
-    </div>
+    <p style="font-size: 12px; margin: 4px 12px; color: #555;">
+      Illustrates how evenly claim costs are shared across providers, showing concentration of spending.
+    </p>
     <div class="chart-container">
       {% if visualizations.lorenz_chart %}
         {{ visualizations.lorenz_chart|safe }}
@@ -604,6 +602,9 @@ footer a:hover {
     <div class="card-header">
       <i class="fas fa-tags"></i> Claim Amounts by Benefit Category
     </div>
+    <p style="font-size: 12px; margin: 4px 12px; color: #555;">
+      Breaks down total claims by benefit category to identify where most costs are incurred.
+    </p>
     <div class="chart-container">
       {% if visualizations.category_amounts %}
         {{ visualizations.category_amounts|safe }}
@@ -613,7 +614,7 @@ footer a:hover {
     </div>
   </div>
 
-  <!-- Update Sunburst Chart with smaller font styling -->
+  <!-- Sunburst Chart -->
   <div class="dashboard-card">
     <div class="card-header">
       <i class="fas fa-circle-notch"></i> Claim Amounts Breakdown (Sunburst)
@@ -622,11 +623,9 @@ footer a:hover {
       {% if visualizations.sunburst %}
         <div id="sunburst-chart">{{ visualizations.sunburst|safe }}</div>
         <script>
-          // Reduce font size in sunburst chart
           document.addEventListener('DOMContentLoaded', function() {
             const sunburstChart = document.getElementById('sunburst-chart');
             if (sunburstChart) {
-              // This will apply after the chart is rendered
               setTimeout(() => {
                 const textElements = sunburstChart.querySelectorAll('text');
                 textElements.forEach(text => {
@@ -642,13 +641,20 @@ footer a:hover {
         <div class="no-data-message">No sunburst data available</div>
       {% endif %}
     </div>
+    <p style="font-size: 12px; margin: 6px 12px; color: #555;">
+      Provides a layered view of claims, drilling down into categories and subcategories of spend.
+    </p>
   </div>
+
 
   <!-- Top Providers Chart -->
   <div class="dashboard-card two-column-card">
     <div class="card-header">
       <i class="fas fa-hospital"></i> Top Providers by Total Amount
     </div>
+    <p style="font-size: 12px; margin: 4px 12px; color: #555;">
+      Highlights providers with the largest claim payouts, useful for monitoring high-cost institutions.
+    </p>
     <div class="chart-container">
       {% if visualizations.top_providers %}
         {{ visualizations.top_providers|safe }}
@@ -658,11 +664,14 @@ footer a:hover {
     </div>
   </div>
 
-  <!-- Top Claimants Table (Anonymized IDs) -->
+  <!-- Top Claimants Table -->
   <div class="dashboard-card">
     <div class="card-header">
       <i class="fas fa-table"></i> Top Claimants Details (Anonymized)
     </div>
+    <p style="font-size: 12px; margin: 4px 12px; color: #555;">
+      Lists members with the highest claim amounts and claim counts, helping to spot heavy users.
+    </p>
     <div class="table-container">
       <table class="data-table">
         <thead>
