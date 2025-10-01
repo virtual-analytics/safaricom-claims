@@ -581,18 +581,18 @@ footer a:hover {
   </div>
 
   <!-- Lorenz Chart Card -->
-  <div class="dashboard-card">
-    <div class="card-header">
-      <i class="fas fa-chart-pie"></i> Claims Distribution (Lorenz Curve)
+  <div class="dashboard-card" style="border:1px solid #ddd; border-radius:10px; padding:12px; color:#333;">
+    <div class="card-header" style="font-weight:bold; font-size:14px; display:flex; align-items:center; margin-bottom:6px; border-bottom:1px solid #ddd; padding-bottom:4px; color:green;">
+      <i class="fas fa-chart-pie" style="margin-right:6px; color:green;"></i> Claims Distribution (Lorenz Curve)
     </div>
-    <p style="font-size: 12px; margin: 4px 12px; color: #555;">
+    <p style="font-size:12px; margin:4px 12px; color:#555;">
       Illustrates how evenly claim costs are shared across providers, showing concentration of spending.
     </p>
-    <div class="chart-container">
+    <div class="chart-container" style="border:1px solid #ddd; border-radius:6px; padding:8px;">
       {% if visualizations.lorenz_chart %}
         {{ visualizations.lorenz_chart|safe }}
       {% else %}
-        <div class="no-data-message">No distribution data available</div>
+        <div class="no-data-message" style="color:#555; text-align:center; font-size:13px;">No distribution data available</div>
       {% endif %}
     </div>
   </div>

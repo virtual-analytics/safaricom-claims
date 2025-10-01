@@ -222,7 +222,7 @@
   <div class="summary-row">
     <div class="summary-card">
       <div class="label">Total Claims</div>
-      <div class="value">{{ deep_summary.total_claims|default:"—" }}</div>
+      <div class="value">{{ deep_summary.total_claims|intcomma|default:"—" }}</div>
     </div>
     <div class="summary-card">
       <div class="label">Total Amount (KES)</div>
@@ -230,7 +230,7 @@
     </div>
     <div class="summary-card">
       <div class="label">Unique Diagnoses</div>
-      <div class="value">{{ deep_summary.unique_diagnoses|default:"—" }}</div>
+      <div class="value">{{ deep_summary.unique_diagnoses|intcomma|default:"—" }}</div>
     </div>
     <div class="summary-card">
       <div class="label">Avg Claim (KES)</div>
@@ -238,17 +238,16 @@
     </div>
   </div>
 
-  <!-- FRAUD CHART - original (kept intact) -->
+  <!-- CORRELATION MATRIX -->
   <div class="card" style="margin-bottom:18px;">
     <div class="card-head">
-      <div class="card-title">Diagnoses with Highest Fraud Rates <span class="card-sub"> (original fraud logic — unchanged)</span></div>
-      <div class="card-actions muted">Min claims: <strong>{{ request.GET.min_claims|default:5 }}</strong></div>
+      <div class="card-title">Diagnosis–Treatment Correlation Matrix <span class="card-sub">(Top 20 by frequency)</span></div>
     </div>
     <div class="card-body">
-      {% if visualizations.diagnosis %}
-        <div class="plotly-container">{{ visualizations.diagnosis|safe }}</div>
+      {% if visualizations.corr_matrix %}
+        <div class="plotly-container">{{ visualizations.corr_matrix|safe }}</div>
       {% else %}
-        <div class="alert">No diagnosis fraud data available.</div>
+        <div class="alert">No correlation matrix data available.</div>
       {% endif %}
     </div>
   </div>

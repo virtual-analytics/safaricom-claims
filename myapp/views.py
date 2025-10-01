@@ -4753,62 +4753,87 @@ def safaricom_home(request):
 
             context['visualizations']['claims_time_chart'] = fig.to_html(full_html=False)
 
-        # ===== LORENZ CHART (Wealth Distribution) =====
-        if 'claim_me' in df.columns and 'amount' in df.columns:
-            # Calculate cumulative distribution of claims by member
-            member_totals = df.groupby('claim_me')['amount'].sum().sort_values()
-            total_amount_all = member_totals.sum()
-            
-            # Calculate Lorenz curve data
-            cumulative_members = np.arange(1, len(member_totals) + 1) / len(member_totals)
-            cumulative_amount = member_totals.cumsum() / total_amount_all
-            
-            # Perfect equality line
-            perfect_equality = np.linspace(0, 1, len(cumulative_members))
-            
-            # Calculate Gini coefficient
-            gini = 1 - 2 * np.trapz(cumulative_amount, cumulative_members)
-            
+        # ===== LORENZ CURVE: Claims Distribution Across Providers =====
+        if not df.empty and 'prov_name' in df.columns and 'amount' in df.columns:
+            # 1. Aggregate total claims per provider
+            provider_totals = (
+                df.groupby('prov_name')['amount']
+                .sum()
+                .sort_values()
+            )
+
+            total_amount_all = provider_totals.sum()
+
+            # 2. Calculate cumulative shares
+            cumulative_providers = np.arange(1, len(provider_totals) + 1) / len(provider_totals)
+            cumulative_amount = provider_totals.cumsum() / total_amount_all
+
+            # 3. Perfect equality line
+            perfect_equality = np.linspace(0, 1, len(cumulative_providers))
+
+            # 4. Gini coefficient
+            gini = 1 - 2 * np.trapz(cumulative_amount, cumulative_providers)
+
+            # 5. Build Lorenz curve figure
             lorenz_fig = go.Figure()
-            
-            # Lorenz curve
+
+            # Lorenz curve with green fill
             lorenz_fig.add_trace(go.Scatter(
-                x=cumulative_members, y=cumulative_amount,
-                mode='lines', name='Lorenz Curve',
-                line=dict(color='#1BB64F', width=3),
-                fill='tonexty'
+                x=cumulative_providers, 
+                y=cumulative_amount,
+                mode='lines',
+                name='Lorenz Curve',
+                line=dict(color='green', width=3),
+                fill='tozeroy',  # ✅ fills the area under the curve
+                fillcolor='rgba(0,128,0,0.2)'  # semi-transparent green
             ))
-            
-            # Perfect equality line
+
+            # Perfect equality (dashed grey line)
             lorenz_fig.add_trace(go.Scatter(
                 x=[0, 1], y=[0, 1],
-                mode='lines', name='Perfect Equality',
-                line=dict(color='red', dash='dash', width=2)
+                mode='lines',
+                name='Perfect Equality',
+                line=dict(color='gray', dash='dash')
             ))
-            
+
+            # Layout updates
             lorenz_fig.update_layout(
-                title=f'Lorenz Curve (Gini Coefficient: {gini:.3f})',
-                xaxis_title='Cumulative Proportion of Members',
-                yaxis_title='Cumulative Proportion of Claims Amount',
-                showlegend=True,
+                
+                
+                xaxis_title='Cumulative Share of Providers',
+                yaxis_title='Cumulative Share of Claim Amount',
                 margin=dict(l=20, r=20, t=60, b=20),
-                paper_bgcolor='rgba(0,0,0,0)',
-                plot_bgcolor='rgba(0,0,0,0)',
-                annotations=[
-                    dict(
-                        x=0.5, y=0.5,
-                        xref="paper", yref="paper",
-                        text=f"Gini: {gini:.3f}",
-                        showarrow=False,
-                        font=dict(size=16, color="black"),
-                        bgcolor="white",
-                        bordercolor="black",
-                        borderwidth=1
-                    )
-                ]
+                paper_bgcolor='white',
+                plot_bgcolor='white',
+                showlegend=True,
+                xaxis=dict(
+                    gridcolor='lightgray',
+                    zerolinecolor='gray',
+                    linecolor='black',
+                    mirror=True
+                ),
+                yaxis=dict(
+                    gridcolor='lightgray',
+                    zerolinecolor='gray',
+                    linecolor='black',
+                    mirror=True
+                )
             )
-            
+
+            # Gini annotation
+            lorenz_fig.add_annotation(
+                x=0.6, y=0.2,
+                text=f"Gini = {gini:.3f}",
+                showarrow=False,
+                font=dict(size=14, color="green"),
+                bgcolor="white",
+                bordercolor="green",
+                borderwidth=1
+            )
+
+            # Save to context
             context['visualizations']['lorenz_chart'] = lorenz_fig.to_html(full_html=False)
+
 
         # ===== BENEFIT CATEGORY CHART =====
         if 'benefit' in df.columns:
@@ -8880,16 +8905,22 @@ def diagnosis_patterns(request):
             )
             context['visualizations']['top_by_count'] = fig_count.to_html(full_html=False)
 
-        top_by_amount = diag_stats.sort_values('Total_Amount', ascending=False).head(20)
-        if not top_by_amount.empty:
-            fig_amount = px.bar(
-                top_by_amount,
-                x='Diagnosis', y='Total_Amount',
-                color='Total_Claims',
-                hover_data=['Mean_Amount', 'Median_Amount', 'Pct_of_Claims'],
-                title='Top Diagnoses by Total Amount'
+        # Correlation Matrix
+        numeric_cols = df.select_dtypes(include=[np.number])
+        if not numeric_cols.empty:
+            corr = numeric_cols.corr().round(2)
+            corr_fig = px.imshow(
+                corr,
+                text_auto=True,
+                color_continuous_scale="RdBu_r",
+                origin="lower",
+                title="Correlation Matrix of Numeric Features"
             )
-            context['visualizations']['top_by_amount'] = fig_amount.to_html(full_html=False)
+            corr_fig.update_layout(
+                margin=dict(l=20, r=20, t=40, b=20),
+                xaxis=dict(side="top")
+            )
+            context['visualizations']['corr_matrix'] = corr_fig.to_html(full_html=False)
 
         # -------------------------
         # Visual: distribution (boxplot) for top diagnoses
@@ -9055,7 +9086,6 @@ def diagnosis_patterns(request):
         # Prepare final tables for template
         # -------------------------
         context['deep_tables']['diag_stats_full'] = diag_stats.to_dict('records')
-        context['deep_tables']['top_by_amount'] = top_by_amount.to_dict('records')
         context['deep_tables']['top_by_count'] = top_by_count.to_dict('records')
 
     except Exception as e:
