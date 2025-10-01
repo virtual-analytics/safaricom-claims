@@ -238,19 +238,19 @@
     </div>
   </div>
 
-  <!-- CORRELATION MATRIX -->
+  <!-- AILMENTS VS TREATMENTS HEATMAP 
   <div class="card" style="margin-bottom:18px;">
     <div class="card-head">
-      <div class="card-title">Diagnosis–Treatment Correlation Matrix <span class="card-sub">(Top 20 by frequency)</span></div>
+      <div class="card-title">Ailments vs Treatments Heatmap <span class="card-sub">(Top 20 ailments by frequency)</span></div>
     </div>
     <div class="card-body">
-      {% if visualizations.corr_matrix %}
-        <div class="plotly-container">{{ visualizations.corr_matrix|safe }}</div>
+      {% if visualizations.ailment_treatment_heatmap %}
+        <div class="plotly-container">{{ visualizations.ailment_treatment_heatmap|safe }}</div>
       {% else %}
-        <div class="alert">No correlation matrix data available.</div>
+        <div class="alert">No ailment-treatment heatmap data available.</div>
       {% endif %}
     </div>
-  </div>
+  </div>-->
 
   <!-- two-column grid: top-by-count & top-by-amount -->
   <div class="grid">
