@@ -964,8 +964,8 @@ function initializeDashboard() {
   try {
     console.log('🚀 Initializing Dashboard...');
     
-    // Initialize tabs with hover functionality
-    initializeHoverTabs();
+    // Initialize tabs with SIMPLE click functionality
+    initializeTabs();
     
     // Initialize filters
     initializeFilters();
@@ -984,55 +984,50 @@ function initializeDashboard() {
   }
 }
 
-// Hover-based tab switching
-function initializeHoverTabs() {
+// SIMPLE tab switching - Click only (more reliable)
+function initializeTabs() {
   const tabs = document.querySelectorAll('.mini-tab');
   const tabContents = document.querySelectorAll('.tab-content');
   
   console.log(`Found ${tabs.length} tabs and ${tabContents.length} tab contents`);
   
-  // Add hover event listeners
+  // Add click event listeners to all tabs
   tabs.forEach(tab => {
-    // Remove any existing event listeners
-    const newTab = tab.cloneNode(true);
-    tab.parentNode.replaceChild(newTab, tab);
-  });
-  
-  // Re-select tabs after cloning
-  const freshTabs = document.querySelectorAll('.mini-tab');
-  
-  freshTabs.forEach(tab => {
-    let hoverTimer;
-    
-    // Mouse enter - switch tab immediately
-    tab.addEventListener('mouseenter', function() {
-      const targetTab = this.getAttribute('data-tab');
-      console.log(`Hovering over: ${targetTab}`);
-      
-      // Clear any existing timer
-      clearTimeout(hoverTimer);
-      
-      // Switch tab immediately
-      switchToTab(targetTab);
-    });
-    
-    // Mouse leave - clear timer (no action needed)
-    tab.addEventListener('mouseleave', function() {
-      clearTimeout(hoverTimer);
-    });
-    
-    // Click - also switch tab (for touch devices)
-    tab.addEventListener('click', function(e) {
+    // Remove any existing click listeners by using one-time setup
+    tab.onclick = function(e) {
       e.preventDefault();
       const targetTab = this.getAttribute('data-tab');
+      console.log(`Clicked tab: ${targetTab}`);
       switchToTab(targetTab);
+    };
+    
+    // Optional: Add hover effect without auto-switching
+    tab.addEventListener('mouseenter', function() {
+      if (!this.classList.contains('active')) {
+        this.style.transform = 'translateY(-2px)';
+        this.style.boxShadow = '0 4px 12px rgba(214, 39, 40, 0.2)';
+      }
+    });
+    
+    tab.addEventListener('mouseleave', function() {
+      if (!this.classList.contains('active')) {
+        this.style.transform = 'translateY(0px)';
+        this.style.boxShadow = 'none';
+      }
     });
   });
   
   function switchToTab(targetTabName) {
     try {
       // Remove active class from all tabs and contents
-      freshTabs.forEach(t => t.classList.remove('active'));
+      tabs.forEach(t => {
+        t.classList.remove('active');
+        if (!t.classList.contains('active')) {
+          t.style.transform = 'translateY(0px)';
+          t.style.boxShadow = 'none';
+        }
+      });
+      
       tabContents.forEach(content => content.classList.remove('active'));
       
       // Add active class to target tab and content
@@ -1041,6 +1036,8 @@ function initializeHoverTabs() {
       
       if (targetTab && targetContent) {
         targetTab.classList.add('active');
+        targetTab.style.transform = 'translateY(-2px)';
+        targetTab.style.boxShadow = '0 4px 12px rgba(214, 39, 40, 0.2)';
         targetContent.classList.add('active');
         
         console.log(`✅ Switched to tab: ${targetTabName}`);
@@ -1143,7 +1140,10 @@ function updateFilterChips() {
           const minVal = elements.minAmount?.value || '0';
           const maxVal = elements.maxAmount?.value || '∞';
           if (minVal || maxVal) {
-            chips.push({type: 'Amount', value: `${minVal} - ${maxVal} KES`});
+            // Avoid duplicates
+            if (!chips.some(chip => chip.type === 'Amount')) {
+              chips.push({type: 'Amount', value: `${minVal} - ${maxVal} KES`});
+            }
           }
         }
       }
@@ -1154,28 +1154,67 @@ function updateFilterChips() {
     container.innerHTML = chips.map(chip => `
       <div class="filter-chip">
         ${chip.type}: ${chip.value}
-        <span class="remove" data-type="${chip.type.toLowerCase()}">×</span>
+        <span class="remove" data-type="${chip.type.toLowerCase()}" data-value="${chip.value}">×</span>
       </div>
     `).join('');
+    
+    // Add remove functionality to chips
+    container.querySelectorAll('.filter-chip .remove').forEach(removeBtn => {
+      removeBtn.addEventListener('click', function() {
+        const chipType = this.getAttribute('data-type');
+        removeFilterChip(chipType);
+      });
+    });
+    
     container.style.display = 'flex';
   } else {
     container.style.display = 'none';
   }
 }
 
+function removeFilterChip(chipType) {
+  switch(chipType) {
+    case 'provider':
+    case 'diagnosis':
+    case 'gender':
+    case 'year':
+      if (typeof $ !== 'undefined' && $.fn.select2) {
+        $(`#${chipType}-filter`).val(null).trigger('change');
+      }
+      break;
+    case 'amount':
+      document.getElementById('min-amount').value = '';
+      document.getElementById('max-amount').value = '';
+      break;
+  }
+  updateFilterChips();
+}
+
 // Event listeners setup
 function setupEventListeners() {
   // Apply filters
-  document.getElementById('apply-filters')?.addEventListener('click', applyFilters);
+  const applyFiltersBtn = document.getElementById('apply-filters');
+  if (applyFiltersBtn) {
+    applyFiltersBtn.addEventListener('click', applyFilters);
+  }
   
   // Reset filters
-  document.getElementById('reset-filters')?.addEventListener('click', resetFilters);
+  const resetFiltersBtn = document.getElementById('reset-filters');
+  if (resetFiltersBtn) {
+    resetFiltersBtn.addEventListener('click', resetFilters);
+  }
   
   // Export CSV
-  document.getElementById('download-table')?.addEventListener('click', exportCSV);
+  const downloadTableBtn = document.getElementById('download-table');
+  if (downloadTableBtn) {
+    downloadTableBtn.addEventListener('click', exportCSV);
+  }
   
   // Table search
-  document.getElementById('table-search')?.addEventListener('input', searchTable);
+  const tableSearch = document.getElementById('table-search');
+  if (tableSearch) {
+    tableSearch.addEventListener('input', searchTable);
+  }
   
   // Window resize
   window.addEventListener('resize', resizePlotlyCharts);
@@ -1184,6 +1223,13 @@ function setupEventListeners() {
   document.addEventListener('change', function(e) {
     if (e.target.matches('#provider-filter, #diagnosis-filter, #gender-filter, #year-filter, #min-amount, #max-amount')) {
       updateFilterChips();
+    }
+  });
+  
+  // Enter key in amount fields
+  document.addEventListener('keypress', function(e) {
+    if ((e.target.matches('#min-amount') || e.target.matches('#max-amount')) && e.key === 'Enter') {
+      applyFilters();
     }
   });
 }
@@ -1197,6 +1243,7 @@ function applyFilters() {
     const params = new URLSearchParams();
     const urlParams = new URLSearchParams(window.location.search);
     
+    // Preserve non-filter parameters
     for (const [key, value] of urlParams) {
       if (!key.startsWith('filter_')) params.set(key, value);
     }
@@ -1223,13 +1270,19 @@ function resetFilters() {
   if (typeof $ !== 'undefined' && $.fn.select2) {
     $('#provider-filter, #diagnosis-filter, #gender-filter, #year-filter').val(null).trigger('change');
   }
+  
   document.getElementById('min-amount').value = '';
   document.getElementById('max-amount').value = '';
-  document.getElementById('active-filters').style.display = 'none';
+  
+  const container = document.getElementById('active-filters');
+  if (container) {
+    container.style.display = 'none';
+  }
   
   const url = new URL(window.location.href);
   const params = new URLSearchParams();
   
+  // Preserve non-filter parameters
   for (const [key, value] of url.searchParams) {
     if (!key.startsWith('filter_')) params.set(key, value);
   }
@@ -1238,7 +1291,8 @@ function resetFilters() {
 }
 
 function exportCSV(e) {
-  e.preventDefault();
+  if (e) e.preventDefault();
+  
   const table = document.getElementById('diag-table');
   if (!table) {
     alert('Table not available to export');
@@ -1261,7 +1315,7 @@ function exportCSV(e) {
   a.download = 'diagnosis_summary.csv';
   document.body.appendChild(a);
   a.click();
-  a.remove();
+  document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
 
@@ -1272,25 +1326,54 @@ function searchTable() {
   const query = search.value.trim().toLowerCase();
   const rows = document.querySelectorAll('#diag-table tbody tr');
   
+  let visibleCount = 0;
   rows.forEach(row => {
     const name = row.querySelector('.diag-name')?.innerText.toLowerCase() || '';
-    row.style.display = name.includes(query) ? '' : 'none';
+    const isVisible = name.includes(query);
+    row.style.display = isVisible ? '' : 'none';
+    if (isVisible) visibleCount++;
   });
+  
+  // Optional: Show "no results" message
+  const tableWrapper = document.getElementById('table-wrapper');
+  let noResults = tableWrapper.querySelector('.no-results');
+  
+  if (visibleCount === 0 && query.length > 0) {
+    if (!noResults) {
+      noResults = document.createElement('div');
+      noResults.className = 'no-results alert';
+      noResults.innerHTML = '<i class="fas fa-search"></i> No matching diagnoses found';
+      tableWrapper.appendChild(noResults);
+    }
+  } else if (noResults) {
+    noResults.remove();
+  }
 }
 
-// Initialize when ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initializeDashboard);
-} else {
+// SIMPLE initialization - just wait for DOM to be ready
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('DOM loaded, initializing dashboard...');
+  initializeDashboard();
+});
+
+// Fallback initialization
+if (document.readyState === 'interactive' || document.readyState === 'complete') {
+  console.log('Document already ready, initializing now...');
   initializeDashboard();
 }
 
-// Final safety check
+// Final safety check - ensure at least one tab is active
 setTimeout(() => {
-  if (!document.querySelector('.mini-tab.active')) {
-    console.warn('No active tab found, reinitializing...');
-    initializeHoverTabs();
+  const activeTab = document.querySelector('.mini-tab.active');
+  const activeContent = document.querySelector('.tab-content.active');
+  
+  if (!activeTab || !activeContent) {
+    console.warn('No active tab found, activating first tab...');
+    const firstTab = document.querySelector('.mini-tab');
+    if (firstTab) {
+      firstTab.click();
+    }
   }
-}, 2000);
+}, 1000);
 </script>
 {% endblock %}
