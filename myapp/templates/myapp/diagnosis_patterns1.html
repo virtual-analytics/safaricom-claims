@@ -238,21 +238,7 @@
     </div>
   </div>
 
-  <!-- AILMENTS VS TREATMENTS HEATMAP 
-  <div class="card" style="margin-bottom:18px;">
-    <div class="card-head">
-      <div class="card-title">Ailments vs Treatments Heatmap <span class="card-sub">(Top 20 ailments by frequency)</span></div>
-    </div>
-    <div class="card-body">
-      {% if visualizations.ailment_treatment_heatmap %}
-        <div class="plotly-container">{{ visualizations.ailment_treatment_heatmap|safe }}</div>
-      {% else %}
-        <div class="alert">No ailment-treatment heatmap data available.</div>
-      {% endif %}
-    </div>
-  </div>-->
-
-  <!-- two-column grid: top-by-count & top-by-amount -->
+  <!-- two-column grid: top-by-count & DIAGNOSIS VS PROCEDURE HEATMAP -->
   <div class="grid">
     <div class="card">
       <div class="card-head">
@@ -271,19 +257,20 @@
       </div>
     </div>
 
+    <!-- REPLACED: Top Diagnoses by Total Amount with Diagnosis vs Procedure Heatmap -->
     <div class="card">
       <div class="card-head">
         <div>
-          <div class="card-title">Top Diagnoses by Total Amount</div>
-          <div class="card-sub">Which diagnoses drive cost</div>
+          <div class="card-title">Diagnosis vs Procedure Heatmap</div>
+          <div class="card-sub">Top 20 ailments vs common treatments</div>
         </div>
-        <div class="kpi"><strong>Amount</strong></div>
+        <div class="kpi"><strong>Heatmap</strong></div>
       </div>
       <div class="card-body">
-        {% if visualizations.top_by_amount %}
-          <div class="plotly-container">{{ visualizations.top_by_amount|safe }}</div>
+        {% if visualizations.diagnosis_procedure_heatmap %}
+          <div class="plotly-container">{{ visualizations.diagnosis_procedure_heatmap|safe }}</div>
         {% else %}
-          <div class="alert">No chart available.</div>
+          <div class="alert">No heatmap data available.</div>
         {% endif %}
       </div>
     </div>
