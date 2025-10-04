@@ -11,11 +11,57 @@
   <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
-  <!-- Plotly for charts -->
-  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <!-- Plotly for charts - Multiple CDN fallbacks -->
+  <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist@2.24.1/plotly.min.js"></script>
+  
+  <!-- Fallback Plotly CDN -->
+  <script>
+    window.plotlyLoadAttempts = 0;
+    window.maxPlotlyAttempts = 3;
+    
+    function checkPlotlyLoaded() {
+      if (typeof Plotly === 'undefined') {
+        window.plotlyLoadAttempts++;
+        if (window.plotlyLoadAttempts < window.maxPlotlyAttempts) {
+          console.warn(`Plotly not loaded, attempt ${window.plotlyLoadAttempts}. Loading fallback...`);
+          loadPlotlyFallback();
+        } else {
+          console.error('All Plotly CDN attempts failed. Charts will not render.');
+          showPlotlyError();
+        }
+      } else {
+        console.log('Plotly loaded successfully');
+        window.PlotlyLoaded = true;
+      }
+    }
+    
+    function loadPlotlyFallback() {
+      const fallbackScript = document.createElement('script');
+      fallbackScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.24.1/plotly.min.js';
+      fallbackScript.integrity = 'sha512-ujKZF3d1+3/2VGhKQQS5aT1hkM1hTZQpBk1TqfT/HRK4pR1R5N9TkQjB9fSxqO/5JQ+MiRwVJQ8RzQJQKQKCA==';
+      fallbackScript.crossOrigin = 'anonymous';
+      fallbackScript.onload = function() {
+        console.log('Plotly loaded from fallback CDN');
+        window.PlotlyLoaded = true;
+      };
+      fallbackScript.onerror = function() {
+        console.error('Fallback Plotly CDN also failed');
+        checkPlotlyLoaded();
+      };
+      document.head.appendChild(fallbackScript);
+    }
+    
+    function showPlotlyError() {
+      // This will be handled in the main JavaScript
+      window.PlotlyLoadFailed = true;
+    }
+    
+    // Check if Plotly loaded after a short delay
+    setTimeout(checkPlotlyLoaded, 1000);
+  </script>
 
-  <!-- Tiny icon set for small UI accents (Font Awesome CDN) -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-p6O+...==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <!-- Tiny icon set for small UI accents -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 {% endblock %}
 
 {% block content %}
@@ -110,32 +156,6 @@
     align-items: center;
   }
 
-  /* Controls */
-  .controls {
-    display:flex;
-    gap:12px;
-    align-items:center;
-    margin-bottom:18px;
-    flex-wrap:wrap;
-  }
-  .control {
-    background:var(--card-bg);
-    border:1px solid var(--border);
-    padding:10px;
-    border-radius:8px;
-    display:flex;
-    gap:8px;
-    align-items:center;
-  }
-  .control label { font-size:13px; color:var(--muted); margin-right:6px; font-weight:600; }
-  .control input[type="number"], .control select {
-    padding:8px 10px;
-    border-radius:6px;
-    border:1px solid #dfe6ef;
-    min-width:120px;
-  }
-  .control .small { font-size:12px; color:var(--muted); }
-
   .btn {
     background:var(--accent);
     color:#fff;
@@ -170,7 +190,7 @@
   .summary-card .value { font-size: 20px; font-weight: 800; color: var(--accent); margin-bottom: 4px; }
   .summary-card .trend { font-size: 11px; color: var(--muted); }
 
-  /* Mini Tabs */
+  /* Mini Tabs with Hover Functionality */
   .mini-tabs {
     display: flex;
     background: var(--card-bg);
@@ -192,7 +212,7 @@
     font-size: 13px;
     font-weight: 600;
     color: var(--muted);
-    transition: all 0.3s ease;
+    transition: all 0.15s ease;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -200,8 +220,10 @@
   }
 
   .mini-tab:hover {
-    background: #f8fafc;
-    color: var(--accent);
+    background: var(--accent);
+    color: white;
+    box-shadow: 0 2px 8px rgba(214, 39, 40, 0.3);
+    transform: translateY(-1px);
   }
 
   .mini-tab.active {
@@ -217,19 +239,18 @@
   /* Tab Content */
   .tab-content {
     display: none;
-    animation: fadeIn 0.3s ease;
+    opacity: 0;
+    transform: translateY(5px);
+    transition: all 0.3s ease;
   }
 
   .tab-content.active {
     display: block;
+    opacity: 1;
+    transform: translateY(0);
   }
 
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  /* Grid of cards - ENFORCE 2 PER ROW */
+  /* Grid of cards */
   .grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -287,6 +308,23 @@
     flex: 1;
   }
 
+  .chart-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--muted);
+    text-align: center;
+    padding: 20px;
+  }
+
+  .chart-error i {
+    font-size: 48px;
+    margin-bottom: 16px;
+    color: #dc2626;
+  }
+
   /* Loading states */
   .loading {
     display: flex;
@@ -310,53 +348,21 @@
   }
 
   /* Responsive */
-  @media(max-width: 1200px){
-    .grid {
-      grid-template-columns: repeat(2, 1fr);
-    }
-  }
-  
   @media(max-width: 980px){
-    .grid { 
-      grid-template-columns: 1fr; 
-    }
-    .plotly-container { 
-      height: 360px; 
-    }
-    .filters-grid { 
-      grid-template-columns: 1fr; 
-    }
-    .card .card-body {
-      min-height: 300px;
-    }
-    .mini-tabs {
-      flex-wrap: wrap;
-    }
-    .mini-tab {
-      flex: 1 1 calc(50% - 8px);
-      min-width: 120px;
-    }
+    .grid { grid-template-columns: 1fr; }
+    .plotly-container { height: 360px; }
+    .filters-grid { grid-template-columns: 1fr; }
+    .mini-tabs { flex-wrap: wrap; }
+    .mini-tab { flex: 1 1 calc(50% - 8px); min-width: 120px; }
   }
 
   @media(max-width: 768px){
-    .summary-row { 
-      grid-template-columns: repeat(2, 1fr); 
-    }
-    .card .card-body {
-      min-height: 280px;
-    }
-    .mini-tab {
-      flex: 1 1 100%;
-    }
+    .summary-row { grid-template-columns: repeat(2, 1fr); }
+    .mini-tab { flex: 1 1 100%; }
   }
 
   @media(max-width: 480px){
-    .summary-row { 
-      grid-template-columns: 1fr; 
-    }
-    .card .card-body {
-      min-height: 250px;
-    }
+    .summary-row { grid-template-columns: 1fr; }
   }
 
   /* Tables */
@@ -378,17 +384,6 @@
     z-index:2; 
     font-weight: 600; 
   }
-
-  /* small helpers */
-  .muted { color:var(--muted); font-size:13px; }
-  .tag { background:#f3f7fb; padding:6px 8px; border-radius:6px; font-weight:700; color:#1f2937; }
-  .controls-right { margin-left:auto; display:flex; gap:8px; align-items:center; }
-  .kpi { display:flex; gap:10px; align-items:center; }
-  .kpi strong { color:var(--accent); font-size:15px; }
-
-  /* export & search */
-  .toolbar { display:flex; gap:12px; align-items:center; margin-top:8px; flex-wrap: wrap; }
-  .search-input { padding:8px 12px; border-radius:8px; border:1px solid var(--border); min-width:220px; }
 
   /* alerts */
   .alert { 
@@ -431,18 +426,6 @@
     cursor: pointer;
     font-weight: bold;
   }
-
-  /* Single card layout for full-width visualizations */
-  .single-card {
-    grid-column: 1 / -1;
-  }
-
-  /* Card actions */
-  .card-actions {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-  }
 </style>
 
 <div class="page-wrap">
@@ -465,8 +448,7 @@
         <label for="provider-filter">Provider</label>
         <select id="provider-filter" multiple>
           {% for provider in filter_options.providers %}
-            <option value="{{ provider }}" 
-              {% if provider in request.GET.filter_provider %}selected{% endif %}>
+            <option value="{{ provider }}" {% if provider in request.GET.filter_provider %}selected{% endif %}>
               {{ provider }}
             </option>
           {% endfor %}
@@ -477,8 +459,7 @@
         <label for="diagnosis-filter">Diagnosis</label>
         <select id="diagnosis-filter" multiple>
           {% for diagnosis in filter_options.diagnoses %}
-            <option value="{{ diagnosis }}"
-              {% if diagnosis in request.GET.filter_diagnosis %}selected{% endif %}>
+            <option value="{{ diagnosis }}" {% if diagnosis in request.GET.filter_diagnosis %}selected{% endif %}>
               {{ diagnosis }}
             </option>
           {% endfor %}
@@ -489,8 +470,7 @@
         <label for="gender-filter">Gender</label>
         <select id="gender-filter" multiple>
           {% for gender in filter_options.genders %}
-            <option value="{{ gender }}"
-              {% if gender in request.GET.filter_gender %}selected{% endif %}>
+            <option value="{{ gender }}" {% if gender in request.GET.filter_gender %}selected{% endif %}>
               {{ gender }}
             </option>
           {% endfor %}
@@ -501,8 +481,7 @@
         <label for="year-filter">Year</label>
         <select id="year-filter" multiple>
           {% for year in filter_options.years %}
-            <option value="{{ year }}"
-              {% if year in request.GET.filter_year %}selected{% endif %}>
+            <option value="{{ year }}" {% if year in request.GET.filter_year %}selected{% endif %}>
               {{ year }}
             </option>
           {% endfor %}
@@ -512,10 +491,8 @@
       <div class="filter-group">
         <label for="amount-range">Amount Range (KES)</label>
         <div style="display: flex; gap: 8px;">
-          <input type="number" id="min-amount" placeholder="Min" 
-                 value="{{ request.GET.filter_min_amount|default:'' }}" style="flex: 1;">
-          <input type="number" id="max-amount" placeholder="Max" 
-                 value="{{ request.GET.filter_max_amount|default:'' }}" style="flex: 1;">
+          <input type="number" id="min-amount" placeholder="Min" value="{{ request.GET.filter_min_amount|default:'' }}" style="flex: 1;">
+          <input type="number" id="max-amount" placeholder="Max" value="{{ request.GET.filter_max_amount|default:'' }}" style="flex: 1;">
         </div>
       </div>
       
@@ -526,9 +503,7 @@
     </div>
     
     <!-- Active Filter Chips -->
-    <div class="filter-chips" id="active-filters" style="display: none;">
-      <!-- Active filters will appear here -->
-    </div>
+    <div class="filter-chips" id="active-filters"></div>
   </div>
 
   <!-- Loading Indicator -->
@@ -541,27 +516,27 @@
   <div class="summary-row">
     <div class="summary-card">
       <div class="label">Total Claims</div>
-      <div class="value" id="total-claims">{{ deep_summary.total_claims|intcomma|default:"—" }}</div>
+      <div class="value">{{ deep_summary.total_claims|intcomma|default:"—" }}</div>
       <div class="trend">All time</div>
     </div>
     <div class="summary-card">
       <div class="label">Total Amount (KES)</div>
-      <div class="value" id="total-amount">KES {{ deep_summary.total_amount|floatformat:2|intcomma }}</div>
+      <div class="value">KES {{ deep_summary.total_amount|floatformat:2|intcomma }}</div>
       <div class="trend">Current view</div>
     </div>
     <div class="summary-card">
       <div class="label">Unique Diagnoses</div>
-      <div class="value" id="unique-diagnoses">{{ deep_summary.unique_diagnoses|intcomma|default:"—" }}</div>
+      <div class="value">{{ deep_summary.unique_diagnoses|intcomma|default:"—" }}</div>
       <div class="trend">Filtered count</div>
     </div>
     <div class="summary-card">
       <div class="label">Avg Claim (KES)</div>
-      <div class="value" id="avg-claim">KES {{ deep_summary.avg_claim|floatformat:2|intcomma }}</div>
+      <div class="value">KES {{ deep_summary.avg_claim|floatformat:2|intcomma }}</div>
       <div class="trend">Per claim</div>
     </div>
     <div class="summary-card">
       <div class="label">Top Diagnosis</div>
-      <div class="value" id="top-diagnosis">{{ deep_summary.top_diagnosis|default:"—" }}</div>
+      <div class="value">{{ deep_summary.top_diagnosis|default:"—" }}</div>
       <div class="trend">By claim count</div>
     </div>
   </div>
@@ -588,9 +563,8 @@
     </button>
   </div>
 
-  <!-- Tab 1: Overview -->
+  <!-- Tab Contents -->
   <div class="tab-content active" id="overview-tab">
-    <!-- Top Diagnoses & Procedure Heatmap - 2 per row -->
     <div class="grid">
       <div class="card">
         <div class="card-head">
@@ -598,13 +572,15 @@
             <div class="card-title">Top Diagnoses by Claim Count</div>
             <div class="card-sub">Counts with shading by total amount</div>
           </div>
-          <div class="kpi"><strong>Top</strong>&nbsp;{{ deep_tables.top_by_count|length|default:"N/A" }}</div>
         </div>
         <div class="card-body">
           {% if visualizations.top_by_count %}
             <div class="plotly-container">{{ visualizations.top_by_count|safe }}</div>
           {% else %}
-            <div class="alert">No chart available.</div>
+            <div class="chart-error">
+              <i class="fas fa-chart-bar"></i>
+              <div>Chart not available</div>
+            </div>
           {% endif %}
         </div>
       </div>
@@ -615,19 +591,20 @@
             <div class="card-title">Diagnosis vs Procedure Heatmap</div>
             <div class="card-sub">Top 20 ailments vs common treatments</div>
           </div>
-          <div class="kpi"><strong>Heatmap</strong></div>
         </div>
         <div class="card-body">
           {% if visualizations.diagnosis_procedure_heatmap %}
             <div class="plotly-container">{{ visualizations.diagnosis_procedure_heatmap|safe }}</div>
           {% else %}
-            <div class="alert">No heatmap data available.</div>
+            <div class="chart-error">
+              <i class="fas fa-th"></i>
+              <div>Heatmap not available</div>
+            </div>
           {% endif %}
         </div>
       </div>
     </div>
 
-    <!-- Boxplot - Full width -->
     <div class="grid full">
       <div class="card">
         <div class="card-head">
@@ -635,22 +612,22 @@
             <div class="card-title">Claim Amount Distribution for Top Diagnoses</div>
             <div class="card-sub">Boxplots show spread and outliers per diagnosis</div>
           </div>
-          <div class="card-actions muted">Tip: use table search to focus on diagnosis</div>
         </div>
         <div class="card-body">
           {% if visualizations.box_by_diagnosis %}
             <div class="plotly-container">{{ visualizations.box_by_diagnosis|safe }}</div>
           {% else %}
-            <div class="alert">No boxplot available.</div>
+            <div class="chart-error">
+              <i class="fas fa-chart-box"></i>
+              <div>Boxplot not available</div>
+            </div>
           {% endif %}
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Tab 2: Cost Analysis -->
   <div class="tab-content" id="cost-analysis-tab">
-    <!-- Cost Efficiency & Outlier Detection - 2 per row -->
     <div class="grid">
       <div class="card">
         <div class="card-head">
@@ -685,12 +662,11 @@
       </div>
     </div>
 
-    <!-- Severity & Volatility - 2 per row -->
     <div class="grid">
       <div class="card">
         <div class="card-head">
           <div>
-            <div class="card-title">Severity Bucket Distribution (Top Diagnoses)</div>
+            <div class="card-title">Severity Bucket Distribution</div>
             <div class="card-sub">Claims binned into severity buckets by amount</div>
           </div>
         </div>
@@ -719,14 +695,12 @@
     </div>
   </div>
 
-  <!-- Tab 3: Temporal Patterns -->
   <div class="tab-content" id="temporal-tab">
-    <!-- Monthly Trends & Seasonality - 2 per row -->
     <div class="grid">
       <div class="card">
         <div class="card-head">
           <div>
-            <div class="card-title">Monthly Diagnosis Trends (Top)</div>
+            <div class="card-title">Monthly Diagnosis Trends</div>
             <div class="card-sub">Multi-line view for top diagnoses over time</div>
           </div>
         </div>
@@ -742,8 +716,8 @@
       <div class="card">
         <div class="card-head">
           <div>
-            <div class="card-title">Seasonality Heatmap (Month × Year)</div>
-            <div class="card-sub">Total amounts by month and year highlight seasonal cycles</div>
+            <div class="card-title">Seasonality Heatmap</div>
+            <div class="card-sub">Total amounts by month and year</div>
           </div>
         </div>
         <div class="card-body">
@@ -756,7 +730,6 @@
       </div>
     </div>
 
-    <!-- Seasonal Patterns & Weekly Analysis - 2 per row -->
     <div class="grid">
       <div class="card">
         <div class="card-head">
@@ -792,9 +765,7 @@
     </div>
   </div>
 
-  <!-- Tab 4: Demographics -->
   <div class="tab-content" id="demographics-tab">
-    <!-- Gender & Age Distribution - 2 per row -->
     <div class="grid">
       <div class="card">
         <div class="card-head">
@@ -825,12 +796,11 @@
       </div>
     </div>
 
-    <!-- Repeat Claimants - Full width -->
     <div class="grid full">
       <div class="card">
         <div class="card-head">
           <div class="card-title">Repeat-Claimant Summary</div>
-          <div class="card-sub">Members with multiple claims by diagnosis (top)</div>
+          <div class="card-sub">Members with multiple claims by diagnosis</div>
         </div>
         <div class="card-body">
           {% if visualizations.repeat_claimants %}
@@ -859,9 +829,7 @@
     </div>
   </div>
 
-  <!-- Tab 5: Providers -->
   <div class="tab-content" id="providers-tab">
-    <!-- Provider Breakdown & Specialization - 2 per row -->
     <div class="grid">
       <div class="card">
         <div class="card-head">
@@ -897,9 +865,7 @@
     </div>
   </div>
 
-  <!-- Tab 6: Advanced Insights -->
   <div class="tab-content" id="advanced-tab">
-    <!-- Diagnosis Clustering - Full width -->
     <div class="grid full">
       <div class="card">
         <div class="card-head">
@@ -918,7 +884,6 @@
       </div>
     </div>
 
-    <!-- Diagnosis Summary Table - Full width -->
     <div class="grid full">
       <div class="card">
         <div class="card-head">
@@ -929,7 +894,7 @@
           <div>
             <div class="toolbar">
               <input type="text" id="table-search" class="search-input" placeholder="Search table (diagnosis)..." />
-              <button id="download-table" class="btn ghost"><i class="fa fa-download"></i>&nbsp;Download CSV</button>
+              <button id="download-table" class="btn ghost"><i class="fa fa-download"></i> Download CSV</button>
             </div>
           </div>
         </div>
@@ -989,386 +954,343 @@
   </footer>
 </div>
 
-<!-- Enhanced JavaScript with Robust Tab Functionality -->
+<!-- Enhanced JavaScript with Hover Tabs and Error Handling -->
 <script>
-// Use DOMContentLoaded and fallback to ensure tabs work everywhere
-document.addEventListener('DOMContentLoaded', function() {
-    initializeDashboard();
-});
+// Global error tracking
+window.dashboardErrors = [];
 
-// Fallback in case DOMContentLoaded already fired
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeDashboard);
-} else {
-    initializeDashboard();
-}
-
+// Main initialization
 function initializeDashboard() {
-    // Initialize tabs first
-    initializeTabs();
+  try {
+    console.log('🚀 Initializing Dashboard...');
     
-    // Then initialize other components
+    // Initialize tabs with hover functionality
+    initializeHoverTabs();
+    
+    // Initialize filters
     initializeFilters();
-    updateFilterChips();
     
-    // Set up event listeners
+    // Setup event listeners
     setupEventListeners();
+    
+    // Check Plotly status
+    checkPlotlyStatus();
+    
+    console.log('✅ Dashboard initialized successfully');
+    
+  } catch (error) {
+    console.error('❌ Dashboard initialization failed:', error);
+    window.dashboardErrors.push(error);
+  }
 }
 
-function initializeTabs() {
-    console.log('Initializing tabs...');
+// Hover-based tab switching
+function initializeHoverTabs() {
+  const tabs = document.querySelectorAll('.mini-tab');
+  const tabContents = document.querySelectorAll('.tab-content');
+  
+  console.log(`Found ${tabs.length} tabs and ${tabContents.length} tab contents`);
+  
+  // Add hover event listeners
+  tabs.forEach(tab => {
+    // Remove any existing event listeners
+    const newTab = tab.cloneNode(true);
+    tab.parentNode.replaceChild(newTab, tab);
+  });
+  
+  // Re-select tabs after cloning
+  const freshTabs = document.querySelectorAll('.mini-tab');
+  
+  freshTabs.forEach(tab => {
+    let hoverTimer;
     
-    const tabs = document.querySelectorAll('.mini-tab');
-    const tabContents = document.querySelectorAll('.tab-content');
-    
-    // Log for debugging
-    console.log('Found tabs:', tabs.length);
-    console.log('Found tab contents:', tabContents.length);
-    
-    // Ensure at least one tab is active on initial load
-    let hasActiveTab = false;
-    tabContents.forEach(content => {
-        if (content.classList.contains('active')) {
-            hasActiveTab = true;
-        }
+    // Mouse enter - switch tab immediately
+    tab.addEventListener('mouseenter', function() {
+      const targetTab = this.getAttribute('data-tab');
+      console.log(`Hovering over: ${targetTab}`);
+      
+      // Clear any existing timer
+      clearTimeout(hoverTimer);
+      
+      // Switch tab immediately
+      switchToTab(targetTab);
     });
     
-    if (!hasActiveTab && tabContents.length > 0) {
-        tabContents[0].classList.add('active');
-        if (tabs.length > 0) {
-            tabs[0].classList.add('active');
-        }
+    // Mouse leave - clear timer (no action needed)
+    tab.addEventListener('mouseleave', function() {
+      clearTimeout(hoverTimer);
+    });
+    
+    // Click - also switch tab (for touch devices)
+    tab.addEventListener('click', function(e) {
+      e.preventDefault();
+      const targetTab = this.getAttribute('data-tab');
+      switchToTab(targetTab);
+    });
+  });
+  
+  function switchToTab(targetTabName) {
+    try {
+      // Remove active class from all tabs and contents
+      freshTabs.forEach(t => t.classList.remove('active'));
+      tabContents.forEach(content => content.classList.remove('active'));
+      
+      // Add active class to target tab and content
+      const targetTab = document.querySelector(`.mini-tab[data-tab="${targetTabName}"]`);
+      const targetContent = document.getElementById(`${targetTabName}-tab`);
+      
+      if (targetTab && targetContent) {
+        targetTab.classList.add('active');
+        targetContent.classList.add('active');
+        
+        console.log(`✅ Switched to tab: ${targetTabName}`);
+        
+        // Resize Plotly charts after tab switch
+        setTimeout(resizePlotlyCharts, 100);
+      } else {
+        console.error(`❌ Tab elements not found for: ${targetTabName}`);
+      }
+    } catch (error) {
+      console.error('Error switching tab:', error);
     }
-    
-    // Add click event listeners to tabs
-    tabs.forEach(tab => {
-        // Remove any existing listeners to prevent duplicates
-        tab.replaceWith(tab.cloneNode(true));
-    });
-    
-    // Re-select tabs after cloning
-    const freshTabs = document.querySelectorAll('.mini-tab');
-    
-    freshTabs.forEach(tab => {
-        tab.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            const targetTab = this.getAttribute('data-tab');
-            console.log('Tab clicked:', targetTab);
-            
-            // Remove active class from all tabs and contents
-            freshTabs.forEach(t => t.classList.remove('active'));
-            tabContents.forEach(content => content.classList.remove('active'));
-            
-            // Add active class to clicked tab and corresponding content
-            this.classList.add('active');
-            const targetContent = document.getElementById(`${targetTab}-tab`);
-            
-            if (targetContent) {
-                targetContent.classList.add('active');
-                console.log('Activated tab content:', targetTab);
-                
-                // Trigger Plotly resize after a short delay
-                setTimeout(() => {
-                    resizePlotlyCharts();
-                }, 50);
-            } else {
-                console.error('Tab content not found:', `${targetTab}-tab`);
-            }
-        });
-    });
-    
-    console.log('Tabs initialization complete');
+  }
+}
+
+// Plotly status check
+function checkPlotlyStatus() {
+  setTimeout(() => {
+    if (typeof Plotly === 'undefined') {
+      console.warn('⚠️ Plotly not loaded, showing fallback content');
+      showPlotlyFallbacks();
+    } else {
+      console.log('✅ Plotly is ready');
+      // Initial resize of charts
+      resizePlotlyCharts();
+    }
+  }, 500);
+}
+
+function showPlotlyFallbacks() {
+  const plotlyContainers = document.querySelectorAll('.plotly-container');
+  plotlyContainers.forEach(container => {
+    const parentCard = container.closest('.card-body');
+    if (parentCard && !parentCard.querySelector('.chart-error')) {
+      container.innerHTML = `
+        <div class="chart-error">
+          <i class="fas fa-exclamation-triangle"></i>
+          <div>Chart loading failed</div>
+          <small>Please check your internet connection</small>
+        </div>
+      `;
+    }
+  });
 }
 
 function resizePlotlyCharts() {
-    if (typeof Plotly !== 'undefined') {
-        const plots = document.querySelectorAll('.plotly-graph-div');
-        console.log('Resizing Plotly charts:', plots.length);
-        plots.forEach(p => {
-            try { 
-                Plotly.Plots.resize(p); 
-            } catch (err) { 
-                console.log('Plotly resize error:', err);
-            }
-        });
+  if (typeof Plotly !== 'undefined') {
+    try {
+      const plots = document.querySelectorAll('.plotly-graph-div');
+      plots.forEach(plot => {
+        try {
+          Plotly.Plots.resize(plot);
+        } catch (err) {
+          console.log('Plotly resize skipped:', err);
+        }
+      });
+    } catch (error) {
+      console.log('Plotly resize error:', error);
     }
+  }
 }
 
+// Filter initialization
 function initializeFilters() {
-    if (typeof $ !== 'undefined' && $.fn.select2) {
-        try {
-            $('#provider-filter, #diagnosis-filter, #gender-filter, #year-filter').select2({
-                placeholder: 'Select options...',
-                width: '100%'
-            });
-            console.log('Select2 filters initialized');
-        } catch (e) {
-            console.error('Select2 initialization error:', e);
-        }
+  if (typeof $ !== 'undefined' && $.fn.select2) {
+    try {
+      $('#provider-filter, #diagnosis-filter, #gender-filter, #year-filter').select2({
+        placeholder: 'Select options...',
+        width: '100%'
+      });
+    } catch (e) {
+      console.error('Select2 initialization failed:', e);
     }
+  }
+  updateFilterChips();
 }
 
 function updateFilterChips() {
-    const chipsContainer = document.getElementById('active-filters');
-    if (!chipsContainer) return;
-    
-    const chips = [];
-    
-    // Provider chips
-    const providerSelect = document.getElementById('provider-filter');
-    if (providerSelect) {
-        const providers = Array.from(providerSelect.selectedOptions)
-            .map(opt => ({type: 'Provider', value: opt.text}));
-        chips.push(...providers);
-    }
-    
-    // Diagnosis chips
-    const diagnosisSelect = document.getElementById('diagnosis-filter');
-    if (diagnosisSelect) {
-        const diagnoses = Array.from(diagnosisSelect.selectedOptions)
-            .map(opt => ({type: 'Diagnosis', value: opt.text}));
-        chips.push(...diagnoses);
-    }
-    
-    // Gender chips
-    const genderSelect = document.getElementById('gender-filter');
-    if (genderSelect) {
-        const genders = Array.from(genderSelect.selectedOptions)
-            .map(opt => ({type: 'Gender', value: opt.text}));
-        chips.push(...genders);
-    }
-    
-    // Year chips
-    const yearSelect = document.getElementById('year-filter');
-    if (yearSelect) {
-        const years = Array.from(yearSelect.selectedOptions)
-            .map(opt => ({type: 'Year', value: opt.text}));
-        chips.push(...years);
-    }
-    
-    // Amount range chip
-    const minAmount = document.getElementById('min-amount');
-    const maxAmount = document.getElementById('max-amount');
-    if (minAmount && maxAmount) {
-        const minVal = minAmount.value;
-        const maxVal = maxAmount.value;
-        if (minVal || maxVal) {
-            chips.push({type: 'Amount', value: `${minVal || '0'} - ${maxVal || '∞'} KES`});
-        }
-    }
-    
-    // Render chips
-    if (chips.length > 0) {
-        chipsContainer.innerHTML = chips.map(chip => `
-            <div class="filter-chip">
-                ${chip.type}: ${chip.value}
-                <span class="remove" data-type="${chip.type.toLowerCase()}" data-value="${chip.value}">×</span>
-            </div>
-        `).join('');
-        chipsContainer.style.display = 'flex';
-        
-        // Add remove functionality
-        chipsContainer.querySelectorAll('.remove').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const type = this.dataset.type;
-                const value = this.dataset.value;
-                removeFilter(type, value);
-            });
+  const container = document.getElementById('active-filters');
+  if (!container) return;
+  
+  const chips = [];
+  const elements = {
+    provider: document.getElementById('provider-filter'),
+    diagnosis: document.getElementById('diagnosis-filter'),
+    gender: document.getElementById('gender-filter'),
+    year: document.getElementById('year-filter'),
+    minAmount: document.getElementById('min-amount'),
+    maxAmount: document.getElementById('max-amount')
+  };
+  
+  Object.entries(elements).forEach(([type, element]) => {
+    if (element) {
+      if (element.multiple) {
+        Array.from(element.selectedOptions).forEach(opt => {
+          chips.push({type: type.charAt(0).toUpperCase() + type.slice(1), value: opt.text});
         });
-    } else {
-        chipsContainer.style.display = 'none';
+      } else if (element.value) {
+        if (type === 'minAmount' || type === 'maxAmount') {
+          const minVal = elements.minAmount?.value || '0';
+          const maxVal = elements.maxAmount?.value || '∞';
+          if (minVal || maxVal) {
+            chips.push({type: 'Amount', value: `${minVal} - ${maxVal} KES`});
+          }
+        }
+      }
     }
+  });
+  
+  if (chips.length > 0) {
+    container.innerHTML = chips.map(chip => `
+      <div class="filter-chip">
+        ${chip.type}: ${chip.value}
+        <span class="remove" data-type="${chip.type.toLowerCase()}">×</span>
+      </div>
+    `).join('');
+    container.style.display = 'flex';
+  } else {
+    container.style.display = 'none';
+  }
 }
 
-function removeFilter(type, value) {
-    switch(type) {
-        case 'provider':
-            const providerSelect = $('#provider-filter');
-            providerSelect.val(providerSelect.val().filter(v => v !== value));
-            providerSelect.trigger('change');
-            break;
-        case 'diagnosis':
-            const diagnosisSelect = $('#diagnosis-filter');
-            diagnosisSelect.val(diagnosisSelect.val().filter(v => v !== value));
-            diagnosisSelect.trigger('change');
-            break;
-        case 'gender':
-            const genderSelect = $('#gender-filter');
-            genderSelect.val(genderSelect.val().filter(v => v !== value));
-            genderSelect.trigger('change');
-            break;
-        case 'year':
-            const yearSelect = $('#year-filter');
-            yearSelect.val(yearSelect.val().filter(v => v !== value));
-            yearSelect.trigger('change');
-            break;
-        case 'amount':
-            document.getElementById('min-amount').value = '';
-            document.getElementById('max-amount').value = '';
-            break;
-    }
-    updateFilterChips();
-}
-
+// Event listeners setup
 function setupEventListeners() {
-    // Apply filters
-    const applyFiltersBtn = document.getElementById('apply-filters');
-    if (applyFiltersBtn) {
-        applyFiltersBtn.addEventListener('click', function(){
-            const loadingIndicator = document.getElementById('loading-indicator');
-            if (loadingIndicator) loadingIndicator.style.display = 'flex';
-            
-            setTimeout(() => {
-                const queryString = buildFilterParams();
-                window.location.href = `${window.location.pathname}?${queryString}`;
-            }, 100);
-        });
+  // Apply filters
+  document.getElementById('apply-filters')?.addEventListener('click', applyFilters);
+  
+  // Reset filters
+  document.getElementById('reset-filters')?.addEventListener('click', resetFilters);
+  
+  // Export CSV
+  document.getElementById('download-table')?.addEventListener('click', exportCSV);
+  
+  // Table search
+  document.getElementById('table-search')?.addEventListener('input', searchTable);
+  
+  // Window resize
+  window.addEventListener('resize', resizePlotlyCharts);
+  
+  // Filter changes
+  document.addEventListener('change', function(e) {
+    if (e.target.matches('#provider-filter, #diagnosis-filter, #gender-filter, #year-filter, #min-amount, #max-amount')) {
+      updateFilterChips();
     }
-    
-    // Reset filters
-    const resetFiltersBtn = document.getElementById('reset-filters');
-    if (resetFiltersBtn) {
-        resetFiltersBtn.addEventListener('click', function(){
-            if (typeof $ !== 'undefined' && $.fn.select2) {
-                $('#provider-filter, #diagnosis-filter, #gender-filter, #year-filter').val(null).trigger('change');
-            }
-            document.getElementById('min-amount').value = '';
-            document.getElementById('max-amount').value = '';
-            document.getElementById('active-filters').style.display = 'none';
-            
-            const url = new URL(window.location.href);
-            const params = new URLSearchParams();
-            
-            for (const [key, value] of url.searchParams) {
-                if (!key.startsWith('filter_')) {
-                    params.set(key, value);
-                }
-            }
-            
-            window.location.href = `${url.pathname}?${params.toString()}`;
-        });
-    }
-    
-    // Export CSV
-    const downloadTableBtn = document.getElementById('download-table');
-    if (downloadTableBtn) {
-        downloadTableBtn.addEventListener('click', function(e){
-            e.preventDefault();
-            const table = document.getElementById('diag-table');
-            if(!table){ alert('Table not available to export'); return; }
-            const csv = tableToCSV(table);
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'diagnosis_summary.csv';
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            URL.revokeObjectURL(url);
-        });
-    }
-    
-    // Table search
-    const tableSearch = document.getElementById('table-search');
-    if(tableSearch){
-        tableSearch.addEventListener('input', function(){
-            const q = this.value.trim().toLowerCase();
-            const rows = document.querySelectorAll('#diag-table tbody tr');
-            rows.forEach(r => {
-                const name = r.querySelector('.diag-name')?.innerText.toLowerCase() || '';
-                r.style.display = name.includes(q) ? '' : 'none';
-            });
-        });
-    }
-    
-    // Window resize for Plotly
-    window.addEventListener('resize', function(){
-        resizePlotlyCharts();
-    });
-    
-    // Filter changes
-    document.addEventListener('change', function(e) {
-        if (e.target.matches('#provider-filter, #diagnosis-filter, #gender-filter, #year-filter, #min-amount, #max-amount')) {
-            updateFilterChips();
-        }
-    });
+  });
 }
 
-function buildFilterParams() {
+// Filter functions
+function applyFilters() {
+  const loading = document.getElementById('loading-indicator');
+  if (loading) loading.style.display = 'flex';
+  
+  setTimeout(() => {
     const params = new URLSearchParams();
-    
-    // Add existing params
     const urlParams = new URLSearchParams(window.location.search);
+    
     for (const [key, value] of urlParams) {
-        if (!key.startsWith('filter_')) {
-            params.set(key, value);
-        }
+      if (!key.startsWith('filter_')) params.set(key, value);
     }
     
-    // Add new filter params
-    const providerSelect = document.getElementById('provider-filter');
-    if (providerSelect) {
-        const providers = Array.from(providerSelect.selectedOptions).map(opt => opt.value);
-        if (providers.length > 0) {
-            params.set('filter_provider', providers.join(','));
-        }
-    }
+    // Add filter params
+    ['provider', 'diagnosis', 'gender', 'year'].forEach(type => {
+      const select = document.getElementById(`${type}-filter`);
+      if (select) {
+        const values = Array.from(select.selectedOptions).map(opt => opt.value);
+        if (values.length > 0) params.set(`filter_${type}`, values.join(','));
+      }
+    });
     
-    const diagnosisSelect = document.getElementById('diagnosis-filter');
-    if (diagnosisSelect) {
-        const diagnoses = Array.from(diagnosisSelect.selectedOptions).map(opt => opt.value);
-        if (diagnoses.length > 0) {
-            params.set('filter_diagnosis', diagnoses.join(','));
-        }
-    }
+    const minAmount = document.getElementById('min-amount')?.value;
+    const maxAmount = document.getElementById('max-amount')?.value;
+    if (minAmount) params.set('filter_min_amount', minAmount);
+    if (maxAmount) params.set('filter_max_amount', maxAmount);
     
-    const genderSelect = document.getElementById('gender-filter');
-    if (genderSelect) {
-        const genders = Array.from(genderSelect.selectedOptions).map(opt => opt.value);
-        if (genders.length > 0) {
-            params.set('filter_gender', genders.join(','));
-        }
-    }
-    
-    const yearSelect = document.getElementById('year-filter');
-    if (yearSelect) {
-        const years = Array.from(yearSelect.selectedOptions).map(opt => opt.value);
-        if (years.length > 0) {
-            params.set('filter_year', years.join(','));
-        }
-    }
-    
-    const minAmount = document.getElementById('min-amount');
-    const maxAmount = document.getElementById('max-amount');
-    if (minAmount && minAmount.value) params.set('filter_min_amount', minAmount.value);
-    if (maxAmount && maxAmount.value) params.set('filter_max_amount', maxAmount.value);
-    
-    return params.toString();
+    window.location.href = `${window.location.pathname}?${params.toString()}`;
+  }, 100);
 }
 
-function tableToCSV(tableEl) {
-    const rows = Array.from(tableEl.querySelectorAll('tr'));
-    return rows.map(row => {
-        const cols = Array.from(row.querySelectorAll('th,td'));
-        return cols.map(col => {
-            let text = col.innerText.replace(/"/g, '""').trim();
-            return `"${text}"`;
-        }).join(',');
-    }).join('\n');
+function resetFilters() {
+  if (typeof $ !== 'undefined' && $.fn.select2) {
+    $('#provider-filter, #diagnosis-filter, #gender-filter, #year-filter').val(null).trigger('change');
+  }
+  document.getElementById('min-amount').value = '';
+  document.getElementById('max-amount').value = '';
+  document.getElementById('active-filters').style.display = 'none';
+  
+  const url = new URL(window.location.href);
+  const params = new URLSearchParams();
+  
+  for (const [key, value] of url.searchParams) {
+    if (!key.startsWith('filter_')) params.set(key, value);
+  }
+  
+  window.location.href = `${url.pathname}?${params.toString()}`;
 }
 
-// Final initialization check
+function exportCSV(e) {
+  e.preventDefault();
+  const table = document.getElementById('diag-table');
+  if (!table) {
+    alert('Table not available to export');
+    return;
+  }
+  
+  const rows = Array.from(table.querySelectorAll('tr'));
+  const csv = rows.map(row => {
+    const cols = Array.from(row.querySelectorAll('th,td'));
+    return cols.map(col => {
+      let text = col.innerText.replace(/"/g, '""').trim();
+      return `"${text}"`;
+    }).join(',');
+  }).join('\n');
+  
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'diagnosis_summary.csv';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function searchTable() {
+  const search = document.getElementById('table-search');
+  if (!search) return;
+  
+  const query = search.value.trim().toLowerCase();
+  const rows = document.querySelectorAll('#diag-table tbody tr');
+  
+  rows.forEach(row => {
+    const name = row.querySelector('.diag-name')?.innerText.toLowerCase() || '';
+    row.style.display = name.includes(query) ? '' : 'none';
+  });
+}
+
+// Initialize when ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeDashboard);
+} else {
+  initializeDashboard();
+}
+
+// Final safety check
 setTimeout(() => {
-    if (document.querySelector('.mini-tabs')) {
-        console.log('Dashboard fully initialized');
-    } else {
-        console.warn('Mini-tabs not found, re-initializing...');
-        initializeTabs();
-    }
-}, 1000);
+  if (!document.querySelector('.mini-tab.active')) {
+    console.warn('No active tab found, reinitializing...');
+    initializeHoverTabs();
+  }
+}, 2000);
 </script>
-
 {% endblock %}
