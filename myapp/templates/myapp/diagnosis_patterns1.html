@@ -170,6 +170,65 @@
   .summary-card .value { font-size: 20px; font-weight: 800; color: var(--accent); margin-bottom: 4px; }
   .summary-card .trend { font-size: 11px; color: var(--muted); }
 
+  /* Mini Tabs */
+  .mini-tabs {
+    display: flex;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+    gap: 4px;
+  }
+
+  .mini-tab {
+    flex: 1;
+    padding: 12px 16px;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .mini-tab:hover {
+    background: #f8fafc;
+    color: var(--accent);
+  }
+
+  .mini-tab.active {
+    background: var(--accent);
+    color: white;
+    box-shadow: 0 2px 8px rgba(214, 39, 40, 0.2);
+  }
+
+  .mini-tab .tab-icon {
+    font-size: 14px;
+  }
+
+  /* Tab Content */
+  .tab-content {
+    display: none;
+    animation: fadeIn 0.3s ease;
+  }
+
+  .tab-content.active {
+    display: block;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
   /* Grid of cards - ENFORCE 2 PER ROW */
   .grid {
     display: grid;
@@ -270,6 +329,13 @@
     .card .card-body {
       min-height: 300px;
     }
+    .mini-tabs {
+      flex-wrap: wrap;
+    }
+    .mini-tab {
+      flex: 1 1 calc(50% - 8px);
+      min-width: 120px;
+    }
   }
 
   @media(max-width: 768px){
@@ -278,6 +344,9 @@
     }
     .card .card-body {
       min-height: 280px;
+    }
+    .mini-tab {
+      flex: 1 1 100%;
     }
   }
 
@@ -497,377 +566,420 @@
     </div>
   </div>
 
-  <!-- Key Insights - 2 per row -->
-  <div class="grid">
-    <div class="card">
-      <div class="card-head">
-        <div>
-          <div class="card-title">Diagnosis Cost Efficiency</div>
-          <div class="card-sub">Cost per claim vs frequency</div>
+  <!-- Mini Tabs Navigation -->
+  <div class="mini-tabs">
+    <button class="mini-tab active" data-tab="overview">
+      <i class="fas fa-chart-line tab-icon"></i> Overview
+    </button>
+    <button class="mini-tab" data-tab="cost-analysis">
+      <i class="fas fa-money-bill-wave tab-icon"></i> Cost Analysis
+    </button>
+    <button class="mini-tab" data-tab="temporal">
+      <i class="fas fa-calendar-alt tab-icon"></i> Temporal Patterns
+    </button>
+    <button class="mini-tab" data-tab="demographics">
+      <i class="fas fa-users tab-icon"></i> Demographics
+    </button>
+    <button class="mini-tab" data-tab="providers">
+      <i class="fas fa-hospital tab-icon"></i> Providers
+    </button>
+    <button class="mini-tab" data-tab="advanced">
+      <i class="fas fa-microscope tab-icon"></i> Advanced Insights
+    </button>
+  </div>
+
+  <!-- Tab 1: Overview -->
+  <div class="tab-content active" id="overview-tab">
+    <!-- Top Diagnoses & Procedure Heatmap - 2 per row -->
+    <div class="grid">
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <div class="card-title">Top Diagnoses by Claim Count</div>
+            <div class="card-sub">Counts with shading by total amount</div>
+          </div>
+          <div class="kpi"><strong>Top</strong>&nbsp;{{ deep_tables.top_by_count|length|default:"N/A" }}</div>
+        </div>
+        <div class="card-body">
+          {% if visualizations.top_by_count %}
+            <div class="plotly-container">{{ visualizations.top_by_count|safe }}</div>
+          {% else %}
+            <div class="alert">No chart available.</div>
+          {% endif %}
         </div>
       </div>
-      <div class="card-body">
-        {% if visualizations.cost_efficiency %}
-          <div class="plotly-container">{{ visualizations.cost_efficiency|safe }}</div>
-        {% else %}
-          <div class="alert info">Apply filters to see cost efficiency analysis</div>
-        {% endif %}
+
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <div class="card-title">Diagnosis vs Procedure Heatmap</div>
+            <div class="card-sub">Top 20 ailments vs common treatments</div>
+          </div>
+          <div class="kpi"><strong>Heatmap</strong></div>
+        </div>
+        <div class="card-body">
+          {% if visualizations.diagnosis_procedure_heatmap %}
+            <div class="plotly-container">{{ visualizations.diagnosis_procedure_heatmap|safe }}</div>
+          {% else %}
+            <div class="alert">No heatmap data available.</div>
+          {% endif %}
+        </div>
       </div>
     </div>
 
-    <div class="card">
-      <div class="card-head">
-        <div>
-          <div class="card-title">Diagnosis Seasonality</div>
-          <div class="card-sub">Monthly patterns for top diagnoses</div>
+    <!-- Boxplot - Full width -->
+    <div class="grid full">
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <div class="card-title">Claim Amount Distribution for Top Diagnoses</div>
+            <div class="card-sub">Boxplots show spread and outliers per diagnosis</div>
+          </div>
+          <div class="card-actions muted">Tip: use table search to focus on diagnosis</div>
         </div>
-      </div>
-      <div class="card-body">
-        {% if visualizations.seasonal_patterns %}
-          <div class="plotly-container">{{ visualizations.seasonal_patterns|safe }}</div>
-        {% else %}
-          <div class="alert info">Seasonal patterns will appear here</div>
-        {% endif %}
+        <div class="card-body">
+          {% if visualizations.box_by_diagnosis %}
+            <div class="plotly-container">{{ visualizations.box_by_diagnosis|safe }}</div>
+          {% else %}
+            <div class="alert">No boxplot available.</div>
+          {% endif %}
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Advanced Analysis - 2 per row -->
-  <div class="grid">
-    <div class="card">
-      <div class="card-head">
-        <div>
-          <div class="card-title">Provider Specialization</div>
-          <div class="card-sub">Top diagnoses per provider</div>
+  <!-- Tab 2: Cost Analysis -->
+  <div class="tab-content" id="cost-analysis-tab">
+    <!-- Cost Efficiency & Outlier Detection - 2 per row -->
+    <div class="grid">
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <div class="card-title">Diagnosis Cost Efficiency</div>
+            <div class="card-sub">Cost per claim vs frequency</div>
+          </div>
+        </div>
+        <div class="card-body">
+          {% if visualizations.cost_efficiency %}
+            <div class="plotly-container">{{ visualizations.cost_efficiency|safe }}</div>
+          {% else %}
+            <div class="alert info">Apply filters to see cost efficiency analysis</div>
+          {% endif %}
         </div>
       </div>
-      <div class="card-body">
-        {% if visualizations.provider_specialization %}
-          <div class="plotly-container">{{ visualizations.provider_specialization|safe }}</div>
-        {% else %}
-          <div class="alert info">Provider specialization analysis</div>
-        {% endif %}
+
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <div class="card-title">Cost Outlier Detection</div>
+            <div class="card-sub">Unusual claim amounts by diagnosis</div>
+          </div>
+        </div>
+        <div class="card-body">
+          {% if visualizations.cost_outliers %}
+            <div class="plotly-container">{{ visualizations.cost_outliers|safe }}</div>
+          {% else %}
+            <div class="alert info">Outlier detection results</div>
+          {% endif %}
+        </div>
       </div>
     </div>
 
-    <div class="card">
-      <div class="card-head">
-        <div>
-          <div class="card-title">Diagnosis Clustering</div>
-          <div class="card-sub">Similar diagnoses grouped by cost and frequency</div>
+    <!-- Severity & Volatility - 2 per row -->
+    <div class="grid">
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <div class="card-title">Severity Bucket Distribution (Top Diagnoses)</div>
+            <div class="card-sub">Claims binned into severity buckets by amount</div>
+          </div>
+        </div>
+        <div class="card-body">
+          {% if visualizations.severity_buckets_top %}
+            <div class="plotly-container">{{ visualizations.severity_buckets_top|safe }}</div>
+          {% else %}
+            <div class="alert">Severity bucket chart not available.</div>
+          {% endif %}
         </div>
       </div>
-      <div class="card-body">
-        {% if visualizations.diagnosis_clusters %}
-          <div class="plotly-container">{{ visualizations.diagnosis_clusters|safe }}</div>
-        {% else %}
-          <div class="alert info">Diagnosis clustering analysis</div>
-        {% endif %}
+
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">Top Volatile Diagnoses (CV)</div>
+          <div class="card-sub">Diagnoses with high coefficient of variation</div>
+        </div>
+        <div class="card-body">
+          {% if visualizations.volatility_top %}
+            <div class="plotly-container">{{ visualizations.volatility_top|safe }}</div>
+          {% else %}
+            <div class="alert">Volatility chart not available.</div>
+          {% endif %}
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Outlier Detection & Temporal Analysis - 2 per row -->
-  <div class="grid">
-    <div class="card">
-      <div class="card-head">
-        <div>
-          <div class="card-title">Cost Outlier Detection</div>
-          <div class="card-sub">Unusual claim amounts by diagnosis</div>
+  <!-- Tab 3: Temporal Patterns -->
+  <div class="tab-content" id="temporal-tab">
+    <!-- Monthly Trends & Seasonality - 2 per row -->
+    <div class="grid">
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <div class="card-title">Monthly Diagnosis Trends (Top)</div>
+            <div class="card-sub">Multi-line view for top diagnoses over time</div>
+          </div>
+        </div>
+        <div class="card-body">
+          {% if visualizations.monthly_trends_top %}
+            <div class="plotly-container">{{ visualizations.monthly_trends_top|safe }}</div>
+          {% else %}
+            <div class="alert">Monthly trends not available.</div>
+          {% endif %}
         </div>
       </div>
-      <div class="card-body">
-        {% if visualizations.cost_outliers %}
-          <div class="plotly-container">{{ visualizations.cost_outliers|safe }}</div>
-        {% else %}
-          <div class="alert info">Outlier detection results</div>
-        {% endif %}
+
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <div class="card-title">Seasonality Heatmap (Month × Year)</div>
+            <div class="card-sub">Total amounts by month and year highlight seasonal cycles</div>
+          </div>
+        </div>
+        <div class="card-body">
+          {% if visualizations.seasonality_heatmap %}
+            <div class="plotly-container">{{ visualizations.seasonality_heatmap|safe }}</div>
+          {% else %}
+            <div class="alert">Seasonality heatmap not available.</div>
+          {% endif %}
+        </div>
       </div>
     </div>
 
-    <div class="card">
-      <div class="card-head">
-        <div>
-          <div class="card-title">Weekly Patterns Analysis</div>
-          <div class="card-sub">Claim distribution across days of the week</div>
+    <!-- Seasonal Patterns & Weekly Analysis - 2 per row -->
+    <div class="grid">
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <div class="card-title">Diagnosis Seasonality</div>
+            <div class="card-sub">Monthly patterns for top diagnoses</div>
+          </div>
+        </div>
+        <div class="card-body">
+          {% if visualizations.seasonal_patterns %}
+            <div class="plotly-container">{{ visualizations.seasonal_patterns|safe }}</div>
+          {% else %}
+            <div class="alert info">Seasonal patterns will appear here</div>
+          {% endif %}
         </div>
       </div>
-      <div class="card-body">
-        {% if visualizations.temporal_analysis %}
-          <div class="plotly-container">{{ visualizations.temporal_analysis|safe }}</div>
-        {% else %}
-          <div class="alert info">Weekly patterns analysis</div>
-        {% endif %}
+
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <div class="card-title">Weekly Patterns Analysis</div>
+            <div class="card-sub">Claim distribution across days of the week</div>
+          </div>
+        </div>
+        <div class="card-body">
+          {% if visualizations.temporal_analysis %}
+            <div class="plotly-container">{{ visualizations.temporal_analysis|safe }}</div>
+          {% else %}
+            <div class="alert info">Weekly patterns analysis</div>
+          {% endif %}
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Top Diagnoses & Procedure Heatmap - 2 per row -->
-  <div class="grid">
-    <div class="card">
-      <div class="card-head">
-        <div>
-          <div class="card-title">Top Diagnoses by Claim Count</div>
-          <div class="card-sub">Counts with shading by total amount</div>
+  <!-- Tab 4: Demographics -->
+  <div class="tab-content" id="demographics-tab">
+    <!-- Gender & Age Distribution - 2 per row -->
+    <div class="grid">
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">Gender Split for Top Diagnoses</div>
+          <div class="card-sub">Compare male/female claim volumes by diagnosis</div>
         </div>
-        <div class="kpi"><strong>Top</strong>&nbsp;{{ deep_tables.top_by_count|length|default:"N/A" }}</div>
+        <div class="card-body">
+          {% if visualizations.gender_split_top %}
+            <div class="plotly-container">{{ visualizations.gender_split_top|safe }}</div>
+          {% else %}
+            <div class="alert">Gender split chart not available.</div>
+          {% endif %}
+        </div>
       </div>
-      <div class="card-body">
-        {% if visualizations.top_by_count %}
-          <div class="plotly-container">{{ visualizations.top_by_count|safe }}</div>
-        {% else %}
-          <div class="alert">No chart available.</div>
-        {% endif %}
+
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">Age Distribution for Top Diagnoses</div>
+          <div class="card-sub">Boxplot of claimant ages per diagnosis</div>
+        </div>
+        <div class="card-body">
+          {% if visualizations.age_distribution_top %}
+            <div class="plotly-container">{{ visualizations.age_distribution_top|safe }}</div>
+          {% else %}
+            <div class="alert">Age distribution chart not available.</div>
+          {% endif %}
+        </div>
       </div>
     </div>
 
-    <div class="card">
-      <div class="card-head">
-        <div>
-          <div class="card-title">Diagnosis vs Procedure Heatmap</div>
-          <div class="card-sub">Top 20 ailments vs common treatments</div>
+    <!-- Repeat Claimants - Full width -->
+    <div class="grid full">
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">Repeat-Claimant Summary</div>
+          <div class="card-sub">Members with multiple claims by diagnosis (top)</div>
         </div>
-        <div class="kpi"><strong>Heatmap</strong></div>
-      </div>
-      <div class="card-body">
-        {% if visualizations.diagnosis_procedure_heatmap %}
-          <div class="plotly-container">{{ visualizations.diagnosis_procedure_heatmap|safe }}</div>
-        {% else %}
-          <div class="alert">No heatmap data available.</div>
-        {% endif %}
+        <div class="card-body">
+          {% if visualizations.repeat_claimants %}
+            <div class="plotly-container">{{ visualizations.repeat_claimants|safe }}</div>
+          {% elif deep_tables.repeat_claimants_summary %}
+            <div style="overflow:auto;">
+              <table class="data-table">
+                <thead><tr><th>Diagnosis</th><th>Members w/Multiple Claims</th><th>Avg Claims/Member</th><th>Max Claims</th></tr></thead>
+                <tbody>
+                  {% for r in deep_tables.repeat_claimants_summary %}
+                  <tr>
+                    <td>{{ r.Diagnosis }}</td>
+                    <td>{{ r.members_with_multiple_claims }}</td>
+                    <td>{{ r.avg_claims_per_member|floatformat:2 }}</td>
+                    <td>{{ r.max_claims_by_member }}</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <div class="alert">Repeat-claimant data not available.</div>
+          {% endif %}
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Boxplot - Full width -->
-  <div class="grid full">
-    <div class="card">
-      <div class="card-head">
-        <div>
-          <div class="card-title">Claim Amount Distribution for Top Diagnoses</div>
-          <div class="card-sub">Boxplots show spread and outliers per diagnosis</div>
+  <!-- Tab 5: Providers -->
+  <div class="tab-content" id="providers-tab">
+    <!-- Provider Breakdown & Specialization - 2 per row -->
+    <div class="grid">
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <div class="card-title">Diagnosis Breakdown for Top Providers</div>
+            <div class="card-sub">Which providers contribute to which diagnoses</div>
+          </div>
         </div>
-        <div class="card-actions muted">Tip: use table search to focus on diagnosis</div>
+        <div class="card-body">
+          {% if visualizations.provider_diagnosis %}
+            <div class="plotly-container">{{ visualizations.provider_diagnosis|safe }}</div>
+          {% else %}
+            <div class="alert">Provider-by-diagnosis chart not available.</div>
+          {% endif %}
+        </div>
       </div>
-      <div class="card-body">
-        {% if visualizations.box_by_diagnosis %}
-          <div class="plotly-container">{{ visualizations.box_by_diagnosis|safe }}</div>
-        {% else %}
-          <div class="alert">No boxplot available.</div>
-        {% endif %}
+
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <div class="card-title">Provider Specialization</div>
+            <div class="card-sub">Top diagnoses per provider</div>
+          </div>
+        </div>
+        <div class="card-body">
+          {% if visualizations.provider_specialization %}
+            <div class="plotly-container">{{ visualizations.provider_specialization|safe }}</div>
+          {% else %}
+            <div class="alert info">Provider specialization analysis</div>
+          {% endif %}
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Monthly Trends & Seasonality - 2 per row -->
-  <div class="grid">
-    <div class="card">
-      <div class="card-head">
-        <div>
-          <div class="card-title">Monthly Diagnosis Trends (Top)</div>
-          <div class="card-sub">Multi-line view for top diagnoses over time</div>
+  <!-- Tab 6: Advanced Insights -->
+  <div class="tab-content" id="advanced-tab">
+    <!-- Diagnosis Clustering - Full width -->
+    <div class="grid full">
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <div class="card-title">Diagnosis Clustering</div>
+            <div class="card-sub">Similar diagnoses grouped by cost and frequency</div>
+          </div>
+        </div>
+        <div class="card-body">
+          {% if visualizations.diagnosis_clusters %}
+            <div class="plotly-container">{{ visualizations.diagnosis_clusters|safe }}</div>
+          {% else %}
+            <div class="alert info">Diagnosis clustering analysis</div>
+          {% endif %}
         </div>
       </div>
-      <div class="card-body">
-        {% if visualizations.monthly_trends_top %}
-          <div class="plotly-container">{{ visualizations.monthly_trends_top|safe }}</div>
-        {% else %}
-          <div class="alert">Monthly trends not available.</div>
-        {% endif %}
-      </div>
     </div>
 
-    <div class="card">
-      <div class="card-head">
-        <div>
-          <div class="card-title">Seasonality Heatmap (Month × Year)</div>
-          <div class="card-sub">Total amounts by month and year highlight seasonal cycles</div>
+    <!-- Diagnosis Summary Table - Full width -->
+    <div class="grid full">
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <div class="card-title">Diagnosis Summary Table</div>
+            <div class="card-sub">Counts, amounts, quantiles, IQR, CV — full table</div>
+          </div>
+          <div>
+            <div class="toolbar">
+              <input type="text" id="table-search" class="search-input" placeholder="Search table (diagnosis)..." />
+              <button id="download-table" class="btn ghost"><i class="fa fa-download"></i>&nbsp;Download CSV</button>
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="card-body">
-        {% if visualizations.seasonality_heatmap %}
-          <div class="plotly-container">{{ visualizations.seasonality_heatmap|safe }}</div>
-        {% else %}
-          <div class="alert">Seasonality heatmap not available.</div>
-        {% endif %}
-      </div>
-    </div>
-  </div>
 
-  <!-- Provider Breakdown & Severity - 2 per row -->
-  <div class="grid">
-    <div class="card">
-      <div class="card-head">
-        <div>
-          <div class="card-title">Diagnosis Breakdown for Top Providers</div>
-          <div class="card-sub">Which providers contribute to which diagnoses</div>
-        </div>
-      </div>
-      <div class="card-body">
-        {% if visualizations.provider_diagnosis %}
-          <div class="plotly-container">{{ visualizations.provider_diagnosis|safe }}</div>
-        {% else %}
-          <div class="alert">Provider-by-diagnosis chart not available.</div>
-        {% endif %}
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-head">
-        <div>
-          <div class="card-title">Severity Bucket Distribution (Top Diagnoses)</div>
-          <div class="card-sub">Claims binned into severity buckets by amount</div>
-        </div>
-      </div>
-      <div class="card-body">
-        {% if visualizations.severity_buckets_top %}
-          <div class="plotly-container">{{ visualizations.severity_buckets_top|safe }}</div>
-        {% else %}
-          <div class="alert">Severity bucket chart not available.</div>
-        {% endif %}
-      </div>
-    </div>
-  </div>
-
-  <!-- Demographics - 2 per row -->
-  <div class="grid">
-    <div class="card">
-      <div class="card-head">
-        <div class="card-title">Gender Split for Top Diagnoses</div>
-        <div class="card-sub">Compare male/female claim volumes by diagnosis</div>
-      </div>
-      <div class="card-body">
-        {% if visualizations.gender_split_top %}
-          <div class="plotly-container">{{ visualizations.gender_split_top|safe }}</div>
-        {% else %}
-          <div class="alert">Gender split chart not available.</div>
-        {% endif %}
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-head">
-        <div class="card-title">Age Distribution for Top Diagnoses</div>
-        <div class="card-sub">Boxplot of claimant ages per diagnosis</div>
-      </div>
-      <div class="card-body">
-        {% if visualizations.age_distribution_top %}
-          <div class="plotly-container">{{ visualizations.age_distribution_top|safe }}</div>
-        {% else %}
-          <div class="alert">Age distribution chart not available.</div>
-        {% endif %}
-      </div>
-    </div>
-  </div>
-
-  <!-- Repeat Claimants & Volatility - 2 per row -->
-  <div class="grid">
-    <div class="card">
-      <div class="card-head">
-        <div class="card-title">Repeat-Claimant Summary</div>
-        <div class="card-sub">Members with multiple claims by diagnosis (top)</div>
-      </div>
-      <div class="card-body">
-        {% if visualizations.repeat_claimants %}
-          <div class="plotly-container">{{ visualizations.repeat_claimants|safe }}</div>
-        {% elif deep_tables.repeat_claimants_summary %}
-          <div style="overflow:auto;">
-            <table class="data-table">
-              <thead><tr><th>Diagnosis</th><th>Members w/Multiple Claims</th><th>Avg Claims/Member</th><th>Max Claims</th></tr></thead>
-              <tbody>
-                {% for r in deep_tables.repeat_claimants_summary %}
+        <div class="card-body" id="table-wrapper" style="overflow:auto; max-height:540px;">
+          {% if deep_tables.diag_stats_full %}
+            <table class="data-table" id="diag-table">
+              <thead>
                 <tr>
-                  <td>{{ r.Diagnosis }}</td>
-                  <td>{{ r.members_with_multiple_claims }}</td>
-                  <td>{{ r.avg_claims_per_member|floatformat:2 }}</td>
-                  <td>{{ r.max_claims_by_member }}</td>
+                  <th>Diagnosis</th>
+                  <th>Total Claims</th>
+                  <th>Total Amount</th>
+                  <th>Mean</th>
+                  <th>Median</th>
+                  <th>Std</th>
+                  <th>Q25</th>
+                  <th>Q50</th>
+                  <th>Q75</th>
+                  <th>Q90</th>
+                  <th>%Claims</th>
+                  <th>%Amount</th>
+                  <th>IQR</th>
+                  <th>CV</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for r in deep_tables.diag_stats_full %}
+                <tr>
+                  <td class="diag-name">{{ r.Diagnosis }}</td>
+                  <td>{{ r.Total_Claims }}</td>
+                  <td>KES {{ r.Total_Amount|floatformat:2|intcomma }}</td>
+                  <td>KES {{ r.Mean_Amount|floatformat:2|intcomma }}</td>
+                  <td>KES {{ r.Median_Amount|floatformat:2|intcomma }}</td>
+                  <td>KES {{ r.Std_Amount|floatformat:2|intcomma }}</td>
+                  <td>KES {{ r.q25|floatformat:2|intcomma }}</td>
+                  <td>KES {{ r.q50|floatformat:2|intcomma }}</td>
+                  <td>KES {{ r.q75|floatformat:2|intcomma }}</td>
+                  <td>KES {{ r.q90|floatformat:2|intcomma }}</td>
+                  <td>{{ r.Pct_of_Claims|floatformat:2 }}%</td>
+                  <td>{{ r.Pct_of_Amount|floatformat:2 }}%</td>
+                  <td>KES {{ r.IQR|floatformat:2|intcomma }}</td>
+                  <td>{% if r.CV %}{{ r.CV|floatformat:2 }}{% else %}-{% endif %}</td>
                 </tr>
                 {% endfor %}
               </tbody>
             </table>
-          </div>
-        {% else %}
-          <div class="alert">Repeat-claimant data not available.</div>
-        {% endif %}
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-head">
-        <div class="card-title">Top Volatile Diagnoses (CV)</div>
-        <div class="card-sub">Diagnoses with high coefficient of variation</div>
-      </div>
-      <div class="card-body">
-        {% if visualizations.volatility_top %}
-          <div class="plotly-container">{{ visualizations.volatility_top|safe }}</div>
-        {% else %}
-          <div class="alert">Volatility chart not available.</div>
-        {% endif %}
-      </div>
-    </div>
-  </div>
-
-  <!-- Diagnosis Summary Table - Full width -->
-  <div class="grid full">
-    <div class="card">
-      <div class="card-head">
-        <div>
-          <div class="card-title">Diagnosis Summary Table</div>
-          <div class="card-sub">Counts, amounts, quantiles, IQR, CV — full table</div>
+          {% else %}
+            <div class="alert">Diagnosis summary table not available.</div>
+          {% endif %}
         </div>
-        <div>
-          <div class="toolbar">
-            <input type="text" id="table-search" class="search-input" placeholder="Search table (diagnosis)..." />
-            <button id="download-table" class="btn ghost"><i class="fa fa-download"></i>&nbsp;Download CSV</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="card-body" id="table-wrapper" style="overflow:auto; max-height:540px;">
-        {% if deep_tables.diag_stats_full %}
-          <table class="data-table" id="diag-table">
-            <thead>
-              <tr>
-                <th>Diagnosis</th>
-                <th>Total Claims</th>
-                <th>Total Amount</th>
-                <th>Mean</th>
-                <th>Median</th>
-                <th>Std</th>
-                <th>Q25</th>
-                <th>Q50</th>
-                <th>Q75</th>
-                <th>Q90</th>
-                <th>%Claims</th>
-                <th>%Amount</th>
-                <th>IQR</th>
-                <th>CV</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for r in deep_tables.diag_stats_full %}
-              <tr>
-                <td class="diag-name">{{ r.Diagnosis }}</td>
-                <td>{{ r.Total_Claims }}</td>
-                <td>KES {{ r.Total_Amount|floatformat:2|intcomma }}</td>
-                <td>KES {{ r.Mean_Amount|floatformat:2|intcomma }}</td>
-                <td>KES {{ r.Median_Amount|floatformat:2|intcomma }}</td>
-                <td>KES {{ r.Std_Amount|floatformat:2|intcomma }}</td>
-                <td>KES {{ r.q25|floatformat:2|intcomma }}</td>
-                <td>KES {{ r.q50|floatformat:2|intcomma }}</td>
-                <td>KES {{ r.q75|floatformat:2|intcomma }}</td>
-                <td>KES {{ r.q90|floatformat:2|intcomma }}</td>
-                <td>{{ r.Pct_of_Claims|floatformat:2 }}%</td>
-                <td>{{ r.Pct_of_Amount|floatformat:2 }}%</td>
-                <td>KES {{ r.IQR|floatformat:2|intcomma }}</td>
-                <td>{% if r.CV %}{{ r.CV|floatformat:2 }}{% else %}-{% endif %}</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        {% else %}
-          <div class="alert">Diagnosis summary table not available.</div>
-        {% endif %}
       </div>
     </div>
   </div>
@@ -877,12 +989,42 @@
   </footer>
 </div>
 
-<!-- JavaScript remains the same as previous version -->
+<!-- Enhanced JavaScript with Tab Functionality -->
 <script>
 (function(){
   // Performance optimization: Lazy load charts
   let chartsLoaded = false;
   
+  // Tab Management
+  function initializeTabs() {
+    const tabs = document.querySelectorAll('.mini-tab');
+    const tabContents = document.querySelectorAll('.tab-content');
+    
+    tabs.forEach(tab => {
+      tab.addEventListener('click', function() {
+        const targetTab = this.getAttribute('data-tab');
+        
+        // Remove active class from all tabs and contents
+        tabs.forEach(t => t.classList.remove('active'));
+        tabContents.forEach(content => content.classList.remove('active'));
+        
+        // Add active class to clicked tab and corresponding content
+        this.classList.add('active');
+        document.getElementById(`${targetTab}-tab`).classList.add('active');
+        
+        // Trigger Plotly resize for the active tab
+        setTimeout(() => {
+          if(typeof Plotly !== 'undefined'){
+            const plots = document.querySelectorAll('.plotly-graph-div');
+            plots.forEach(p => {
+              try { Plotly.Plots.resize(p); } catch (err) { /* ignore */ }
+            });
+          }
+        }, 100);
+      });
+    });
+  }
+
   // Helper: convert HTML table to CSV string
   function tableToCSV(tableEl) {
     const rows = Array.from(tableEl.querySelectorAll('tr'));
@@ -1073,6 +1215,7 @@
 
   // Initialize on page load
   document.addEventListener('DOMContentLoaded', function() {
+    initializeTabs();
     initializeFilters();
     updateFilterChips();
     
