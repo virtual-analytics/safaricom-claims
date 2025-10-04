@@ -8731,12 +8731,16 @@ def minet_suspicious_providers(request):
 
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
+from django.core.cache import cache
 import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 import logging
 from datetime import datetime
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
 
 from myapp.models import ClaimRecord
 
@@ -8745,15 +8749,16 @@ logger = logging.getLogger(__name__)
 @login_required
 def diagnosis_patterns(request):
     """
-    Deep, descriptive diagnosis patterns analysis (basic -> deep).
-    NOTE: the original fraud section is left intact (not modified) as requested.
+    Enhanced diagnosis patterns analysis with advanced filtering, insightful visualizations,
+    and performance optimizations.
     """
     context = {
         'active_tab': 'fraud-detection',
         'visualizations': {},
         'diagnosis_data': None,
-        'deep_tables': {},   # additional prepared tables for the template
+        'deep_tables': {},
         'deep_summary': {},
+        'filter_options': {},
         'error': None,
         'deep_error': None
     }
@@ -8802,8 +8807,13 @@ def diagnosis_patterns(request):
             context['diagnosis_data'] = high_fraud_diag.to_dict('records')
 
         # -------------------------
-        # Deep descriptive analysis (additional, non-fraud)
+        # Enhanced descriptive analysis with filtering
         # -------------------------
+        
+        # Get filter parameters
+        filter_params = get_filter_parameters(request)
+        
+        # Build base queryset with all required columns
         cols = [
             'ailment', 'amount', 'claim_prov_date', 'prov_name', 'gender', 'dob',
             'claim_me', 'claim_ce', 'benefit', 'benefit_desc', 'cost_center', 'admit_id',
@@ -8812,13 +8822,17 @@ def diagnosis_patterns(request):
         
         logger.info(f"Querying ClaimRecord with columns: {cols}")
         queryset_all = ClaimRecord.objects.values(*cols)
+        
+        # Apply filters to queryset
+        queryset_all = apply_filters_to_queryset(queryset_all, filter_params)
         df = pd.DataFrame(list(queryset_all))
         
-        logger.info(f"Retrieved {len(df)} records from database")
+        logger.info(f"Retrieved {len(df)} records after filtering")
 
         if df.empty:
-            context['deep_error'] = "No additional claims data available for deeper diagnosis analysis."
-            logger.warning("No data retrieved from ClaimRecord")
+            context['deep_error'] = "No claims data available for the selected filters."
+            # Still return filter options even if no data
+            context = add_filter_options(context, ClaimRecord.objects.all())
             return render(request, 'diagnosis_patterns1.html', context)
 
         # Clean and prepare data
@@ -8826,10 +8840,14 @@ def diagnosis_patterns(request):
         
         if df.empty:
             context['deep_error'] = "No valid claims data after cleaning."
+            context = add_filter_options(context, ClaimRecord.objects.all())
             return render(request, 'diagnosis_patterns1.html', context)
 
-        # Generate summary statistics
-        context = generate_summary_stats(df, context)
+        # Generate filter options based on filtered data
+        context = add_filter_options(context, queryset_all)
+        
+        # Generate enhanced summary statistics
+        context = generate_enhanced_summary_stats(df, context)
         
         # Generate diagnosis statistics
         diag_stats = generate_diagnosis_stats(df)
@@ -8837,20 +8855,90 @@ def diagnosis_patterns(request):
         context['deep_tables']['diag_stats_full'] = diag_stats.to_dict('records')
         context['deep_tables']['top_by_count'] = diag_stats.head(20).to_dict('records')
         
-        # Generate all visualizations
-        context = generate_all_visualizations(df, diag_stats, context)
+        # Generate all visualizations (including new enhanced ones)
+        context = generate_enhanced_visualizations(df, diag_stats, context, filter_params)
 
     except Exception as e:
         import traceback
         error_details = traceback.format_exc()
         logger.error(f"Critical error in diagnosis_patterns: {str(e)}\n{error_details}")
         context['error'] = f"An error occurred while analyzing diagnosis patterns: {str(e)}"
+        # Ensure filter options are still populated
+        if not context.get('filter_options'):
+            context = add_filter_options(context, ClaimRecord.objects.all())
 
     # Log final context state for debugging
     logger.info(f"Final context - Visualizations: {list(context['visualizations'].keys())}")
     logger.info(f"Final context - Tables: {list(context['deep_tables'].keys())}")
 
     return render(request, 'diagnosis_patterns1.html', context)
+
+
+def get_filter_parameters(request):
+    """Extract filter parameters from request."""
+    filters = {}
+    
+    # Provider filter
+    provider_filter = request.GET.get('filter_provider', '')
+    if provider_filter:
+        filters['prov_name__in'] = provider_filter.split(',')
+    
+    # Diagnosis filter
+    diagnosis_filter = request.GET.get('filter_diagnosis', '')
+    if diagnosis_filter:
+        filters['ailment__in'] = diagnosis_filter.split(',')
+    
+    # Gender filter
+    gender_filter = request.GET.get('filter_gender', '')
+    if gender_filter:
+        filters['gender__in'] = gender_filter.split(',')
+    
+    # Year filter
+    year_filter = request.GET.get('filter_year', '')
+    if year_filter:
+        filters['claim_prov_date__year__in'] = [int(y) for y in year_filter.split(',')]
+    
+    # Amount range filters
+    min_amount = request.GET.get('filter_min_amount')
+    max_amount = request.GET.get('filter_max_amount')
+    if min_amount:
+        filters['amount__gte'] = float(min_amount)
+    if max_amount:
+        filters['amount__lte'] = float(max_amount)
+    
+    return filters
+
+
+def apply_filters_to_queryset(queryset, filters):
+    """Apply filters to Django queryset."""
+    for key, value in filters.items():
+        queryset = queryset.filter(**{key: value})
+    return queryset
+
+
+def add_filter_options(context, queryset):
+    """Populate filter dropdown options."""
+    # Get unique values for filters
+    providers = list(ClaimRecord.objects.values_list('prov_name', flat=True)
+                    .distinct().order_by('prov_name'))
+    diagnoses = list(ClaimRecord.objects.values_list('ailment', flat=True)
+                    .distinct().order_by('ailment')[:100])  # Limit to top 100
+    genders = list(ClaimRecord.objects.values_list('gender', flat=True)
+                  .distinct().order_by('gender'))
+    
+    # Get years from claim dates
+    years = list(ClaimRecord.objects.dates('claim_prov_date', 'year')
+                .order_by('-claim_prov_date'))
+    years = [str(y.year) for y in years]
+    
+    context['filter_options'] = {
+        'providers': providers,
+        'diagnoses': diagnoses,
+        'genders': genders,
+        'years': years
+    }
+    
+    return context
 
 
 def clean_dataframe(df):
@@ -8879,10 +8967,10 @@ def clean_dataframe(df):
     
     logger.info(f"Data cleaning: {len(df)} valid records (removed {initial_count - len(df)})")
     
-    # Create derived fields
+    # Create derived fields with full month names
     df['year'] = df['claim_prov_date'].dt.year
     df['month'] = df['claim_prov_date'].dt.month
-    df['month_name'] = df['claim_prov_date'].dt.strftime('%b')
+    df['month_name'] = df['claim_prov_date'].dt.strftime('%B')  # Full month names
     df['month_year'] = df['claim_prov_date'].dt.to_period('M').astype(str)
     df['day_of_week'] = df['claim_prov_date'].dt.day_name()
     
@@ -8896,28 +8984,36 @@ def clean_dataframe(df):
     return df
 
 
-def generate_summary_stats(df, context):
-    """Generate summary statistics for the dashboard."""
+def generate_enhanced_summary_stats(df, context):
+    """Generate enhanced summary statistics with filtered data insights."""
     
-    # Use claim_ce for unique claim counting if available and valid
     if 'claim_ce' in df.columns and df['claim_ce'].notna().any() and df['claim_ce'].nunique() > 0:
         total_claims = df['claim_ce'].nunique()
     else:
-        # Fallback to admit_id or row count
         total_claims = df['admit_id'].nunique() if 'admit_id' in df.columns else len(df)
     
     total_amount = float(df['amount'].sum())
     unique_diagnoses = df['Diagnosis'].nunique()
     avg_claim = (total_amount / total_claims) if total_claims > 0 else 0.0
-
+    
+    # Find top diagnosis
+    top_diagnosis = df['Diagnosis'].value_counts().index[0] if not df.empty else "N/A"
+    
+    # Calculate additional metrics
+    max_single_claim = float(df['amount'].max()) if not df.empty else 0.0
+    date_range = f"{df['claim_prov_date'].min().strftime('%Y-%m')} to {df['claim_prov_date'].max().strftime('%Y-%m')}" if not df.empty else "N/A"
+    
     context['deep_summary'] = {
         'total_claims': int(total_claims),
         'total_amount': total_amount,
         'unique_diagnoses': int(unique_diagnoses),
-        'avg_claim': round(avg_claim, 2)
+        'avg_claim': round(avg_claim, 2),
+        'top_diagnosis': top_diagnosis,
+        'max_single_claim': max_single_claim,
+        'date_range': date_range
     }
     
-    logger.info(f"Summary stats: {total_claims} claims, KES {total_amount:,.2f}, {unique_diagnoses} diagnoses")
+    logger.info(f"Enhanced summary stats: {total_claims} claims, KES {total_amount:,.2f}, {unique_diagnoses} diagnoses")
     
     return context
 
@@ -8971,44 +9067,399 @@ def generate_diagnosis_stats(df):
     return diag_stats
 
 
-def generate_all_visualizations(df, diag_stats, context):
-    """Generate all Plotly visualizations for the dashboard."""
+def generate_enhanced_visualizations(df, diag_stats, context, filter_params):
+    """Generate all enhanced visualizations including new ones."""
     
-    # 1. Top diagnoses by count
+    # Original visualizations
     context = generate_top_diagnoses_chart(diag_stats, context)
-    
-    # 2. Diagnosis vs Procedure heatmap
     context = generate_diagnosis_procedure_heatmap(df, diag_stats, context)
-    
-    # 3. Boxplot for claim amounts
     context = generate_boxplot(df, diag_stats, context)
-    
-    # 4. Monthly trends
     context = generate_monthly_trends(df, diag_stats, context)
-    
-    # 5. Seasonality heatmap
     context = generate_seasonality_heatmap(df, context)
-    
-    # 6. Provider breakdown
     context = generate_provider_breakdown(df, diag_stats, context)
-    
-    # 7. Gender split
     context = generate_gender_split(df, diag_stats, context)
-    
-    # 8. Age distribution
     context = generate_age_distribution(df, diag_stats, context)
-    
-    # 9. Severity buckets
     context = generate_severity_buckets(df, diag_stats, context)
-    
-    # 10. Repeat claimants
     context = generate_repeat_claimants(df, diag_stats, context)
-    
-    # 11. Volatility chart
     context = generate_volatility_chart(diag_stats, context)
+    
+    # NEW: Enhanced visualizations
+    context = generate_cost_efficiency_chart(diag_stats, context)
+    context = generate_seasonal_patterns(df, diag_stats, context)
+    context = generate_provider_specialization(df, context)
+    context = generate_diagnosis_clusters(diag_stats, context)
+    context = generate_cost_outliers(df, diag_stats, context)
+    context = generate_temporal_analysis(df, context)
+    context = generate_diagnosis_network(df, diag_stats, context)
     
     return context
 
+
+# NEW VISUALIZATION FUNCTIONS
+
+def generate_cost_efficiency_chart(diag_stats, context):
+    """Generate cost efficiency scatter plot."""
+    try:
+        # Filter to meaningful data
+        efficiency_df = diag_stats[
+            (diag_stats['Total_Claims'] >= 5) & 
+            (diag_stats['Mean_Amount'] > 0)
+        ].head(30)
+        
+        if len(efficiency_df) > 5:
+            fig = px.scatter(
+                efficiency_df,
+                x='Total_Claims',
+                y='Mean_Amount',
+                size='Total_Amount',
+                color='Pct_of_Amount',
+                hover_name='Diagnosis',
+                title='Diagnosis Cost Efficiency: Frequency vs Average Cost',
+                labels={
+                    'Total_Claims': 'Number of Claims',
+                    'Mean_Amount': 'Average Claim Amount (KES)',
+                    'Total_Amount': 'Total Cost (KES)',
+                    'Pct_of_Amount': '% of Total Amount'
+                }
+            )
+            
+            fig.update_layout(
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)',
+                height=400
+            )
+            
+            context['visualizations']['cost_efficiency'] = fig.to_html(full_html=False)
+            
+    except Exception as e:
+        logger.error(f"Error creating cost efficiency chart: {str(e)}")
+    
+    return context
+
+
+def generate_seasonal_patterns(df, diag_stats, context):
+    """Generate seasonal patterns for top diagnoses with full month names."""
+    try:
+        top_diagnoses = diag_stats.head(8)['Diagnosis'].tolist()
+        seasonal_df = df[df['Diagnosis'].isin(top_diagnoses)].copy()
+        
+        if not seasonal_df.empty:
+            # Use full month names and ensure proper ordering
+            month_order = ['January', 'February', 'March', 'April', 'May', 'June',
+                          'July', 'August', 'September', 'October', 'November', 'December']
+            seasonal_df['month_name'] = pd.Categorical(seasonal_df['month_name'], 
+                                                     categories=month_order, ordered=True)
+            
+            monthly_patterns = seasonal_df.groupby(['Diagnosis', 'month_name']).agg({
+                'amount': ['sum', 'count']
+            }).reset_index()
+            
+            monthly_patterns.columns = ['Diagnosis', 'month_name', 'total_amount', 'claim_count']
+            
+            # Create subplots
+            fig = make_subplots(
+                rows=2, cols=1,
+                subplot_titles=('Monthly Total Amount by Diagnosis', 'Monthly Claim Count by Diagnosis'),
+                vertical_spacing=0.1
+            )
+            
+            for diagnosis in top_diagnoses:
+                diagnosis_data = monthly_patterns[monthly_patterns['Diagnosis'] == diagnosis]
+                fig.add_trace(
+                    go.Scatter(x=diagnosis_data['month_name'], y=diagnosis_data['total_amount'], 
+                              name=diagnosis, mode='lines+markers'),
+                    row=1, col=1
+                )
+                fig.add_trace(
+                    go.Scatter(x=diagnosis_data['month_name'], y=diagnosis_data['claim_count'],
+                              name=diagnosis, mode='lines+markers', showlegend=False),
+                    row=2, col=1
+                )
+            
+            fig.update_layout(
+                height=500,
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)',
+                title_text="Seasonal Patterns Analysis"
+            )
+            
+            fig.update_xaxes(tickangle=45, row=1, col=1)
+            fig.update_xaxes(tickangle=45, row=2, col=1)
+            
+            context['visualizations']['seasonal_patterns'] = fig.to_html(full_html=False)
+            
+    except Exception as e:
+        logger.error(f"Error creating seasonal patterns: {str(e)}")
+    
+    return context
+
+
+def generate_provider_specialization(df, context):
+    """Generate provider specialization analysis."""
+    try:
+        if 'prov_name' in df.columns and not df.empty:
+            # Get top providers and diagnoses
+            top_providers = df['prov_name'].value_counts().head(10).index.tolist()
+            top_diagnoses = df['Diagnosis'].value_counts().head(15).index.tolist()
+            
+            provider_specialization = df[
+                df['prov_name'].isin(top_providers) & 
+                df['Diagnosis'].isin(top_diagnoses)
+            ]
+            
+            if not provider_specialization.empty:
+                specialization_matrix = provider_specialization.groupby(
+                    ['prov_name', 'Diagnosis']
+                ).size().unstack(fill_value=0)
+                
+                # Calculate specialization index (percentage of provider's claims for each diagnosis)
+                provider_totals = specialization_matrix.sum(axis=1)
+                specialization_pct = specialization_matrix.div(provider_totals, axis=0) * 100
+                
+                fig = px.imshow(
+                    specialization_pct.values,
+                    x=specialization_pct.columns.tolist(),
+                    y=specialization_pct.index.tolist(),
+                    color_continuous_scale="Blues",
+                    aspect="auto",
+                    title="Provider Specialization Matrix (% of Provider's Claims by Diagnosis)",
+                    labels=dict(x="Diagnosis", y="Provider", color="% of Provider's Claims")
+                )
+                
+                fig.update_layout(
+                    height=500,
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    xaxis_tickangle=45
+                )
+                
+                context['visualizations']['provider_specialization'] = fig.to_html(full_html=False)
+                
+    except Exception as e:
+        logger.error(f"Error creating provider specialization: {str(e)}")
+    
+    return context
+
+
+def generate_diagnosis_clusters(diag_stats, context):
+    """Generate diagnosis clustering analysis."""
+    try:
+        # Prepare data for clustering
+        cluster_data = diag_stats[
+            (diag_stats['Total_Claims'] >= 10) & 
+            (diag_stats['Mean_Amount'] > 0)
+        ].head(50)
+        
+        if len(cluster_data) > 10:
+            features = cluster_data[['Total_Claims', 'Mean_Amount', 'CV']].fillna(0)
+            
+            # Standardize features
+            scaler = StandardScaler()
+            scaled_features = scaler.fit_transform(features)
+            
+            # Perform clustering
+            kmeans = KMeans(n_clusters=4, random_state=42)
+            clusters = kmeans.fit_predict(scaled_features)
+            
+            cluster_data = cluster_data.copy()
+            cluster_data['Cluster'] = clusters
+            
+            # Define cluster labels based on characteristics
+            cluster_labels = {
+                0: 'Low Frequency, Low Cost',
+                1: 'High Frequency, Low Cost', 
+                2: 'Low Frequency, High Cost',
+                3: 'High Frequency, High Cost'
+            }
+            cluster_data['Cluster_Label'] = cluster_data['Cluster'].map(cluster_labels)
+            
+            fig = px.scatter(
+                cluster_data,
+                x='Total_Claims',
+                y='Mean_Amount',
+                color='Cluster_Label',
+                size='Total_Amount',
+                hover_name='Diagnosis',
+                title='Diagnosis Clustering: Grouping Similar Diagnosis Patterns',
+                labels={
+                    'Total_Claims': 'Claim Frequency',
+                    'Mean_Amount': 'Average Cost (KES)',
+                    'Cluster_Label': 'Pattern Group'
+                }
+            )
+            
+            fig.update_layout(
+                height=450,
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)'
+            )
+            
+            context['visualizations']['diagnosis_clusters'] = fig.to_html(full_html=False)
+            
+    except Exception as e:
+        logger.error(f"Error creating diagnosis clusters: {str(e)}")
+    
+    return context
+
+
+def generate_cost_outliers(df, diag_stats, context):
+    """Generate cost outlier detection visualization."""
+    try:
+        top_diagnoses = diag_stats.head(15)['Diagnosis'].tolist()
+        outlier_data = df[df['Diagnosis'].isin(top_diagnoses)]
+        
+        if not outlier_data.empty:
+            # Calculate IQR outliers
+            def detect_outliers(group):
+                Q1 = group.quantile(0.25)
+                Q3 = group.quantile(0.75)
+                IQR = Q3 - Q1
+                lower = Q1 - 1.5 * IQR
+                upper = Q3 + 1.5 * IQR
+                return (group < lower) | (group > upper)
+            
+            outlier_data = outlier_data.copy()
+            outlier_data['is_outlier'] = outlier_data.groupby('Diagnosis')['amount'].transform(detect_outliers)
+            
+            outlier_summary = outlier_data.groupby('Diagnosis').agg({
+                'amount': 'count',
+                'is_outlier': 'sum'
+            }).rename(columns={'amount': 'total_claims', 'is_outlier': 'outlier_claims'})
+            
+            outlier_summary['outlier_percentage'] = (outlier_summary['outlier_claims'] / outlier_summary['total_claims']) * 100
+            
+            fig = px.bar(
+                outlier_summary.reset_index(),
+                x='Diagnosis',
+                y='outlier_percentage',
+                color='outlier_claims',
+                title='Cost Outlier Detection: Percentage of Unusual Claims by Diagnosis',
+                labels={
+                    'outlier_percentage': 'Percentage of Outlier Claims (%)',
+                    'outlier_claims': 'Number of Outliers',
+                    'Diagnosis': 'Diagnosis'
+                }
+            )
+            
+            fig.update_layout(
+                xaxis_tickangle=45,
+                height=450,
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)'
+            )
+            
+            context['visualizations']['cost_outliers'] = fig.to_html(full_html=False)
+            
+    except Exception as e:
+        logger.error(f"Error creating cost outliers: {str(e)}")
+    
+    return context
+
+
+def generate_temporal_analysis(df, context):
+    """Generate temporal analysis of diagnosis patterns with full month names."""
+    try:
+        if not df.empty:
+            # Weekly patterns
+            df['weekday'] = df['claim_prov_date'].dt.day_name()
+            df['week'] = df['claim_prov_date'].dt.isocalendar().week
+            
+            weekday_patterns = df.groupby('weekday').agg({
+                'amount': ['sum', 'count']
+            }).reset_index()
+            
+            weekday_patterns.columns = ['weekday', 'total_amount', 'claim_count']
+            
+            # Order weekdays properly
+            weekday_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+            weekday_patterns['weekday'] = pd.Categorical(weekday_patterns['weekday'], categories=weekday_order, ordered=True)
+            weekday_patterns = weekday_patterns.sort_values('weekday')
+            
+            fig = make_subplots(
+                rows=1, cols=2,
+                subplot_titles=('Total Amount by Weekday', 'Claim Count by Weekday')
+            )
+            
+            fig.add_trace(
+                go.Bar(x=weekday_patterns['weekday'], y=weekday_patterns['total_amount'], name='Total Amount'),
+                row=1, col=1
+            )
+            
+            fig.add_trace(
+                go.Bar(x=weekday_patterns['weekday'], y=weekday_patterns['claim_count'], name='Claim Count'),
+                row=1, col=2
+            )
+            
+            fig.update_layout(
+                height=400,
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)',
+                title_text="Weekly Patterns Analysis",
+                showlegend=False
+            )
+            
+            context['visualizations']['temporal_analysis'] = fig.to_html(full_html=False)
+            
+    except Exception as e:
+        logger.error(f"Error creating temporal analysis: {str(e)}")
+    
+    return context
+
+
+def generate_diagnosis_network(df, diag_stats, context):
+    """Generate diagnosis co-occurrence network analysis."""
+    try:
+        if 'admit_id' in df.columns and not df.empty:
+            # Get patients with multiple diagnoses
+            patient_diagnoses = df.groupby('admit_id')['Diagnosis'].apply(list).reset_index()
+            patient_diagnoses = patient_diagnoses[patient_diagnoses['Diagnosis'].apply(len) > 1]
+            
+            if not patient_diagnoses.empty:
+                # Create co-occurrence matrix
+                from itertools import combinations
+                
+                co_occurrences = {}
+                for diagnoses in patient_diagnoses['Diagnosis']:
+                    for diag1, diag2 in combinations(sorted(diagnoses), 2):
+                        pair = (diag1, diag2)
+                        co_occurrences[pair] = co_occurrences.get(pair, 0) + 1
+                
+                # Convert to dataframe
+                co_occurrence_df = pd.DataFrame([
+                    {'Diagnosis_A': pair[0], 'Diagnosis_B': pair[1], 'Count': count}
+                    for pair, count in co_occurrences.items()
+                ])
+                
+                # Get top co-occurrences
+                top_co_occurrences = co_occurrence_df.nlargest(20, 'Count')
+                
+                if not top_co_occurrences.empty:
+                    fig = px.scatter(
+                        top_co_occurrences,
+                        x='Diagnosis_A',
+                        y='Diagnosis_B',
+                        size='Count',
+                        color='Count',
+                        title='Diagnosis Co-occurrence Network (Top 20 Pairs)',
+                        labels={'Count': 'Co-occurrence Frequency'}
+                    )
+                    
+                    fig.update_layout(
+                        xaxis_tickangle=45,
+                        height=500,
+                        plot_bgcolor='rgba(0,0,0,0)',
+                        paper_bgcolor='rgba(0,0,0,0)'
+                    )
+                    
+                    context['visualizations']['diagnosis_network'] = fig.to_html(full_html=False)
+                    
+    except Exception as e:
+        logger.error(f"Error creating diagnosis network: {str(e)}")
+    
+    return context
+
+
+# ORIGINAL VISUALIZATION FUNCTIONS (UPDATED WITH FULL MONTH NAMES)
 
 def generate_top_diagnoses_chart(diag_stats, context):
     """Generate bar chart of top diagnoses by count."""
@@ -9119,12 +9570,15 @@ def generate_boxplot(df, diag_stats, context):
 
 
 def generate_monthly_trends(df, diag_stats, context):
-    """Generate monthly trends for top diagnoses."""
+    """Generate monthly trends for top diagnoses with full month names."""
     top_5_diagnoses = diag_stats.head(5)['Diagnosis'].tolist()
     trends_df = df[df['Diagnosis'].isin(top_5_diagnoses)]
     
     if not trends_df.empty:
         try:
+            # Use full month names in trends
+            trends_df['month_year'] = trends_df['claim_prov_date'].dt.strftime('%Y-%b')
+            
             monthly_trends = trends_df.groupby(['month_year', 'Diagnosis']).agg({
                 'amount': 'sum',
                 'Diagnosis': 'count'
@@ -9140,7 +9594,8 @@ def generate_monthly_trends(df, diag_stats, context):
             )
             fig_trends.update_layout(
                 plot_bgcolor='rgba(0,0,0,0)',
-                paper_bgcolor='rgba(0,0,0,0)'
+                paper_bgcolor='rgba(0,0,0,0)',
+                xaxis_tickangle=45
             )
             context['visualizations']['monthly_trends_top'] = fig_trends.to_html(full_html=False)
         except Exception as e:
@@ -9150,15 +9605,22 @@ def generate_monthly_trends(df, diag_stats, context):
 
 
 def generate_seasonality_heatmap(df, context):
-    """Generate seasonality heatmap."""
+    """Generate seasonality heatmap with full month names."""
     try:
-        seasonality_df = df.groupby(['year', 'month']).agg({'amount': 'sum'}).reset_index()
-        pivot_season = seasonality_df.pivot(index='month', columns='year', values='amount').fillna(0)
+        seasonality_df = df.groupby(['year', 'month_name']).agg({'amount': 'sum'}).reset_index()
+        
+        # Ensure proper month ordering
+        month_order = ['January', 'February', 'March', 'April', 'May', 'June',
+                      'July', 'August', 'September', 'October', 'November', 'December']
+        seasonality_df['month_name'] = pd.Categorical(seasonality_df['month_name'], 
+                                                     categories=month_order, ordered=True)
+        
+        pivot_season = seasonality_df.pivot(index='month_name', columns='year', values='amount').fillna(0)
         
         fig_season = px.imshow(
             pivot_season.values,
             x=pivot_season.columns.tolist(),
-            y=[f"Month {i}" for i in pivot_season.index],
+            y=pivot_season.index.tolist(),
             color_continuous_scale="Viridis",
             title="Seasonality Heatmap: Total Amount by Month and Year",
             labels=dict(x="Year", y="Month", color="Total Amount (KES)")
@@ -9306,20 +9768,17 @@ def generate_repeat_claimants(df, diag_stats, context):
     if not repeat_df.empty and 'admit_id' in repeat_df.columns:
         try:
             # Calculate repeat claimants per diagnosis
-            repeat_stats = repeat_df.groupby('Diagnosis').agg({
-                'admit_id': lambda x: (x.value_counts() > 1).sum(),  # Members with multiple claims
-                'admit_id': 'count'
-            }).rename(columns={'admit_id': 'members_with_multiple_claims', 'admit_id': 'total_claims'})
+            member_claims = repeat_df.groupby(['Diagnosis', 'admit_id']).size().reset_index(name='claims_count')
             
-            # Calculate average claims per member
-            claims_per_member = repeat_df.groupby(['Diagnosis', 'admit_id']).size().reset_index(name='claims_count')
-            avg_claims = claims_per_member.groupby('Diagnosis').agg({
-                'claims_count': 'mean',
-                'claims_count': 'max'
-            }).rename(columns={'claims_count': 'avg_claims_per_member', 'claims_count': 'max_claims_by_member'})
+            repeat_summary = member_claims.groupby('Diagnosis').agg({
+                'admit_id': 'count',
+                'claims_count': ['sum', 'mean', 'max']
+            }).reset_index()
             
-            repeat_summary = repeat_stats.merge(avg_claims, on='Diagnosis')
-            repeat_summary = repeat_summary.reset_index()
+            repeat_summary.columns = ['Diagnosis', 'unique_members', 'total_claims', 'avg_claims_per_member', 'max_claims_by_member']
+            
+            repeat_summary['members_with_multiple_claims'] = member_claims[member_claims['claims_count'] > 1].groupby('Diagnosis').size()
+            repeat_summary['members_with_multiple_claims'] = repeat_summary['members_with_multiple_claims'].fillna(0)
             
             # Store in context for table display
             context['deep_tables']['repeat_claimants_summary'] = repeat_summary.to_dict('records')
@@ -9330,7 +9789,7 @@ def generate_repeat_claimants(df, diag_stats, context):
                 x='Diagnosis',
                 y='members_with_multiple_claims',
                 title='Repeat Claimants by Diagnosis',
-                hover_data=['avg_claims_per_member', 'max_claims_by_member']
+                hover_data=['avg_claims_per_member', 'max_claims_by_member', 'unique_members']
             )
             fig_repeat.update_layout(
                 xaxis_tickangle=45,
@@ -9376,6 +9835,29 @@ def generate_volatility_chart(diag_stats, context):
         logger.error(f"Error creating volatility chart: {str(e)}")
     
     return context
+
+
+# Performance optimization: Add caching for expensive operations
+def get_cached_diagnosis_stats():
+    """Get diagnosis stats with caching for performance."""
+    cache_key = 'diagnosis_stats_full'
+    cached_result = cache.get(cache_key)
+    
+    if cached_result is None:
+        # Compute expensive operation
+        queryset = ClaimRecord.objects.values('ailment', 'amount', 'claim_prov_date')
+        df = pd.DataFrame(list(queryset))
+        df = clean_dataframe(df)
+        result = generate_diagnosis_stats(df)
+        # Cache for 1 hour
+        cache.set(cache_key, result, 3600)
+        return result
+    
+    return cached_result
+
+#######################
+###############
+##########
 
 
 

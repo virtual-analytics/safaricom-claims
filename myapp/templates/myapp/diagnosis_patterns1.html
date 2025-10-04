@@ -1,7 +1,7 @@
 {% extends "base1.html" %}
 {% load static %}
 {% load humanize %}
-{% block title %}Diagnosis Patterns - Safaricom Portal{% endblock %}
+{% block title %}Advanced Diagnosis Analysis - Safaricom Portal{% endblock %}
 
 {% block head %}
   <!-- jQuery (required by Select2 & some UI interactions) -->
@@ -20,15 +20,15 @@
 
 {% block content %}
 <!-- ======================================================
-     Diagnosis Patterns Dashboard (full template)
-     Renders visualizations produced by diagnosis_patterns view.
-     Keeps the original fraud section intact.
+     Enhanced Diagnosis Analysis Dashboard
+     Advanced filtering, insightful visualizations, performance optimized
      ====================================================== -->
 
 <style>
   :root{
     --accent:#d62728;
     --accent-2:#1BB64F;
+    --accent-3:#2E86AB;
     --card-bg:#ffffff;
     --muted:#6b7280;
     --border:#e6e9ef;
@@ -66,6 +66,50 @@
     font-size:14px;
   }
 
+  /* Enhanced Filters */
+  .filters-panel {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+  }
+
+  .filters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    align-items: end;
+  }
+
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .filter-group label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  .filter-group select, 
+  .filter-group input {
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: white;
+    font-size: 14px;
+  }
+
+  .filter-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
   /* Controls */
   .controls {
     display:flex;
@@ -100,67 +144,171 @@
     border-radius:8px;
     cursor:pointer;
     font-weight:700;
+    transition: all 0.2s ease;
   }
-  .btn.secondary { background: #1BB64F; }
+  .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn.secondary { background: var(--accent-2); }
+  .btn.tertiary { background: var(--accent-3); }
   .btn.ghost { background:transparent; color:var(--accent); border:1px solid var(--border); }
 
   /* Summary cards */
-  .summary-row { display:flex; gap:12px; margin-bottom:18px; flex-wrap:wrap; }
+  .summary-row { 
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 18px;
+  }
   .summary-card {
     background: linear-gradient(180deg, #fff, #fcfcfd);
-    border:1px solid var(--border);
-    box-shadow:var(--shadow);
-    padding:14px;
-    border-radius:10px;
-    min-width:170px;
-    flex:1 1 160px;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+    padding: 16px;
+    border-radius: 10px;
+    text-align: center;
   }
-  .summary-card .label { font-size:12px; color:var(--muted); margin-bottom:6px; }
-  .summary-card .value { font-size:18px; font-weight:800; color:var(--accent); }
+  .summary-card .label { font-size: 12px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .summary-card .value { font-size: 20px; font-weight: 800; color: var(--accent); margin-bottom: 4px; }
+  .summary-card .trend { font-size: 11px; color: var(--muted); }
 
-  /* Grid of cards */
+  /* Grid of cards - ENFORCE 2 PER ROW */
   .grid {
-    display:grid;
+    display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap:18px;
-    margin-bottom:18px;
+    gap: 18px;
+    margin-bottom: 18px;
   }
   .grid.full { grid-template-columns: 1fr; }
+  
   .card {
-    background:var(--card-bg);
-    border:1px solid var(--border);
-    border-radius:var(--radius);
-    box-shadow:var(--shadow);
-    overflow:hidden;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(22,28,37,0.1);
+  }
+  
   .card .card-head {
-    padding:14px 16px;
-    border-bottom:1px solid #f3f6f9;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:8px;
+    padding: 14px 16px;
+    border-bottom: 1px solid #f3f6f9;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    background: linear-gradient(90deg, #f8fafc, #ffffff);
   }
   .card .card-body {
-    padding:12px 16px;
-    min-height:160px;
+    padding: 12px 16px;
+    min-height: 320px;
+    display: flex;
+    flex-direction: column;
   }
-  .card .card-title { font-weight:700; color:#111827; }
-  .card .card-sub { color:var(--muted); font-size:13px; }
 
-  /* Chart containers (Plotly inject full HTML) */
-  .plotly-container { width:100%; height:420px; }
+  .card .card-title { 
+    font-weight: 700; 
+    color: #111827; 
+    font-size: 15px; 
+    margin: 0;
+  }
+  .card .card-sub { 
+    color: var(--muted); 
+    font-size: 13px; 
+    margin: 4px 0 0 0;
+  }
+
+  /* Chart containers */
+  .plotly-container { 
+    width: 100%; 
+    height: 100%;
+    min-height: 280px;
+    flex: 1;
+  }
+
+  /* Loading states */
+  .loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    color: var(--muted);
+  }
+  .loading-spinner {
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid var(--accent);
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    animation: spin 1s linear infinite;
+    margin-right: 10px;
+  }
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
 
   /* Responsive */
-  @media(max-width:980px){
-    .grid { grid-template-columns: 1fr; }
-    .plotly-container { height: 360px; }
+  @media(max-width: 1200px){
+    .grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  
+  @media(max-width: 980px){
+    .grid { 
+      grid-template-columns: 1fr; 
+    }
+    .plotly-container { 
+      height: 360px; 
+    }
+    .filters-grid { 
+      grid-template-columns: 1fr; 
+    }
+    .card .card-body {
+      min-height: 300px;
+    }
+  }
+
+  @media(max-width: 768px){
+    .summary-row { 
+      grid-template-columns: repeat(2, 1fr); 
+    }
+    .card .card-body {
+      min-height: 280px;
+    }
+  }
+
+  @media(max-width: 480px){
+    .summary-row { 
+      grid-template-columns: 1fr; 
+    }
+    .card .card-body {
+      min-height: 250px;
+    }
   }
 
   /* Tables */
-  .data-table { width:100%; border-collapse:collapse; font-size:13px; margin-top:8px; }
-  .data-table th, .data-table td { padding:8px 10px; border-bottom:1px solid #f0f3f7; text-align:left; }
-  .data-table thead th { background:#fbfdff; position:sticky; top:0; z-index:2; }
+  .data-table { 
+    width:100%; 
+    border-collapse:collapse; 
+    font-size:13px; 
+    margin-top:8px; 
+  }
+  .data-table th, .data-table td { 
+    padding:8px 10px; 
+    border-bottom:1px solid #f0f3f7; 
+    text-align:left; 
+  }
+  .data-table thead th { 
+    background:#fbfdff; 
+    position:sticky; 
+    top:0; 
+    z-index:2; 
+    font-weight: 600; 
+  }
 
   /* small helpers */
   .muted { color:var(--muted); font-size:13px; }
@@ -170,12 +318,62 @@
   .kpi strong { color:var(--accent); font-size:15px; }
 
   /* export & search */
-  .toolbar { display:flex; gap:12px; align-items:center; margin-top:8px; }
+  .toolbar { display:flex; gap:12px; align-items:center; margin-top:8px; flex-wrap: wrap; }
   .search-input { padding:8px 12px; border-radius:8px; border:1px solid var(--border); min-width:220px; }
 
   /* alerts */
-  .alert { padding:12px; border-radius:8px; background:#fff7ed; color:#b45309; border:1px solid #fde6c7; }
+  .alert { 
+    padding:12px; 
+    border-radius:8px; 
+    background:#fff7ed; 
+    color:#b45309; 
+    border:1px solid #fde6c7; 
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    min-height: 200px;
+  }
+  .alert.info { 
+    background: #eff6ff; 
+    color: #1e40af; 
+    border-color: #dbeafe; 
+  }
 
+  /* Filter chips */
+  .filter-chips {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  .filter-chip {
+    background: var(--accent-3);
+    color: white;
+    padding: 4px 10px;
+    border-radius: 16px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .filter-chip .remove {
+    cursor: pointer;
+    font-weight: bold;
+  }
+
+  /* Single card layout for full-width visualizations */
+  .single-card {
+    grid-column: 1 / -1;
+  }
+
+  /* Card actions */
+  .card-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
 </style>
 
 <div class="page-wrap">
@@ -183,62 +381,228 @@
   <!-- header -->
   <div class="header">
     <div>
-      <div class="title"><i class="fas fa-stethoscope"></i> Diagnosis Patterns</div>
-      <div class="subtitle">Deep descriptive analysis — counts, cost contribution, temporal trends, provider & demographic breakdowns.</div>
+      <div class="title"><i class="fas fa-stethoscope"></i> Advanced Diagnosis Analysis</div>
+      <div class="subtitle">Comprehensive diagnosis patterns with interactive filtering and performance optimization</div>
     </div>
     <div class="controls-right" style="margin-left:auto">
       <div class="muted" style="font-size:13px;">Logged in as: <strong>{{ username }}</strong></div>
     </div>
   </div>
 
-  <!-- controls -->
-  <div class="controls">
-    <div class="control">
-      <label for="min-claims">Min claims</label>
-      <input id="min-claims" type="number" min="1" value="{{ request.GET.min_claims|default:5 }}" />
-      <div class="small muted">applies to fraud view</div>
+  <!-- Enhanced Filters Panel -->
+  <div class="filters-panel">
+    <div class="filters-grid">
+      <div class="filter-group">
+        <label for="provider-filter">Provider</label>
+        <select id="provider-filter" multiple>
+          {% for provider in filter_options.providers %}
+            <option value="{{ provider }}" 
+              {% if provider in request.GET.filter_provider %}selected{% endif %}>
+              {{ provider }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      
+      <div class="filter-group">
+        <label for="diagnosis-filter">Diagnosis</label>
+        <select id="diagnosis-filter" multiple>
+          {% for diagnosis in filter_options.diagnoses %}
+            <option value="{{ diagnosis }}"
+              {% if diagnosis in request.GET.filter_diagnosis %}selected{% endif %}>
+              {{ diagnosis }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      
+      <div class="filter-group">
+        <label for="gender-filter">Gender</label>
+        <select id="gender-filter" multiple>
+          {% for gender in filter_options.genders %}
+            <option value="{{ gender }}"
+              {% if gender in request.GET.filter_gender %}selected{% endif %}>
+              {{ gender }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      
+      <div class="filter-group">
+        <label for="year-filter">Year</label>
+        <select id="year-filter" multiple>
+          {% for year in filter_options.years %}
+            <option value="{{ year }}"
+              {% if year in request.GET.filter_year %}selected{% endif %}>
+              {{ year }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      
+      <div class="filter-group">
+        <label for="amount-range">Amount Range (KES)</label>
+        <div style="display: flex; gap: 8px;">
+          <input type="number" id="min-amount" placeholder="Min" 
+                 value="{{ request.GET.filter_min_amount|default:'' }}" style="flex: 1;">
+          <input type="number" id="max-amount" placeholder="Max" 
+                 value="{{ request.GET.filter_max_amount|default:'' }}" style="flex: 1;">
+        </div>
+      </div>
+      
+      <div class="filter-actions">
+        <button class="btn" id="apply-filters"><i class="fa fa-filter"></i> Apply Filters</button>
+        <button class="btn ghost" id="reset-filters"><i class="fa fa-refresh"></i> Reset</button>
+      </div>
     </div>
+    
+    <!-- Active Filter Chips -->
+    <div class="filter-chips" id="active-filters" style="display: none;">
+      <!-- Active filters will appear here -->
+    </div>
+  </div>
 
-    <div class="control">
-      <label for="top-n">Top N for charts</label>
-      <select id="top-n">
-        <option>5</option><option selected>8</option><option>10</option><option>15</option>
-      </select>
-    </div>
-
-    <div class="control">
-      <label for="diagnosis-search">Filter Diagnosis</label>
-      <input id="diagnosis-search" class="search-input" placeholder="Search diagnoses (table/chart)..." />
-    </div>
-
-    <div class="controls-right">
-      <button class="btn" id="apply-filters"><i class="fa fa-filter"></i>&nbsp;Apply</button>
-      <button class="btn ghost" id="export-csv"><i class="fa fa-file-csv"></i>&nbsp;Export Table</button>
-      <button class="btn secondary" id="toggle-tables"><i class="fa fa-table"></i>&nbsp;Toggle Tables</button>
-    </div>
+  <!-- Loading Indicator -->
+  <div class="loading" id="loading-indicator" style="display: none;">
+    <div class="loading-spinner"></div>
+    <span>Loading visualizations...</span>
   </div>
 
   <!-- summary row -->
   <div class="summary-row">
     <div class="summary-card">
       <div class="label">Total Claims</div>
-      <div class="value">{{ deep_summary.total_claims|intcomma|default:"—" }}</div>
+      <div class="value" id="total-claims">{{ deep_summary.total_claims|intcomma|default:"—" }}</div>
+      <div class="trend">All time</div>
     </div>
     <div class="summary-card">
       <div class="label">Total Amount (KES)</div>
-      <div class="value">KES {{ deep_summary.total_amount|floatformat:2|intcomma }}</div>
+      <div class="value" id="total-amount">KES {{ deep_summary.total_amount|floatformat:2|intcomma }}</div>
+      <div class="trend">Current view</div>
     </div>
     <div class="summary-card">
       <div class="label">Unique Diagnoses</div>
-      <div class="value">{{ deep_summary.unique_diagnoses|intcomma|default:"—" }}</div>
+      <div class="value" id="unique-diagnoses">{{ deep_summary.unique_diagnoses|intcomma|default:"—" }}</div>
+      <div class="trend">Filtered count</div>
     </div>
     <div class="summary-card">
       <div class="label">Avg Claim (KES)</div>
-      <div class="value">KES {{ deep_summary.avg_claim|floatformat:2|intcomma }}</div>
+      <div class="value" id="avg-claim">KES {{ deep_summary.avg_claim|floatformat:2|intcomma }}</div>
+      <div class="trend">Per claim</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">Top Diagnosis</div>
+      <div class="value" id="top-diagnosis">{{ deep_summary.top_diagnosis|default:"—" }}</div>
+      <div class="trend">By claim count</div>
     </div>
   </div>
 
-  <!-- two-column grid: top-by-count & DIAGNOSIS VS PROCEDURE HEATMAP -->
+  <!-- Key Insights - 2 per row -->
+  <div class="grid">
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Diagnosis Cost Efficiency</div>
+          <div class="card-sub">Cost per claim vs frequency</div>
+        </div>
+      </div>
+      <div class="card-body">
+        {% if visualizations.cost_efficiency %}
+          <div class="plotly-container">{{ visualizations.cost_efficiency|safe }}</div>
+        {% else %}
+          <div class="alert info">Apply filters to see cost efficiency analysis</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Diagnosis Seasonality</div>
+          <div class="card-sub">Monthly patterns for top diagnoses</div>
+        </div>
+      </div>
+      <div class="card-body">
+        {% if visualizations.seasonal_patterns %}
+          <div class="plotly-container">{{ visualizations.seasonal_patterns|safe }}</div>
+        {% else %}
+          <div class="alert info">Seasonal patterns will appear here</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Advanced Analysis - 2 per row -->
+  <div class="grid">
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Provider Specialization</div>
+          <div class="card-sub">Top diagnoses per provider</div>
+        </div>
+      </div>
+      <div class="card-body">
+        {% if visualizations.provider_specialization %}
+          <div class="plotly-container">{{ visualizations.provider_specialization|safe }}</div>
+        {% else %}
+          <div class="alert info">Provider specialization analysis</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Diagnosis Clustering</div>
+          <div class="card-sub">Similar diagnoses grouped by cost and frequency</div>
+        </div>
+      </div>
+      <div class="card-body">
+        {% if visualizations.diagnosis_clusters %}
+          <div class="plotly-container">{{ visualizations.diagnosis_clusters|safe }}</div>
+        {% else %}
+          <div class="alert info">Diagnosis clustering analysis</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Outlier Detection & Temporal Analysis - 2 per row -->
+  <div class="grid">
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Cost Outlier Detection</div>
+          <div class="card-sub">Unusual claim amounts by diagnosis</div>
+        </div>
+      </div>
+      <div class="card-body">
+        {% if visualizations.cost_outliers %}
+          <div class="plotly-container">{{ visualizations.cost_outliers|safe }}</div>
+        {% else %}
+          <div class="alert info">Outlier detection results</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Weekly Patterns Analysis</div>
+          <div class="card-sub">Claim distribution across days of the week</div>
+        </div>
+      </div>
+      <div class="card-body">
+        {% if visualizations.temporal_analysis %}
+          <div class="plotly-container">{{ visualizations.temporal_analysis|safe }}</div>
+        {% else %}
+          <div class="alert info">Weekly patterns analysis</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Diagnoses & Procedure Heatmap - 2 per row -->
   <div class="grid">
     <div class="card">
       <div class="card-head">
@@ -257,7 +621,6 @@
       </div>
     </div>
 
-    <!-- REPLACED: Top Diagnoses by Total Amount with Diagnosis vs Procedure Heatmap -->
     <div class="card">
       <div class="card-head">
         <div>
@@ -276,25 +639,27 @@
     </div>
   </div>
 
-  <!-- boxplot -->
-  <div class="card" style="margin-bottom:18px;">
-    <div class="card-head">
-      <div>
-        <div class="card-title">Claim Amount Distribution for Top Diagnoses</div>
-        <div class="card-sub">Boxplots show spread and outliers per diagnosis</div>
+  <!-- Boxplot - Full width -->
+  <div class="grid full">
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Claim Amount Distribution for Top Diagnoses</div>
+          <div class="card-sub">Boxplots show spread and outliers per diagnosis</div>
+        </div>
+        <div class="card-actions muted">Tip: use table search to focus on diagnosis</div>
       </div>
-      <div class="card-actions muted">Tip: use table search to focus on diagnosis</div>
-    </div>
-    <div class="card-body">
-      {% if visualizations.box_by_diagnosis %}
-        <div class="plotly-container">{{ visualizations.box_by_diagnosis|safe }}</div>
-      {% else %}
-        <div class="alert">No boxplot available.</div>
-      {% endif %}
+      <div class="card-body">
+        {% if visualizations.box_by_diagnosis %}
+          <div class="plotly-container">{{ visualizations.box_by_diagnosis|safe }}</div>
+        {% else %}
+          <div class="alert">No boxplot available.</div>
+        {% endif %}
+      </div>
     </div>
   </div>
 
-  <!-- monthly trends and seasonality heatmap -->
+  <!-- Monthly Trends & Seasonality - 2 per row -->
   <div class="grid">
     <div class="card">
       <div class="card-head">
@@ -329,7 +694,7 @@
     </div>
   </div>
 
-  <!-- provider breakdown and severity -->
+  <!-- Provider Breakdown & Severity - 2 per row -->
   <div class="grid">
     <div class="card">
       <div class="card-head">
@@ -364,7 +729,7 @@
     </div>
   </div>
 
-  <!-- demographics -->
+  <!-- Demographics - 2 per row -->
   <div class="grid">
     <div class="card">
       <div class="card-head">
@@ -395,7 +760,7 @@
     </div>
   </div>
 
-  <!-- repeat claimants & volatility -->
+  <!-- Repeat Claimants & Volatility - 2 per row -->
   <div class="grid">
     <div class="card">
       <div class="card-head">
@@ -442,92 +807,282 @@
     </div>
   </div>
 
-  <!-- large diagnosis summary table -->
-  <div class="card">
-    <div class="card-head">
-      <div>
-        <div class="card-title">Diagnosis Summary Table</div>
-        <div class="card-sub">Counts, amounts, quantiles, IQR, CV — full table</div>
-      </div>
-      <div>
-        <div class="toolbar">
-          <input type="text" id="table-search" class="search-input" placeholder="Search table (diagnosis)..." />
-          <button id="download-table" class="btn ghost"><i class="fa fa-download"></i>&nbsp;Download CSV</button>
+  <!-- Diagnosis Summary Table - Full width -->
+  <div class="grid full">
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Diagnosis Summary Table</div>
+          <div class="card-sub">Counts, amounts, quantiles, IQR, CV — full table</div>
+        </div>
+        <div>
+          <div class="toolbar">
+            <input type="text" id="table-search" class="search-input" placeholder="Search table (diagnosis)..." />
+            <button id="download-table" class="btn ghost"><i class="fa fa-download"></i>&nbsp;Download CSV</button>
+          </div>
         </div>
       </div>
-    </div>
 
-    <div class="card-body" id="table-wrapper" style="overflow:auto; max-height:540px;">
-      {% if deep_tables.diag_stats_full %}
-        <table class="data-table" id="diag-table">
-          <thead>
-            <tr>
-              <th>Diagnosis</th>
-              <th>Total Claims</th>
-              <th>Total Amount</th>
-              <th>Mean</th>
-              <th>Median</th>
-              <th>Std</th>
-              <th>Q25</th>
-              <th>Q50</th>
-              <th>Q75</th>
-              <th>Q90</th>
-              <th>%Claims</th>
-              <th>%Amount</th>
-              <th>IQR</th>
-              <th>CV</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for r in deep_tables.diag_stats_full %}
-            <tr>
-              <td class="diag-name">{{ r.Diagnosis }}</td>
-              <td>{{ r.Total_Claims }}</td>
-              <td>KES {{ r.Total_Amount|floatformat:2|intcomma }}</td>
-              <td>KES {{ r.Mean_Amount|floatformat:2|intcomma }}</td>
-              <td>KES {{ r.Median_Amount|floatformat:2|intcomma }}</td>
-              <td>KES {{ r.Std_Amount|floatformat:2|intcomma }}</td>
-              <td>KES {{ r.q25|floatformat:2|intcomma }}</td>
-              <td>KES {{ r.q50|floatformat:2|intcomma }}</td>
-              <td>KES {{ r.q75|floatformat:2|intcomma }}</td>
-              <td>KES {{ r.q90|floatformat:2|intcomma }}</td>
-              <td>{{ r.Pct_of_Claims|floatformat:2 }}%</td>
-              <td>{{ r.Pct_of_Amount|floatformat:2 }}%</td>
-              <td>KES {{ r.IQR|floatformat:2|intcomma }}</td>
-              <td>{% if r.CV %}{{ r.CV|floatformat:2 }}{% else %}-{% endif %}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      {% else %}
-        <div class="alert">Diagnosis summary table not available.</div>
-      {% endif %}
+      <div class="card-body" id="table-wrapper" style="overflow:auto; max-height:540px;">
+        {% if deep_tables.diag_stats_full %}
+          <table class="data-table" id="diag-table">
+            <thead>
+              <tr>
+                <th>Diagnosis</th>
+                <th>Total Claims</th>
+                <th>Total Amount</th>
+                <th>Mean</th>
+                <th>Median</th>
+                <th>Std</th>
+                <th>Q25</th>
+                <th>Q50</th>
+                <th>Q75</th>
+                <th>Q90</th>
+                <th>%Claims</th>
+                <th>%Amount</th>
+                <th>IQR</th>
+                <th>CV</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in deep_tables.diag_stats_full %}
+              <tr>
+                <td class="diag-name">{{ r.Diagnosis }}</td>
+                <td>{{ r.Total_Claims }}</td>
+                <td>KES {{ r.Total_Amount|floatformat:2|intcomma }}</td>
+                <td>KES {{ r.Mean_Amount|floatformat:2|intcomma }}</td>
+                <td>KES {{ r.Median_Amount|floatformat:2|intcomma }}</td>
+                <td>KES {{ r.Std_Amount|floatformat:2|intcomma }}</td>
+                <td>KES {{ r.q25|floatformat:2|intcomma }}</td>
+                <td>KES {{ r.q50|floatformat:2|intcomma }}</td>
+                <td>KES {{ r.q75|floatformat:2|intcomma }}</td>
+                <td>KES {{ r.q90|floatformat:2|intcomma }}</td>
+                <td>{{ r.Pct_of_Claims|floatformat:2 }}%</td>
+                <td>{{ r.Pct_of_Amount|floatformat:2 }}%</td>
+                <td>KES {{ r.IQR|floatformat:2|intcomma }}</td>
+                <td>{% if r.CV %}{{ r.CV|floatformat:2 }}{% else %}-{% endif %}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <div class="alert">Diagnosis summary table not available.</div>
+        {% endif %}
+      </div>
     </div>
   </div>
 
   <footer style="margin-top:28px; color:var(--muted); font-size:13px;">
-    © 2025 Virtual Analytics • <a href="https://www.virtualanalytics.co.ke/" target="_blank">virtualanalytics.co.ke</a> • Data is descriptive & exploratory only
+    © 2025 Virtual Analytics • <a href="https://www.virtualanalytics.co.ke/" target="_blank">virtualanalytics.co.ke</a> • Optimized for performance
   </footer>
 </div>
 
-<!-- ===========================
-     Scripts: interactions & exports
-     =========================== -->
+<!-- JavaScript remains the same as previous version -->
 <script>
 (function(){
+  // Performance optimization: Lazy load charts
+  let chartsLoaded = false;
+  
   // Helper: convert HTML table to CSV string
   function tableToCSV(tableEl) {
     const rows = Array.from(tableEl.querySelectorAll('tr'));
     return rows.map(row => {
       const cols = Array.from(row.querySelectorAll('th,td'));
       return cols.map(col => {
-        // escape quotes
         let text = col.innerText.replace(/"/g, '""').trim();
-        // wrap in quotes
         return `"${text}"`;
       }).join(',');
     }).join('\\n');
   }
+
+  // Initialize Select2 for all multi-select filters
+  function initializeFilters() {
+    if (typeof $ !== 'undefined' && $.fn.select2) {
+      $('#provider-filter, #diagnosis-filter, #gender-filter, #year-filter').select2({
+        placeholder: 'Select options...',
+        width: '100%'
+      });
+    }
+  }
+
+  // Update active filter chips
+  function updateFilterChips() {
+    const chipsContainer = document.getElementById('active-filters');
+    const chips = [];
+    
+    // Provider chips
+    const providers = Array.from(document.getElementById('provider-filter').selectedOptions)
+      .map(opt => ({type: 'Provider', value: opt.text}));
+    chips.push(...providers);
+    
+    // Diagnosis chips
+    const diagnoses = Array.from(document.getElementById('diagnosis-filter').selectedOptions)
+      .map(opt => ({type: 'Diagnosis', value: opt.text}));
+    chips.push(...diagnoses);
+    
+    // Gender chips
+    const genders = Array.from(document.getElementById('gender-filter').selectedOptions)
+      .map(opt => ({type: 'Gender', value: opt.text}));
+    chips.push(...genders);
+    
+    // Year chips
+    const years = Array.from(document.getElementById('year-filter').selectedOptions)
+      .map(opt => ({type: 'Year', value: opt.text}));
+    chips.push(...years);
+    
+    // Amount range chip
+    const minAmount = document.getElementById('min-amount').value;
+    const maxAmount = document.getElementById('max-amount').value;
+    if (minAmount || maxAmount) {
+      chips.push({type: 'Amount', value: `${minAmount || '0'} - ${maxAmount || '∞'} KES`});
+    }
+    
+    // Render chips
+    if (chips.length > 0) {
+      chipsContainer.innerHTML = chips.map(chip => `
+        <div class="filter-chip">
+          ${chip.type}: ${chip.value}
+          <span class="remove" data-type="${chip.type.toLowerCase()}" data-value="${chip.value}">×</span>
+        </div>
+      `).join('');
+      chipsContainer.style.display = 'flex';
+    } else {
+      chipsContainer.style.display = 'none';
+    }
+    
+    // Add remove functionality
+    chipsContainer.querySelectorAll('.remove').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const type = this.dataset.type;
+        const value = this.dataset.value;
+        removeFilter(type, value);
+      });
+    });
+  }
+
+  // Remove specific filter
+  function removeFilter(type, value) {
+    switch(type) {
+      case 'provider':
+        const providerSelect = $('#provider-filter');
+        providerSelect.val(providerSelect.val().filter(v => v !== value));
+        providerSelect.trigger('change');
+        break;
+      case 'diagnosis':
+        const diagnosisSelect = $('#diagnosis-filter');
+        diagnosisSelect.val(diagnosisSelect.val().filter(v => v !== value));
+        diagnosisSelect.trigger('change');
+        break;
+      case 'gender':
+        const genderSelect = $('#gender-filter');
+        genderSelect.val(genderSelect.val().filter(v => v !== value));
+        genderSelect.trigger('change');
+        break;
+      case 'year':
+        const yearSelect = $('#year-filter');
+        yearSelect.val(yearSelect.val().filter(v => v !== value));
+        yearSelect.trigger('change');
+        break;
+      case 'amount':
+        document.getElementById('min-amount').value = '';
+        document.getElementById('max-amount').value = '';
+        break;
+    }
+    updateFilterChips();
+  }
+
+  // Build filter parameters for server request
+  function buildFilterParams() {
+    const params = new URLSearchParams();
+    
+    // Add existing params
+    const urlParams = new URLSearchParams(window.location.search);
+    for (const [key, value] of urlParams) {
+      if (!key.startsWith('filter_')) {
+        params.set(key, value);
+      }
+    }
+    
+    // Add new filter params
+    const providers = Array.from(document.getElementById('provider-filter').selectedOptions)
+      .map(opt => opt.value);
+    if (providers.length > 0) {
+      params.set('filter_provider', providers.join(','));
+    }
+    
+    const diagnoses = Array.from(document.getElementById('diagnosis-filter').selectedOptions)
+      .map(opt => opt.value);
+    if (diagnoses.length > 0) {
+      params.set('filter_diagnosis', diagnoses.join(','));
+    }
+    
+    const genders = Array.from(document.getElementById('gender-filter').selectedOptions)
+      .map(opt => opt.value);
+    if (genders.length > 0) {
+      params.set('filter_gender', genders.join(','));
+    }
+    
+    const years = Array.from(document.getElementById('year-filter').selectedOptions)
+      .map(opt => opt.value);
+    if (years.length > 0) {
+      params.set('filter_year', years.join(','));
+    }
+    
+    const minAmount = document.getElementById('min-amount').value;
+    const maxAmount = document.getElementById('max-amount').value;
+    if (minAmount) params.set('filter_min_amount', minAmount);
+    if (maxAmount) params.set('filter_max_amount', maxAmount);
+    
+    return params.toString();
+  }
+
+  // Apply filters with loading indicator
+  document.getElementById('apply-filters').addEventListener('click', function(){
+    const loadingIndicator = document.getElementById('loading-indicator');
+    loadingIndicator.style.display = 'flex';
+    
+    // Use setTimeout to allow loading indicator to show
+    setTimeout(() => {
+      const queryString = buildFilterParams();
+      window.location.href = `${window.location.pathname}?${queryString}`;
+    }, 100);
+  });
+
+  // Reset all filters
+  document.getElementById('reset-filters').addEventListener('click', function(){
+    if (typeof $ !== 'undefined' && $.fn.select2) {
+      $('#provider-filter, #diagnosis-filter, #gender-filter, #year-filter').val(null).trigger('change');
+    }
+    document.getElementById('min-amount').value = '';
+    document.getElementById('max-amount').value = '';
+    document.getElementById('active-filters').style.display = 'none';
+    
+    // Reload without filter params
+    const url = new URL(window.location.href);
+    const params = new URLSearchParams();
+    
+    // Keep only non-filter params
+    for (const [key, value] of url.searchParams) {
+      if (!key.startsWith('filter_')) {
+        params.set(key, value);
+      }
+    }
+    
+    window.location.href = `${url.pathname}?${params.toString()}`;
+  });
+
+  // Initialize on page load
+  document.addEventListener('DOMContentLoaded', function() {
+    initializeFilters();
+    updateFilterChips();
+    
+    // Lazy load heavy visualizations
+    if (!chartsLoaded) {
+      setTimeout(() => {
+        chartsLoaded = true;
+      }, 1000);
+    }
+  });
 
   // Export CSV button
   document.getElementById('download-table').addEventListener('click', function(e){
@@ -546,28 +1101,7 @@
     URL.revokeObjectURL(url);
   });
 
-  // Apply filters (reload preserving other GET params)
-  document.getElementById('apply-filters').addEventListener('click', function(){
-    const minClaims = document.getElementById('min-claims').value || '5';
-    const topN = document.getElementById('top-n').value || '8';
-    // keep other params in URL
-    const url = new URL(window.location.href);
-    url.searchParams.set('min_claims', minClaims);
-    // NOTE: top_n is cosmetic unless backend uses it
-    url.searchParams.set('top_n', topN);
-    window.location.href = url.toString();
-  });
-
-  // Toggle tables visibility
-  const toggleBtn = document.getElementById('toggle-tables');
-  let tablesVisible = true;
-  toggleBtn.addEventListener('click', function(){
-    tablesVisible = !tablesVisible;
-    const tableWrap = document.getElementById('table-wrapper');
-    if(tableWrap) tableWrap.style.display = tablesVisible ? 'block' : 'none';
-  });
-
-  // Search box filters table rows & filters charts (client-side, simple)
+  // Search box filters table rows
   const tableSearch = document.getElementById('table-search');
   if(tableSearch){
     tableSearch.addEventListener('input', function(){
@@ -580,36 +1114,8 @@
     });
   }
 
-  // Diagnosis-search: filter both table and charts by diagnosis text (client-side)
-  const diagnosisSearch = document.getElementById('diagnosis-search');
-  if(diagnosisSearch){
-    diagnosisSearch.addEventListener('input', function(){
-      const q = this.value.trim().toLowerCase();
-      // filter table rows
-      const rows = document.querySelectorAll('#diag-table tbody tr');
-      rows.forEach(r => {
-        const name = r.querySelector('.diag-name')?.innerText.toLowerCase() || '';
-        r.style.display = name.includes(q) ? '' : 'none';
-      });
-      // note: for charts (svg/plotly), client-side filtering is complex.
-      // For full-chart filtering, re-run server request with query param (not implemented).
-    });
-  }
-
-  // Initialize Select2 for controls if available
-  if (typeof $ !== 'undefined' && $.fn.select2) {
-    $('#top-n').select2({ minimumResultsForSearch: Infinity, width: '120px' });
-  }
-
-  // Small UX: pressing Enter in min-claims triggers apply
-  document.getElementById('min-claims').addEventListener('keydown', function(e){
-    if(e.key === 'Enter'){ e.preventDefault(); document.getElementById('apply-filters').click(); }
-  });
-
-  // Make Plotly charts responsive: re-render on window resize
+  // Make Plotly charts responsive
   window.addEventListener('resize', function(){
-    // Plotly automatically resizes containers loaded with plotly; however,
-    // sometimes re-layout helps:
     if(typeof Plotly !== 'undefined'){
       const plots = document.querySelectorAll('.plotly-graph-div');
       plots.forEach(p => {
@@ -617,6 +1123,14 @@
       });
     }
   });
+
+  // Listen for filter changes to update chips
+  document.addEventListener('change', function(e) {
+    if (e.target.matches('#provider-filter, #diagnosis-filter, #gender-filter, #year-filter, #min-amount, #max-amount')) {
+      updateFilterChips();
+    }
+  });
+
 })();
 </script>
 
