@@ -4,72 +4,17 @@
 {% block title %}Advanced Diagnosis Analysis - Safaricom Portal{% endblock %}
 
 {% block head %}
-  <!-- jQuery (required by Select2 & some UI interactions) -->
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
-  <!-- Select2 for nice selects -->
+  <!-- Load only essential CSS first -->
   <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-
-  <!-- Plotly for charts - Multiple CDN fallbacks -->
-  <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist@2.24.1/plotly.min.js"></script>
-  
-  <!-- Fallback Plotly CDN -->
-  <script>
-    window.plotlyLoadAttempts = 0;
-    window.maxPlotlyAttempts = 3;
-    
-    function checkPlotlyLoaded() {
-      if (typeof Plotly === 'undefined') {
-        window.plotlyLoadAttempts++;
-        if (window.plotlyLoadAttempts < window.maxPlotlyAttempts) {
-          console.warn(`Plotly not loaded, attempt ${window.plotlyLoadAttempts}. Loading fallback...`);
-          loadPlotlyFallback();
-        } else {
-          console.error('All Plotly CDN attempts failed. Charts will not render.');
-          showPlotlyError();
-        }
-      } else {
-        console.log('Plotly loaded successfully');
-        window.PlotlyLoaded = true;
-      }
-    }
-    
-    function loadPlotlyFallback() {
-      const fallbackScript = document.createElement('script');
-      fallbackScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.24.1/plotly.min.js';
-      fallbackScript.integrity = 'sha512-ujKZF3d1+3/2VGhKQQS5aT1hkM1hTZQpBk1TqfT/HRK4pR1R5N9TkQjB9fSxqO/5JQ+MiRwVJQ8RzQJQKQKCA==';
-      fallbackScript.crossOrigin = 'anonymous';
-      fallbackScript.onload = function() {
-        console.log('Plotly loaded from fallback CDN');
-        window.PlotlyLoaded = true;
-      };
-      fallbackScript.onerror = function() {
-        console.error('Fallback Plotly CDN also failed');
-        checkPlotlyLoaded();
-      };
-      document.head.appendChild(fallbackScript);
-    }
-    
-    function showPlotlyError() {
-      // This will be handled in the main JavaScript
-      window.PlotlyLoadFailed = true;
-    }
-    
-    // Check if Plotly loaded after a short delay
-    setTimeout(checkPlotlyLoaded, 1000);
-  </script>
-
-  <!-- Tiny icon set for small UI accents -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  
+  <!-- Load scripts asynchronously -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist@2.24.1/plotly.min.js" async></script>
 {% endblock %}
 
 {% block content %}
-<!-- ======================================================
-     Enhanced Diagnosis Analysis Dashboard
-     Advanced filtering, insightful visualizations, performance optimized
-     ====================================================== -->
-
 <style>
   :root {
     --accent: #d62728;
@@ -78,14 +23,9 @@
     --card-bg: #ffffff;
     --muted: #6b7280;
     --border: #e6e9ef;
-    --glass: rgba(255, 255, 255, 0.6);
     --shadow: 0 6px 18px rgba(22, 28, 37, 0.06);
     --radius: 12px;
     --maxwidth: 1400px;
-    --success: #10b981;
-    --warning: #f59e0b;
-    --error: #ef4444;
-    --info: #3b82f6;
   }
 
   /* Reset and Base Styles */
@@ -105,82 +45,88 @@
   /* Page Layout */
   .page-wrap {
     max-width: var(--maxwidth);
-    margin: 24px auto;
-    padding: 0 16px 80px;
+    margin: 20px auto;
+    padding: 0 16px 60px;
   }
 
   .header {
     display: flex;
     align-items: center;
-    gap: 16px;
-    margin-bottom: 24px;
+    gap: 12px;
+    margin-bottom: 20px;
   }
 
   .header .title {
-    font-size: 26px;
+    font-size: 24px;
     font-weight: 800;
     color: var(--accent);
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
   }
 
   .header .subtitle {
     color: var(--muted);
-    margin-top: 4px;
-    font-size: 14px;
-    font-weight: 400;
+    margin-top: 2px;
+    font-size: 13px;
   }
 
   .controls-right {
     margin-left: auto;
-    font-size: 13px;
+    font-size: 12px;
     color: var(--muted);
   }
 
-  .controls-right strong {
-    color: #111827;
-  }
-
-  /* Enhanced Filters Panel */
+    /* Enhanced Filters Panel - FIXED DROPDOWN OVERLAY */
   .filters-panel {
     background: var(--card-bg);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 20px;
-    margin-bottom: 24px;
+    padding: 16px;
+    margin-bottom: 20px;
     box-shadow: var(--shadow);
-    backdrop-filter: blur(10px);
+    position: relative;
+    /* Remove z-index to prevent stacking context issues */
   }
 
   .filters-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
     align-items: end;
   }
 
   .filter-group {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
+    /* Remove position: relative to prevent stacking context */
   }
 
   .filter-group label {
-    font-size: 13px;
+    font-size: 11px;
     font-weight: 600;
     color: var(--muted);
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
 
-  /* Enhanced Select2 Styling */
+  /* Enhanced Select2 Styling - FIXED OVERLAY */
+  .select2-container {
+    position: relative;
+    /* Let Select2 manage its own z-index */
+  }
+
+  .select2-container--open {
+    z-index: 9999; /* High z-index when dropdown is open */
+  }
+
   .select2-container--default .select2-selection--multiple {
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 6px;
     background: white;
-    min-height: 44px;
-    padding: 4px 8px;
+    min-height: 38px;
+    padding: 2px 6px;
     transition: all 0.2s ease;
   }
 
@@ -188,11 +134,10 @@
     background: var(--accent-3);
     color: white;
     border: none;
-    border-radius: 6px;
-    padding: 4px 8px;
-    margin: 3px;
-    font-size: 12px;
-    font-weight: 500;
+    border-radius: 4px;
+    padding: 2px 6px;
+    margin: 2px;
+    font-size: 11px;
   }
 
   .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
@@ -209,43 +154,58 @@
 
   .select2-container--default .select2-selection--single {
     border: 1px solid var(--border);
-    border-radius: 8px;
-    height: 44px;
+    border-radius: 6px;
+    height: 38px;
     background: white;
     transition: all 0.2s ease;
   }
 
   .select2-container--default .select2-selection--single .select2-selection__rendered {
-    line-height: 42px;
-    padding-left: 12px;
+    line-height: 36px;
+    padding-left: 10px;
     color: #111827;
+    font-size: 13px;
   }
 
   .select2-container--default .select2-selection--single .select2-selection__arrow {
-    height: 42px;
+    height: 36px;
     right: 8px;
   }
 
+  /* FIXED DROPDOWN OVERLAY - Proper z-index management */
   .select2-dropdown {
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 6px;
     box-shadow: var(--shadow);
-    z-index: 10000;
+    z-index: 9999 !important; /* Very high to ensure it's on top */
+  }
+
+  .select2-results__option {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  .select2-search--dropdown {
+    padding: 8px;
+  }
+
+  .select2-search--dropdown .select2-search__field {
+    padding: 6px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 13px;
   }
 
   /* Form Elements */
-  .filter-group select,
   .filter-group input {
-    padding: 10px 12px;
+    padding: 8px 10px;
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 6px;
     background: white;
-    font-size: 14px;
+    font-size: 13px;
     transition: all 0.2s ease;
-    color: #111827;
   }
 
-  .filter-group select:focus,
   .filter-group input:focus {
     outline: none;
     border-color: var(--accent);
@@ -258,7 +218,7 @@
 
   .amount-range {
     display: flex;
-    gap: 8px;
+    gap: 6px;
   }
 
   .amount-range input {
@@ -268,7 +228,7 @@
   /* Filter Actions */
   .filter-actions {
     display: flex;
-    gap: 12px;
+    gap: 8px;
     align-items: center;
     justify-content: flex-end;
   }
@@ -277,29 +237,20 @@
     background: var(--accent);
     color: #fff;
     border: none;
-    padding: 10px 16px;
-    border-radius: 8px;
+    padding: 8px 12px;
+    border-radius: 6px;
     cursor: pointer;
     font-weight: 600;
-    font-size: 14px;
+    font-size: 12px;
     transition: all 0.2s ease;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
   }
 
   .btn:hover {
     opacity: 0.9;
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(214, 39, 40, 0.3);
-  }
-
-  .btn.secondary {
-    background: var(--accent-2);
-  }
-
-  .btn.tertiary {
-    background: var(--accent-3);
   }
 
   .btn.ghost {
@@ -316,19 +267,18 @@
   /* Summary Cards */
   .summary-row {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
-    margin-bottom: 24px;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
   }
 
   .summary-card {
-    background: linear-gradient(135deg, #ffffff, #fcfcfd);
+    background: var(--card-bg);
     border: 1px solid var(--border);
     box-shadow: var(--shadow);
-    padding: 20px;
-    border-radius: 10px;
+    padding: 16px;
+    border-radius: 8px;
     text-align: center;
-    transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
   }
@@ -343,32 +293,26 @@
     background: linear-gradient(90deg, var(--accent), var(--accent-2));
   }
 
-  .summary-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(22, 28, 37, 0.1);
-  }
-
   .summary-card .label {
-    font-size: 12px;
+    font-size: 11px;
     color: var(--muted);
-    margin-bottom: 8px;
+    margin-bottom: 6px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     font-weight: 600;
   }
 
   .summary-card .value {
-    font-size: 24px;
+    font-size: 18px;
     font-weight: 800;
     color: var(--accent);
-    margin-bottom: 4px;
+    margin-bottom: 2px;
     line-height: 1.2;
   }
 
   .summary-card .trend {
-    font-size: 11px;
+    font-size: 10px;
     color: var(--muted);
-    font-weight: 500;
   }
 
   /* Mini Tabs Navigation */
@@ -377,8 +321,8 @@
     background: var(--card-bg);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 8px;
-    margin-bottom: 24px;
+    padding: 6px;
+    margin-bottom: 20px;
     box-shadow: var(--shadow);
     gap: 4px;
     flex-wrap: wrap;
@@ -386,60 +330,42 @@
 
   .mini-tab {
     flex: 1;
-    padding: 12px 16px;
+    padding: 10px 12px;
     border: none;
     background: transparent;
-    border-radius: 8px;
+    border-radius: 6px;
     cursor: pointer;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
     color: var(--muted);
     transition: all 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    min-width: 120px;
+    gap: 6px;
+    min-width: 100px;
   }
 
   .mini-tab:hover {
     background: var(--accent);
     color: white;
-    box-shadow: 0 2px 8px rgba(214, 39, 40, 0.3);
-    transform: translateY(-1px);
   }
 
   .mini-tab.active {
     background: var(--accent);
     color: white;
-    box-shadow: 0 2px 8px rgba(214, 39, 40, 0.2);
-  }
-
-  .mini-tab .tab-icon {
-    font-size: 14px;
-    transition: transform 0.2s ease;
-  }
-
-  .mini-tab:hover .tab-icon,
-  .mini-tab.active .tab-icon {
-    transform: scale(1.1);
   }
 
   /* Tab Content */
   .tab-content {
     display: none;
-    opacity: 0;
-    transform: translateY(10px);
-    transition: all 0.3s ease;
   }
 
   .tab-content.active {
     display: block;
-    opacity: 1;
-    transform: translateY(0);
   }
 
-  /* Grid Layouts */
+  /* SINGLE COLUMN GRID - One chart per row */
   .grid {
     display: grid;
     gap: 20px;
@@ -454,25 +380,16 @@
     grid-template-columns: 1fr;
   }
 
-  .grid.two-col {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  /* Card Components */
+  /* Card Components - Full Width */
   .card {
     background: var(--card-bg);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     box-shadow: var(--shadow);
     overflow: hidden;
-    transition: all 0.3s ease;
     display: flex;
     flex-direction: column;
-  }
-
-  .card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(22, 28, 37, 0.1);
+    width: 100%;
   }
 
   .card .card-head {
@@ -482,12 +399,12 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    background: linear-gradient(90deg, #f8fafc, #ffffff);
+    background: #f8fafc;
   }
 
   .card .card-body {
     padding: 16px 20px;
-    min-height: 320px;
+    min-height: 400px; /* Taller for better chart visibility */
     display: flex;
     flex-direction: column;
     flex: 1;
@@ -496,18 +413,14 @@
   .card .card-title {
     font-weight: 700;
     color: #111827;
-    font-size: 15px;
+    font-size: 16px;
     margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 8px;
   }
 
   .card .card-sub {
     color: var(--muted);
     font-size: 13px;
     margin: 4px 0 0 0;
-    font-weight: 400;
   }
 
   .card .toolbar {
@@ -529,11 +442,11 @@
     border-color: var(--accent);
   }
 
-  /* Chart Containers */
+  /* Chart Containers - Full Height */
   .plotly-container {
     width: 100%;
     height: 100%;
-    min-height: 280px;
+    min-height: 350px; /* Taller for better visualization */
     flex: 1;
   }
 
@@ -580,10 +493,10 @@
     border: 2px solid #f3f3f3;
     border-top: 2px solid var(--accent);
     border-radius: 50%;
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
     animation: spin 1s linear infinite;
-    margin-right: 12px;
+    margin-right: 10px;
   }
 
   @keyframes spin {
@@ -596,7 +509,6 @@
     width: 100%;
     border-collapse: collapse;
     font-size: 13px;
-    margin-top: 8px;
     background: white;
   }
 
@@ -611,7 +523,6 @@
     background: #fbfdff;
     position: sticky;
     top: 0;
-    z-index: 2;
     font-weight: 600;
     color: var(--muted);
     text-transform: uppercase;
@@ -659,40 +570,22 @@
   /* Filter Chips */
   .filter-chips {
     display: flex;
-    gap: 8px;
+    gap: 6px;
     flex-wrap: wrap;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
     align-items: center;
   }
 
   .filter-chip {
     background: var(--accent-3);
     color: white;
-    padding: 6px 12px;
-    border-radius: 16px;
-    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 11px;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
     font-weight: 500;
-    transition: all 0.2s ease;
-  }
-
-  .filter-chip:hover {
-    background: var(--accent);
-    transform: translateY(-1px);
-  }
-
-  .filter-chip .remove {
-    cursor: pointer;
-    font-weight: bold;
-    font-size: 14px;
-    opacity: 0.8;
-    transition: opacity 0.2s ease;
-  }
-
-  .filter-chip .remove:hover {
-    opacity: 1;
   }
 
   /* No Results State */
@@ -712,7 +605,7 @@
   footer {
     margin-top: 40px;
     color: var(--muted);
-    font-size: 13px;
+    font-size: 12px;
     text-align: center;
     padding: 20px 0;
     border-top: 1px solid var(--border);
@@ -727,10 +620,10 @@
     text-decoration: underline;
   }
 
-  /* Responsive Design */
+  /* Enhanced Responsive Design */
   @media (max-width: 1200px) {
-    .grid.two-col {
-      grid-template-columns: 1fr;
+    .filters-grid {
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     }
   }
 
@@ -745,11 +638,16 @@
     
     .mini-tab {
       flex: 1 1 calc(50% - 8px);
-      min-width: 140px;
+      min-width: 120px;
+      font-size: 11px;
+    }
+    
+    .summary-row {
+      grid-template-columns: repeat(2, 1fr);
     }
     
     .plotly-container {
-      height: 360px;
+      min-height: 300px;
     }
     
     .filter-actions {
@@ -759,13 +657,13 @@
 
   @media (max-width: 768px) {
     .page-wrap {
-      padding: 0 12px 60px;
+      padding: 0 12px 40px;
     }
     
     .header {
       flex-direction: column;
       align-items: flex-start;
-      gap: 12px;
+      gap: 8px;
     }
     
     .controls-right {
@@ -774,7 +672,7 @@
     }
     
     .summary-row {
-      grid-template-columns: repeat(2, 1fr);
+      grid-template-columns: 1fr;
     }
     
     .mini-tab {
@@ -784,7 +682,7 @@
     .card .card-head {
       flex-direction: column;
       align-items: flex-start;
-      gap: 12px;
+      gap: 8px;
     }
     
     .toolbar {
@@ -796,15 +694,16 @@
       min-width: 150px;
       flex: 1;
     }
+    
+    .card .card-body {
+      min-height: 350px;
+      padding: 12px 16px;
+    }
   }
 
   @media (max-width: 480px) {
-    .summary-row {
-      grid-template-columns: 1fr;
-    }
-    
     .filters-panel {
-      padding: 16px;
+      padding: 12px;
     }
     
     .filter-actions {
@@ -822,7 +721,11 @@
     }
     
     .card .card-body {
-      padding: 12px 16px;
+      min-height: 300px;
+      padding: 10px 12px;
+    }
+    
+    .plotly-container {
       min-height: 280px;
     }
   }
@@ -866,28 +769,25 @@
 </style>
 
 <div class="page-wrap">
-
-  <!-- header -->
+  <!-- Header -->
   <div class="header">
     <div>
       <div class="title"><i class="fas fa-stethoscope"></i> Advanced Diagnosis Analysis</div>
       <div class="subtitle">Comprehensive diagnosis patterns with interactive filtering and performance optimization</div>
     </div>
-    <div class="controls-right" style="margin-left:auto">
-      <div class="muted" style="font-size:13px;">Logged in as: <strong>{{ username }}</strong></div>
+    <div class="controls-right">
+      <div class="muted">Logged in as: <strong>{{ username }}</strong></div>
     </div>
   </div>
 
-  <!-- Enhanced Filters Panel -->
+  <!-- Enhanced Filters Panel with Fixed Dropdowns -->
   <div class="filters-panel">
     <div class="filters-grid">
       <div class="filter-group">
         <label for="provider-filter">Provider</label>
         <select id="provider-filter" multiple>
           {% for provider in filter_options.providers %}
-            <option value="{{ provider }}" {% if provider in request.GET.filter_provider %}selected{% endif %}>
-              {{ provider }}
-            </option>
+            <option value="{{ provider }}" {% if provider in request.GET.filter_provider %}selected{% endif %}>{{ provider }}</option>
           {% endfor %}
         </select>
       </div>
@@ -896,9 +796,7 @@
         <label for="diagnosis-filter">Diagnosis</label>
         <select id="diagnosis-filter" multiple>
           {% for diagnosis in filter_options.diagnoses %}
-            <option value="{{ diagnosis }}" {% if diagnosis in request.GET.filter_diagnosis %}selected{% endif %}>
-              {{ diagnosis }}
-            </option>
+            <option value="{{ diagnosis }}" {% if diagnosis in request.GET.filter_diagnosis %}selected{% endif %}>{{ diagnosis }}</option>
           {% endfor %}
         </select>
       </div>
@@ -907,9 +805,7 @@
         <label for="gender-filter">Gender</label>
         <select id="gender-filter" multiple>
           {% for gender in filter_options.genders %}
-            <option value="{{ gender }}" {% if gender in request.GET.filter_gender %}selected{% endif %}>
-              {{ gender }}
-            </option>
+            <option value="{{ gender }}" {% if gender in request.GET.filter_gender %}selected{% endif %}>{{ gender }}</option>
           {% endfor %}
         </select>
       </div>
@@ -918,29 +814,26 @@
         <label for="year-filter">Year</label>
         <select id="year-filter" multiple>
           {% for year in filter_options.years %}
-            <option value="{{ year }}" {% if year in request.GET.filter_year %}selected{% endif %}>
-              {{ year }}
-            </option>
+            <option value="{{ year }}" {% if year in request.GET.filter_year %}selected{% endif %}>{{ year }}</option>
           {% endfor %}
         </select>
       </div>
       
       <div class="filter-group">
         <label for="amount-range">Amount Range (KES)</label>
-        <div style="display: flex; gap: 8px;">
-          <input type="number" id="min-amount" placeholder="Min" value="{{ request.GET.filter_min_amount|default:'' }}" style="flex: 1;">
-          <input type="number" id="max-amount" placeholder="Max" value="{{ request.GET.filter_max_amount|default:'' }}" style="flex: 1;">
+        <div class="amount-range">
+          <input type="number" id="min-amount" placeholder="Min" value="{{ request.GET.filter_min_amount|default:'' }}">
+          <input type="number" id="max-amount" placeholder="Max" value="{{ request.GET.filter_max_amount|default:'' }}">
         </div>
       </div>
       
       <div class="filter-actions">
-        <button class="btn" id="apply-filters"><i class="fa fa-filter"></i> Apply Filters</button>
+        <button class="btn" id="apply-filters"><i class="fa fa-filter"></i> Apply</button>
         <button class="btn ghost" id="reset-filters"><i class="fa fa-refresh"></i> Reset</button>
       </div>
     </div>
     
-    <!-- Active Filter Chips -->
-    <div class="filter-chips" id="active-filters"></div>
+    <div class="filter-chips" id="active-filters" style="display: none;"></div>
   </div>
 
   <!-- Loading Indicator -->
@@ -949,7 +842,7 @@
     <span>Loading visualizations...</span>
   </div>
 
-  <!-- summary row -->
+  <!-- Summary Row -->
   <div class="summary-row">
     <div class="summary-card">
       <div class="label">Total Claims</div>
@@ -973,43 +866,27 @@
     </div>
     <div class="summary-card">
       <div class="label">Top Diagnosis</div>
-      <div class="value">{{ deep_summary.top_diagnosis|default:"—" }}</div>
+      <div class="value" style="font-size:16px;">{{ deep_summary.top_diagnosis|default:"—" }}</div>
       <div class="trend">By claim count</div>
     </div>
   </div>
 
   <!-- Mini Tabs Navigation -->
   <div class="mini-tabs">
-    <button class="mini-tab active" data-tab="overview">
-      <i class="fas fa-chart-line tab-icon"></i> Overview
-    </button>
-    <button class="mini-tab" data-tab="cost-analysis">
-      <i class="fas fa-money-bill-wave tab-icon"></i> Cost Analysis
-    </button>
-    <button class="mini-tab" data-tab="temporal">
-      <i class="fas fa-calendar-alt tab-icon"></i> Temporal Patterns
-    </button>
-    <button class="mini-tab" data-tab="demographics">
-      <i class="fas fa-users tab-icon"></i> Demographics
-    </button>
-    <button class="mini-tab" data-tab="providers">
-      <i class="fas fa-hospital tab-icon"></i> Providers
-    </button>
-    <button class="mini-tab" data-tab="advanced">
-      <i class="fas fa-microscope tab-icon"></i> Advanced Insights
-    </button>
+    <button class="mini-tab active" data-tab="overview"><i class="fas fa-chart-line"></i> Overview</button>
+    <button class="mini-tab" data-tab="cost-analysis"><i class="fas fa-money-bill-wave"></i> Cost</button>
+    <button class="mini-tab" data-tab="temporal"><i class="fas fa-calendar-alt"></i> Temporal</button>
+    <button class="mini-tab" data-tab="demographics"><i class="fas fa-users"></i> Demographics</button>
+    <button class="mini-tab" data-tab="providers"><i class="fas fa-hospital"></i> Providers</button>
+    <button class="mini-tab" data-tab="advanced"><i class="fas fa-microscope"></i> Advanced</button>
   </div>
 
-  <!-- Tab Contents -->
-  <!-- UPDATED: Overview tab now has one chart per row -->
+  <!-- Tab Contents - ONE CHART PER ROW -->
   <div class="tab-content active" id="overview-tab">
     <div class="grid one-col">
       <div class="card">
         <div class="card-head">
-          <div>
-            <div class="card-title">Top Diagnoses by Claim Count</div>
-            <div class="card-sub">Counts with shading by total amount</div>
-          </div>
+          <div class="card-title">Top Diagnoses by Claim Count</div>
         </div>
         <div class="card-body">
           {% if visualizations.top_by_count %}
@@ -1025,10 +902,7 @@
 
       <div class="card">
         <div class="card-head">
-          <div>
-            <div class="card-title">Diagnosis vs Procedure Heatmap</div>
-            <div class="card-sub">Top 20 ailments vs common treatments</div>
-          </div>
+          <div class="card-title">Diagnosis vs Procedure Heatmap</div>
         </div>
         <div class="card-body">
           {% if visualizations.diagnosis_procedure_heatmap %}
@@ -1044,10 +918,7 @@
 
       <div class="card">
         <div class="card-head">
-          <div>
-            <div class="card-title">Claim Amount Distribution for Top Diagnoses</div>
-            <div class="card-sub">Boxplots show spread and outliers per diagnosis</div>
-          </div>
+          <div class="card-title">Claim Amount Distribution</div>
         </div>
         <div class="card-body">
           {% if visualizations.box_by_diagnosis %}
@@ -1064,13 +935,10 @@
   </div>
 
   <div class="tab-content" id="cost-analysis-tab">
-    <div class="grid">
+    <div class="grid one-col">
       <div class="card">
         <div class="card-head">
-          <div>
-            <div class="card-title">Diagnosis Cost Efficiency</div>
-            <div class="card-sub">Cost per claim vs frequency</div>
-          </div>
+          <div class="card-title">Cost Efficiency</div>
         </div>
         <div class="card-body">
           {% if visualizations.cost_efficiency %}
@@ -1083,28 +951,7 @@
 
       <div class="card">
         <div class="card-head">
-          <div>
-            <div class="card-title">Cost Outlier Detection</div>
-            <div class="card-sub">Unusual claim amounts by diagnosis</div>
-          </div>
-        </div>
-        <div class="card-body">
-          {% if visualizations.cost_outliers %}
-            <div class="plotly-container">{{ visualizations.cost_outliers|safe }}</div>
-          {% else %}
-            <div class="alert info">Outlier detection results</div>
-          {% endif %}
-        </div>
-      </div>
-    </div>
-
-    <div class="grid">
-      <div class="card">
-        <div class="card-head">
-          <div>
-            <div class="card-title">Severity Bucket Distribution</div>
-            <div class="card-sub">Claims binned into severity buckets by amount</div>
-          </div>
+          <div class="card-title">Severity Buckets</div>
         </div>
         <div class="card-body">
           {% if visualizations.severity_buckets_top %}
@@ -1117,8 +964,7 @@
 
       <div class="card">
         <div class="card-head">
-          <div class="card-title">Top Volatile Diagnoses (CV)</div>
-          <div class="card-sub">Diagnoses with high coefficient of variation</div>
+          <div class="card-title">Volatile Diagnoses</div>
         </div>
         <div class="card-body">
           {% if visualizations.volatility_top %}
@@ -1132,13 +978,10 @@
   </div>
 
   <div class="tab-content" id="temporal-tab">
-    <div class="grid">
+    <div class="grid one-col">
       <div class="card">
         <div class="card-head">
-          <div>
-            <div class="card-title">Monthly Diagnosis Trends</div>
-            <div class="card-sub">Multi-line view for top diagnoses over time</div>
-          </div>
+          <div class="card-title">Monthly Trends</div>
         </div>
         <div class="card-body">
           {% if visualizations.monthly_trends_top %}
@@ -1151,10 +994,7 @@
 
       <div class="card">
         <div class="card-head">
-          <div>
-            <div class="card-title">Seasonality Heatmap</div>
-            <div class="card-sub">Total amounts by month and year</div>
-          </div>
+          <div class="card-title">Seasonality Heatmap</div>
         </div>
         <div class="card-body">
           {% if visualizations.seasonality_heatmap %}
@@ -1164,37 +1004,16 @@
           {% endif %}
         </div>
       </div>
-    </div>
-
-    <div class="grid">
-      <div class="card">
-        <div class="card-head">
-          <div>
-            <div class="card-title">Diagnosis Seasonality</div>
-            <div class="card-sub">Monthly patterns for top diagnoses</div>
-          </div>
-        </div>
-        <div class="card-body">
-          {% if visualizations.seasonal_patterns %}
-            <div class="plotly-container">{{ visualizations.seasonal_patterns|safe }}</div>
-          {% else %}
-            <div class="alert info">Seasonal patterns will appear here</div>
-          {% endif %}
-        </div>
-      </div>
 
       <div class="card">
         <div class="card-head">
-          <div>
-            <div class="card-title">Weekly Patterns Analysis</div>
-            <div class="card-sub">Claim distribution across days of the week</div>
-          </div>
+          <div class="card-title">Weekly Patterns</div>
         </div>
         <div class="card-body">
-          {% if visualizations.temporal_analysis %}
-            <div class="plotly-container">{{ visualizations.temporal_analysis|safe }}</div>
+          {% if visualizations.weekly_patterns %}
+            <div class="plotly-container">{{ visualizations.weekly_patterns|safe }}</div>
           {% else %}
-            <div class="alert info">Weekly patterns analysis</div>
+            <div class="alert">Weekly patterns chart not available.</div>
           {% endif %}
         </div>
       </div>
@@ -1202,11 +1021,10 @@
   </div>
 
   <div class="tab-content" id="demographics-tab">
-    <div class="grid">
+    <div class="grid one-col">
       <div class="card">
         <div class="card-head">
-          <div class="card-title">Gender Split for Top Diagnoses</div>
-          <div class="card-sub">Compare male/female claim volumes by diagnosis</div>
+          <div class="card-title">Gender Split</div>
         </div>
         <div class="card-body">
           {% if visualizations.gender_split_top %}
@@ -1219,46 +1037,13 @@
 
       <div class="card">
         <div class="card-head">
-          <div class="card-title">Age Distribution for Top Diagnoses</div>
-          <div class="card-sub">Boxplot of claimant ages per diagnosis</div>
+          <div class="card-title">Age Distribution</div>
         </div>
         <div class="card-body">
-          {% if visualizations.age_distribution_top %}
-            <div class="plotly-container">{{ visualizations.age_distribution_top|safe }}</div>
+          {% if visualizations.age_distribution %}
+            <div class="plotly-container">{{ visualizations.age_distribution|safe }}</div>
           {% else %}
             <div class="alert">Age distribution chart not available.</div>
-          {% endif %}
-        </div>
-      </div>
-    </div>
-
-    <div class="grid full">
-      <div class="card">
-        <div class="card-head">
-          <div class="card-title">Repeat-Claimant Summary</div>
-          <div class="card-sub">Members with multiple claims by diagnosis</div>
-        </div>
-        <div class="card-body">
-          {% if visualizations.repeat_claimants %}
-            <div class="plotly-container">{{ visualizations.repeat_claimants|safe }}</div>
-          {% elif deep_tables.repeat_claimants_summary %}
-            <div style="overflow:auto;">
-              <table class="data-table">
-                <thead><tr><th>Diagnosis</th><th>Members w/Multiple Claims</th><th>Avg Claims/Member</th><th>Max Claims</th></tr></thead>
-                <tbody>
-                  {% for r in deep_tables.repeat_claimants_summary %}
-                  <tr>
-                    <td>{{ r.Diagnosis }}</td>
-                    <td>{{ r.members_with_multiple_claims }}</td>
-                    <td>{{ r.avg_claims_per_member|floatformat:2 }}</td>
-                    <td>{{ r.max_claims_by_member }}</td>
-                  </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-            </div>
-          {% else %}
-            <div class="alert">Repeat-claimant data not available.</div>
           {% endif %}
         </div>
       </div>
@@ -1266,29 +1051,10 @@
   </div>
 
   <div class="tab-content" id="providers-tab">
-    <div class="grid">
+    <div class="grid one-col">
       <div class="card">
         <div class="card-head">
-          <div>
-            <div class="card-title">Diagnosis Breakdown for Top Providers</div>
-            <div class="card-sub">Which providers contribute to which diagnoses</div>
-          </div>
-        </div>
-        <div class="card-body">
-          {% if visualizations.provider_diagnosis %}
-            <div class="plotly-container">{{ visualizations.provider_diagnosis|safe }}</div>
-          {% else %}
-            <div class="alert">Provider-by-diagnosis chart not available.</div>
-          {% endif %}
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-head">
-          <div>
-            <div class="card-title">Provider Specialization</div>
-            <div class="card-sub">Top diagnoses per provider</div>
-          </div>
+          <div class="card-title">Provider Specialization</div>
         </div>
         <div class="card-body">
           {% if visualizations.provider_specialization %}
@@ -1302,13 +1068,10 @@
   </div>
 
   <div class="tab-content" id="advanced-tab">
-    <div class="grid full">
+    <div class="grid one-col">
       <div class="card">
         <div class="card-head">
-          <div>
-            <div class="card-title">Diagnosis Clustering</div>
-            <div class="card-sub">Similar diagnoses grouped by cost and frequency</div>
-          </div>
+          <div class="card-title">Diagnosis Clustering</div>
         </div>
         <div class="card-body">
           {% if visualizations.diagnosis_clusters %}
@@ -1318,42 +1081,30 @@
           {% endif %}
         </div>
       </div>
-    </div>
 
-    <div class="grid full">
       <div class="card">
         <div class="card-head">
-          <div>
-            <div class="card-title">Diagnosis Summary Table</div>
-            <div class="card-sub">Counts, amounts, quantiles, IQR, CV — full table</div>
-          </div>
+          <div class="card-title">Diagnosis Summary Table</div>
           <div>
             <div class="toolbar">
-              <input type="text" id="table-search" class="search-input" placeholder="Search table (diagnosis)..." />
-              <button id="download-table" class="btn ghost"><i class="fa fa-download"></i> Download CSV</button>
+              <input type="text" id="table-search" class="search-input" placeholder="Search diagnoses..." />
+              <button id="download-table" class="btn ghost"><i class="fa fa-download"></i> CSV</button>
             </div>
           </div>
         </div>
 
-        <div class="card-body" id="table-wrapper" style="overflow:auto; max-height:540px;">
+        <div class="card-body" id="table-wrapper" style="overflow:auto; max-height:500px;">
           {% if deep_tables.diag_stats_full %}
             <table class="data-table" id="diag-table">
               <thead>
                 <tr>
                   <th>Diagnosis</th>
-                  <th>Total Claims</th>
+                  <th>Claims</th>
                   <th>Total Amount</th>
                   <th>Mean</th>
                   <th>Median</th>
-                  <th>Std</th>
-                  <th>Q25</th>
-                  <th>Q50</th>
-                  <th>Q75</th>
-                  <th>Q90</th>
                   <th>%Claims</th>
                   <th>%Amount</th>
-                  <th>IQR</th>
-                  <th>CV</th>
                 </tr>
               </thead>
               <tbody>
@@ -1361,18 +1112,11 @@
                 <tr>
                   <td class="diag-name">{{ r.Diagnosis }}</td>
                   <td>{{ r.Total_Claims }}</td>
-                  <td>KES {{ r.Total_Amount|floatformat:2|intcomma }}</td>
-                  <td>KES {{ r.Mean_Amount|floatformat:2|intcomma }}</td>
-                  <td>KES {{ r.Median_Amount|floatformat:2|intcomma }}</td>
-                  <td>KES {{ r.Std_Amount|floatformat:2|intcomma }}</td>
-                  <td>KES {{ r.q25|floatformat:2|intcomma }}</td>
-                  <td>KES {{ r.q50|floatformat:2|intcomma }}</td>
-                  <td>KES {{ r.q75|floatformat:2|intcomma }}</td>
-                  <td>KES {{ r.q90|floatformat:2|intcomma }}</td>
-                  <td>{{ r.Pct_of_Claims|floatformat:2 }}%</td>
-                  <td>{{ r.Pct_of_Amount|floatformat:2 }}%</td>
-                  <td>KES {{ r.IQR|floatformat:2|intcomma }}</td>
-                  <td>{% if r.CV %}{{ r.CV|floatformat:2 }}{% else %}-{% endif %}</td>
+                  <td>KES {{ r.Total_Amount|floatformat:0|intcomma }}</td>
+                  <td>KES {{ r.Mean_Amount|floatformat:0|intcomma }}</td>
+                  <td>KES {{ r.Median_Amount|floatformat:0|intcomma }}</td>
+                  <td>{{ r.Pct_of_Claims|floatformat:1 }}%</td>
+                  <td>{{ r.Pct_of_Amount|floatformat:1 }}%</td>
                 </tr>
                 {% endfor %}
               </tbody>
@@ -1385,178 +1129,101 @@
     </div>
   </div>
 
-  <footer style="margin-top:28px; color:var(--muted); font-size:13px;">
+  <footer>
     © 2025 Virtual Analytics • <a href="https://www.virtualanalytics.co.ke/" target="_blank">virtualanalytics.co.ke</a> • Optimized for performance
   </footer>
 </div>
 
-<!-- Enhanced JavaScript with Hover Tabs and Error Handling -->
+<!-- OPTIMIZED JAVASCRIPT -->
 <script>
-// Global error tracking
-window.dashboardErrors = [];
+// Simple initialization - minimal dependencies
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('🚀 Initializing Optimized Dashboard...');
+  initializeDashboard();
+});
 
-// Main initialization
 function initializeDashboard() {
   try {
-    console.log('🚀 Initializing Dashboard...');
-    
-    // Initialize tabs with SIMPLE click functionality
+    // Initialize tabs first (critical functionality)
     initializeTabs();
     
-    // Initialize filters
-    initializeFilters();
+    // Initialize filters with minimal delay
+    setTimeout(initializeFilters, 100);
     
     // Setup event listeners
     setupEventListeners();
     
-    // Check Plotly status
+    // Check for Plotly and initialize charts
     checkPlotlyStatus();
     
-    // Apply red color to box plot outliers
-    styleBoxPlotOutliers();
-    
     console.log('✅ Dashboard initialized successfully');
-    
   } catch (error) {
     console.error('❌ Dashboard initialization failed:', error);
-    window.dashboardErrors.push(error);
   }
 }
 
-// Function to style box plot outliers with red color
-function styleBoxPlotOutliers() {
-  if (typeof Plotly !== 'undefined') {
-    // Wait for charts to render
-    setTimeout(() => {
-      try {
-        const plots = document.querySelectorAll('.plotly-graph-div');
-        plots.forEach(plot => {
-          // Check if this is a box plot by looking for box traces
-          const data = plot.data;
-          if (data && Array.isArray(data)) {
-            data.forEach(trace => {
-              if (trace.type === 'box') {
-                // Set outlier color to red
-                if (!trace.marker) trace.marker = {};
-                trace.marker.color = 'red';
-                trace.marker.outliercolor = 'red';
-                trace.marker.line = trace.marker.line || {};
-                trace.marker.line.color = 'red';
-              }
-            });
-            
-            // Update the plot with new styling
-            Plotly.react(plot, data, plot.layout);
-          }
-        });
-        console.log('✅ Box plot outliers styled with red color');
-      } catch (error) {
-        console.log('Note: Box plot styling not applied:', error);
-      }
-    }, 1000);
-  }
-}
-
-// SIMPLE tab switching - Click only (more reliable)
+// SIMPLE tab switching - reliable and fast
 function initializeTabs() {
   const tabs = document.querySelectorAll('.mini-tab');
   const tabContents = document.querySelectorAll('.tab-content');
   
-  console.log(`Found ${tabs.length} tabs and ${tabContents.length} tab contents`);
-  
-  // Add click event listeners to all tabs
   tabs.forEach(tab => {
-    // Remove any existing click listeners by using one-time setup
     tab.onclick = function(e) {
       e.preventDefault();
       const targetTab = this.getAttribute('data-tab');
-      console.log(`Clicked tab: ${targetTab}`);
       switchToTab(targetTab);
     };
-    
-    // Optional: Add hover effect without auto-switching
-    tab.addEventListener('mouseenter', function() {
-      if (!this.classList.contains('active')) {
-        this.style.transform = 'translateY(-2px)';
-        this.style.boxShadow = '0 4px 12px rgba(214, 39, 40, 0.2)';
-      }
-    });
-    
-    tab.addEventListener('mouseleave', function() {
-      if (!this.classList.contains('active')) {
-        this.style.transform = 'translateY(0px)';
-        this.style.boxShadow = 'none';
-      }
-    });
   });
   
   function switchToTab(targetTabName) {
-    try {
-      // Remove active class from all tabs and contents
-      tabs.forEach(t => {
-        t.classList.remove('active');
-        if (!t.classList.contains('active')) {
-          t.style.transform = 'translateY(0px)';
-          t.style.boxShadow = 'none';
-        }
-      });
+    // Remove active class from all
+    document.querySelectorAll('.mini-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    
+    // Add active class to target
+    const targetTab = document.querySelector(`.mini-tab[data-tab="${targetTabName}"]`);
+    const targetContent = document.getElementById(`${targetTabName}-tab`);
+    
+    if (targetTab && targetContent) {
+      targetTab.classList.add('active');
+      targetContent.classList.add('active');
       
-      tabContents.forEach(content => content.classList.remove('active'));
-      
-      // Add active class to target tab and content
-      const targetTab = document.querySelector(`.mini-tab[data-tab="${targetTabName}"]`);
-      const targetContent = document.getElementById(`${targetTabName}-tab`);
-      
-      if (targetTab && targetContent) {
-        targetTab.classList.add('active');
-        targetTab.style.transform = 'translateY(-2px)';
-        targetTab.style.boxShadow = '0 4px 12px rgba(214, 39, 40, 0.2)';
-        targetContent.classList.add('active');
-        
-        console.log(`✅ Switched to tab: ${targetTabName}`);
-        
-        // Resize Plotly charts after tab switch
-        setTimeout(resizePlotlyCharts, 100);
-        
-        // Re-apply box plot styling when switching tabs
-        setTimeout(styleBoxPlotOutliers, 500);
-      } else {
-        console.error(`❌ Tab elements not found for: ${targetTabName}`);
-      }
-    } catch (error) {
-      console.error('Error switching tab:', error);
+      // Resize charts after tab switch
+      setTimeout(resizePlotlyCharts, 50);
     }
   }
 }
 
-// Plotly status check
-function checkPlotlyStatus() {
-  setTimeout(() => {
-    if (typeof Plotly === 'undefined') {
-      console.warn('⚠️ Plotly not loaded, showing fallback content');
-      showPlotlyFallbacks();
-    } else {
-      console.log('✅ Plotly is ready');
-      // Initial resize of charts
-      resizePlotlyCharts();
+function initializeFilters() {
+  if (window.jQuery && jQuery.fn.select2) {
+    try {
+      $('#provider-filter, #diagnosis-filter, #gender-filter, #year-filter').select2({
+        placeholder: 'Select...',
+        width: '100%',
+        closeOnSelect: false,
+        dropdownParent: $('.filters-panel') // Ensure dropdowns are properly positioned
+      });
+    } catch (e) {
+      console.log('Select2 not available, using native selects');
     }
-  }, 500);
+  }
 }
 
-function showPlotlyFallbacks() {
-  const plotlyContainers = document.querySelectorAll('.plotly-container');
-  plotlyContainers.forEach(container => {
-    const parentCard = container.closest('.card-body');
-    if (parentCard && !parentCard.querySelector('.chart-error')) {
-      container.innerHTML = `
-        <div class="chart-error">
-          <i class="fas fa-exclamation-triangle"></i>
-          <div>Chart loading failed</div>
-          <small>Please check your internet connection</small>
-        </div>
-      `;
+function checkPlotlyStatus() {
+  let checkCount = 0;
+  const maxChecks = 10;
+  
+  const checkPlotly = setInterval(() => {
+    checkCount++;
+    if (typeof Plotly !== 'undefined') {
+      clearInterval(checkPlotly);
+      console.log('✅ Plotly loaded');
+      resizePlotlyCharts();
+    } else if (checkCount >= maxChecks) {
+      clearInterval(checkPlotly);
+      console.log('⚠️ Plotly not loaded after timeout');
     }
-  });
+  }, 200);
 }
 
 function resizePlotlyCharts() {
@@ -1567,168 +1234,47 @@ function resizePlotlyCharts() {
         try {
           Plotly.Plots.resize(plot);
         } catch (err) {
-          console.log('Plotly resize skipped:', err);
+          // Silent fail
         }
       });
     } catch (error) {
-      console.log('Plotly resize error:', error);
+      // Silent fail
     }
   }
 }
 
-// Filter initialization with enhanced Select2 styling
-function initializeFilters() {
-  if (typeof $ !== 'undefined' && $.fn.select2) {
-    try {
-      $('#provider-filter, #diagnosis-filter, #gender-filter, #year-filter').select2({
-        placeholder: 'Select options...',
-        width: '100%',
-        closeOnSelect: false,
-        theme: 'default'
-      });
-      
-      // Remove any overlay issues by ensuring proper z-index
-      $('.select2-container').css('z-index', 'auto');
-      
-    } catch (e) {
-      console.error('Select2 initialization failed:', e);
-    }
-  }
-  updateFilterChips();
-}
-
-function updateFilterChips() {
-  const container = document.getElementById('active-filters');
-  if (!container) return;
-  
-  const chips = [];
-  const elements = {
-    provider: document.getElementById('provider-filter'),
-    diagnosis: document.getElementById('diagnosis-filter'),
-    gender: document.getElementById('gender-filter'),
-    year: document.getElementById('year-filter'),
-    minAmount: document.getElementById('min-amount'),
-    maxAmount: document.getElementById('max-amount')
-  };
-  
-  Object.entries(elements).forEach(([type, element]) => {
-    if (element) {
-      if (element.multiple) {
-        Array.from(element.selectedOptions).forEach(opt => {
-          chips.push({type: type.charAt(0).toUpperCase() + type.slice(1), value: opt.text});
-        });
-      } else if (element.value) {
-        if (type === 'minAmount' || type === 'maxAmount') {
-          const minVal = elements.minAmount?.value || '0';
-          const maxVal = elements.maxAmount?.value || '∞';
-          if (minVal || maxVal) {
-            // Avoid duplicates
-            if (!chips.some(chip => chip.type === 'Amount')) {
-              chips.push({type: 'Amount', value: `${minVal} - ${maxVal} KES`});
-            }
-          }
-        }
-      }
-    }
-  });
-  
-  if (chips.length > 0) {
-    container.innerHTML = chips.map(chip => `
-      <div class="filter-chip">
-        ${chip.type}: ${chip.value}
-        <span class="remove" data-type="${chip.type.toLowerCase()}" data-value="${chip.value}">×</span>
-      </div>
-    `).join('');
-    
-    // Add remove functionality to chips
-    container.querySelectorAll('.filter-chip .remove').forEach(removeBtn => {
-      removeBtn.addEventListener('click', function() {
-        const chipType = this.getAttribute('data-type');
-        removeFilterChip(chipType);
-      });
-    });
-    
-    container.style.display = 'flex';
-  } else {
-    container.style.display = 'none';
-  }
-}
-
-function removeFilterChip(chipType) {
-  switch(chipType) {
-    case 'provider':
-    case 'diagnosis':
-    case 'gender':
-    case 'year':
-      if (typeof $ !== 'undefined' && $.fn.select2) {
-        $(`#${chipType}-filter`).val(null).trigger('change');
-      }
-      break;
-    case 'amount':
-      document.getElementById('min-amount').value = '';
-      document.getElementById('max-amount').value = '';
-      break;
-  }
-  updateFilterChips();
-}
-
-// Event listeners setup
 function setupEventListeners() {
   // Apply filters
-  const applyFiltersBtn = document.getElementById('apply-filters');
-  if (applyFiltersBtn) {
-    applyFiltersBtn.addEventListener('click', applyFilters);
-  }
+  const applyBtn = document.getElementById('apply-filters');
+  if (applyBtn) applyBtn.addEventListener('click', applyFilters);
   
   // Reset filters
-  const resetFiltersBtn = document.getElementById('reset-filters');
-  if (resetFiltersBtn) {
-    resetFiltersBtn.addEventListener('click', resetFilters);
-  }
+  const resetBtn = document.getElementById('reset-filters');
+  if (resetBtn) resetBtn.addEventListener('click', resetFilters);
   
   // Export CSV
   const downloadTableBtn = document.getElementById('download-table');
-  if (downloadTableBtn) {
-    downloadTableBtn.addEventListener('click', exportCSV);
-  }
+  if (downloadTableBtn) downloadTableBtn.addEventListener('click', exportCSV);
   
   // Table search
   const tableSearch = document.getElementById('table-search');
-  if (tableSearch) {
-    tableSearch.addEventListener('input', searchTable);
-  }
+  if (tableSearch) tableSearch.addEventListener('input', searchTable);
   
   // Window resize
-  window.addEventListener('resize', resizePlotlyCharts);
-  
-  // Filter changes
-  document.addEventListener('change', function(e) {
-    if (e.target.matches('#provider-filter, #diagnosis-filter, #gender-filter, #year-filter, #min-amount, #max-amount')) {
-      updateFilterChips();
-    }
-  });
-  
-  // Enter key in amount fields
-  document.addEventListener('keypress', function(e) {
-    if ((e.target.matches('#min-amount') || e.target.matches('#max-amount')) && e.key === 'Enter') {
-      applyFilters();
-    }
+  let resizeTimer;
+  window.addEventListener('resize', function() {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(resizePlotlyCharts, 250);
   });
 }
 
-// Filter functions
 function applyFilters() {
   const loading = document.getElementById('loading-indicator');
   if (loading) loading.style.display = 'flex';
   
+  // Quick redirect - let server handle the filtering
   setTimeout(() => {
     const params = new URLSearchParams();
-    const urlParams = new URLSearchParams(window.location.search);
-    
-    // Preserve non-filter parameters
-    for (const [key, value] of urlParams) {
-      if (!key.startsWith('filter_')) params.set(key, value);
-    }
     
     // Add filter params
     ['provider', 'diagnosis', 'gender', 'year'].forEach(type => {
@@ -1749,27 +1295,15 @@ function applyFilters() {
 }
 
 function resetFilters() {
-  if (typeof $ !== 'undefined' && $.fn.select2) {
+  if (window.jQuery && jQuery.fn.select2) {
     $('#provider-filter, #diagnosis-filter, #gender-filter, #year-filter').val(null).trigger('change');
   }
   
   document.getElementById('min-amount').value = '';
   document.getElementById('max-amount').value = '';
   
-  const container = document.getElementById('active-filters');
-  if (container) {
-    container.style.display = 'none';
-  }
-  
-  const url = new URL(window.location.href);
-  const params = new URLSearchParams();
-  
-  // Preserve non-filter parameters
-  for (const [key, value] of url.searchParams) {
-    if (!key.startsWith('filter_')) params.set(key, value);
-  }
-  
-  window.location.href = `${url.pathname}?${params.toString()}`;
+  // Immediate redirect to reset all filters
+  window.location.href = window.location.pathname;
 }
 
 function exportCSV(e) {
@@ -1815,47 +1349,6 @@ function searchTable() {
     row.style.display = isVisible ? '' : 'none';
     if (isVisible) visibleCount++;
   });
-  
-  // Optional: Show "no results" message
-  const tableWrapper = document.getElementById('table-wrapper');
-  let noResults = tableWrapper.querySelector('.no-results');
-  
-  if (visibleCount === 0 && query.length > 0) {
-    if (!noResults) {
-      noResults = document.createElement('div');
-      noResults.className = 'no-results alert';
-      noResults.innerHTML = '<i class="fas fa-search"></i> No matching diagnoses found';
-      tableWrapper.appendChild(noResults);
-    }
-  } else if (noResults) {
-    noResults.remove();
-  }
 }
-
-// SIMPLE initialization - just wait for DOM to be ready
-document.addEventListener('DOMContentLoaded', function() {
-  console.log('DOM loaded, initializing dashboard...');
-  initializeDashboard();
-});
-
-// Fallback initialization
-if (document.readyState === 'interactive' || document.readyState === 'complete') {
-  console.log('Document already ready, initializing now...');
-  initializeDashboard();
-}
-
-// Final safety check - ensure at least one tab is active
-setTimeout(() => {
-  const activeTab = document.querySelector('.mini-tab.active');
-  const activeContent = document.querySelector('.tab-content.active');
-  
-  if (!activeTab || !activeContent) {
-    console.warn('No active tab found, activating first tab...');
-    const firstTab = document.querySelector('.mini-tab');
-    if (firstTab) {
-      firstTab.click();
-    }
-  }
-}, 1000);
 </script>
 {% endblock %}
