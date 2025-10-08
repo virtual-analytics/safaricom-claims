@@ -17,9 +17,14 @@
 {% block content %}
 <style>
   :root {
-    --accent: #d62728;
-    --accent-2: #1BB64F;
-    --accent-3: #2E86AB;
+    --safaricom-green: #007C3F;
+    --safaricom-light-green: #00A859;
+    --safaricom-dark-green: #005A2B;
+    --safaricom-orange: #FF6600;
+    --safaricom-yellow: #FFCC00;
+    --accent: #007C3F;
+    --accent-2: #00A859;
+    --accent-3: #005A2B;
     --card-bg: #ffffff;
     --muted: #6b7280;
     --border: #e6e9ef;
@@ -77,7 +82,7 @@
     color: var(--muted);
   }
 
-    /* Enhanced Filters Panel - FIXED DROPDOWN OVERLAY */
+  /* Enhanced Filters Panel */
   .filters-panel {
     background: var(--card-bg);
     border: 1px solid var(--border);
@@ -86,7 +91,7 @@
     margin-bottom: 20px;
     box-shadow: var(--shadow);
     position: relative;
-    /* Remove z-index to prevent stacking context issues */
+    z-index: 100;
   }
 
   .filters-grid {
@@ -100,7 +105,6 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
-    /* Remove position: relative to prevent stacking context */
   }
 
   .filter-group label {
@@ -111,14 +115,21 @@
     letter-spacing: 0.5px;
   }
 
-  /* Enhanced Select2 Styling - FIXED OVERLAY */
+  /* Enhanced Select2 Styling */
   .select2-container {
     position: relative;
-    /* Let Select2 manage its own z-index */
+    z-index: 1000;
   }
 
   .select2-container--open {
-    z-index: 9999; /* High z-index when dropdown is open */
+    z-index: 9999 !important;
+  }
+
+  .select2-dropdown {
+    z-index: 9999 !important;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow: var(--shadow);
   }
 
   .select2-container--default .select2-selection--multiple {
@@ -131,7 +142,7 @@
   }
 
   .select2-container--default .select2-selection--multiple .select2-selection__choice {
-    background: var(--accent-3);
+    background: var(--accent);
     color: white;
     border: none;
     border-radius: 4px;
@@ -149,7 +160,7 @@
   .select2-container--default.select2-container--focus .select2-selection--multiple {
     border-color: var(--accent);
     outline: none;
-    box-shadow: 0 0 0 3px rgba(214, 39, 40, 0.1);
+    box-shadow: 0 0 0 3px rgba(0, 124, 63, 0.1);
   }
 
   .select2-container--default .select2-selection--single {
@@ -170,14 +181,6 @@
   .select2-container--default .select2-selection--single .select2-selection__arrow {
     height: 36px;
     right: 8px;
-  }
-
-  /* FIXED DROPDOWN OVERLAY - Proper z-index management */
-  .select2-dropdown {
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    box-shadow: var(--shadow);
-    z-index: 9999 !important; /* Very high to ensure it's on top */
   }
 
   .select2-results__option {
@@ -209,7 +212,7 @@
   .filter-group input:focus {
     outline: none;
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(214, 39, 40, 0.1);
+    box-shadow: 0 0 0 3px rgba(0, 124, 63, 0.1);
   }
 
   .filter-group input::placeholder {
@@ -249,7 +252,7 @@
   }
 
   .btn:hover {
-    opacity: 0.9;
+    background: var(--accent-2);
     transform: translateY(-1px);
   }
 
@@ -281,6 +284,12 @@
     text-align: center;
     position: relative;
     overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .summary-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(22, 28, 37, 0.1);
   }
 
   .summary-card::before {
@@ -390,6 +399,12 @@
     display: flex;
     flex-direction: column;
     width: 100%;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(22, 28, 37, 0.1);
   }
 
   .card .card-head {
@@ -404,7 +419,7 @@
 
   .card .card-body {
     padding: 16px 20px;
-    min-height: 400px; /* Taller for better chart visibility */
+    min-height: 400px;
     display: flex;
     flex-direction: column;
     flex: 1;
@@ -446,7 +461,7 @@
   .plotly-container {
     width: 100%;
     height: 100%;
-    min-height: 350px; /* Taller for better visualization */
+    min-height: 350px;
     flex: 1;
   }
 
@@ -577,7 +592,7 @@
   }
 
   .filter-chip {
-    background: var(--accent-3);
+    background: var(--accent);
     color: white;
     padding: 4px 8px;
     border-radius: 12px;
@@ -847,7 +862,7 @@
     <div class="summary-card">
       <div class="label">Total Claims</div>
       <div class="value">{{ deep_summary.total_claims|intcomma|default:"—" }}</div>
-      <div class="trend">All time</div>
+      <div class="trend">Unique claims based on claim_ce</div>
     </div>
     <div class="summary-card">
       <div class="label">Total Amount (KES)</div>
@@ -862,7 +877,7 @@
     <div class="summary-card">
       <div class="label">Avg Claim (KES)</div>
       <div class="value">KES {{ deep_summary.avg_claim|floatformat:2|intcomma }}</div>
-      <div class="trend">Per claim</div>
+      <div class="trend">Per unique claim</div>
     </div>
     <div class="summary-card">
       <div class="label">Top Diagnosis</div>
@@ -884,21 +899,6 @@
   <!-- Tab Contents - ONE CHART PER ROW -->
   <div class="tab-content active" id="overview-tab">
     <div class="grid one-col">
-      <div class="card">
-        <div class="card-head">
-          <div class="card-title">Top Diagnoses by Claim Count</div>
-        </div>
-        <div class="card-body">
-          {% if visualizations.top_by_count %}
-            <div class="plotly-container">{{ visualizations.top_by_count|safe }}</div>
-          {% else %}
-            <div class="chart-error">
-              <i class="fas fa-chart-bar"></i>
-              <div>Chart not available</div>
-            </div>
-          {% endif %}
-        </div>
-      </div>
 
       <div class="card">
         <div class="card-head">
@@ -911,6 +911,22 @@
             <div class="chart-error">
               <i class="fas fa-th"></i>
               <div>Heatmap not available</div>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">Top Diagnoses by Claim Count</div>
+        </div>
+        <div class="card-body">
+          {% if visualizations.top_by_count %}
+            <div class="plotly-container">{{ visualizations.top_by_count|safe }}</div>
+          {% else %}
+            <div class="chart-error">
+              <i class="fas fa-chart-bar"></i>
+              <div>Chart not available</div>
             </div>
           {% endif %}
         </div>
@@ -944,7 +960,11 @@
           {% if visualizations.cost_efficiency %}
             <div class="plotly-container">{{ visualizations.cost_efficiency|safe }}</div>
           {% else %}
-            <div class="alert info">Apply filters to see cost efficiency analysis</div>
+            <div class="alert info">
+              <i class="fas fa-info-circle"></i>
+              <div>Cost efficiency analysis not available</div>
+              <small>Try applying different filters or check if you have sufficient data</small>
+            </div>
           {% endif %}
         </div>
       </div>
@@ -1034,19 +1054,6 @@
           {% endif %}
         </div>
       </div>
-
-      <div class="card">
-        <div class="card-head">
-          <div class="card-title">Age Distribution</div>
-        </div>
-        <div class="card-body">
-          {% if visualizations.age_distribution %}
-            <div class="plotly-container">{{ visualizations.age_distribution|safe }}</div>
-          {% else %}
-            <div class="alert">Age distribution chart not available.</div>
-          {% endif %}
-        </div>
-      </div>
     </div>
   </div>
 
@@ -1077,7 +1084,11 @@
           {% if visualizations.diagnosis_clusters %}
             <div class="plotly-container">{{ visualizations.diagnosis_clusters|safe }}</div>
           {% else %}
-            <div class="alert info">Diagnosis clustering analysis</div>
+            <div class="alert info">
+              <i class="fas fa-info-circle"></i>
+              <div>Diagnosis clustering not available</div>
+              <small>This analysis requires sufficient data with multiple diagnoses</small>
+            </div>
           {% endif %}
         </div>
       </div>
@@ -1165,14 +1176,13 @@ function initializeDashboard() {
 // SIMPLE tab switching - reliable and fast
 function initializeTabs() {
   const tabs = document.querySelectorAll('.mini-tab');
-  const tabContents = document.querySelectorAll('.tab-content');
   
   tabs.forEach(tab => {
-    tab.onclick = function(e) {
+    tab.addEventListener('click', function(e) {
       e.preventDefault();
       const targetTab = this.getAttribute('data-tab');
       switchToTab(targetTab);
-    };
+    });
   });
   
   function switchToTab(targetTabName) {
@@ -1197,15 +1207,20 @@ function initializeTabs() {
 function initializeFilters() {
   if (window.jQuery && jQuery.fn.select2) {
     try {
+      // Initialize all select2 dropdowns with proper z-index handling
       $('#provider-filter, #diagnosis-filter, #gender-filter, #year-filter').select2({
         placeholder: 'Select...',
         width: '100%',
         closeOnSelect: false,
-        dropdownParent: $('.filters-panel') // Ensure dropdowns are properly positioned
+        dropdownParent: $('.filters-panel')
       });
+      
+      console.log('✅ Select2 filters initialized');
     } catch (e) {
-      console.log('Select2 not available, using native selects');
+      console.log('Select2 not available, using native selects:', e);
     }
+  } else {
+    console.log('jQuery or Select2 not loaded, using native select elements');
   }
 }
 
