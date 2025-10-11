@@ -107,7 +107,7 @@ def login_view(request):
     return render(request, 'myapp/login.html', {'form': form})
 
 
-def get_database_tables():
+def get_database_tables(self):
     """Return all non-internal tables from the database (works with SQLite & PostgreSQL)."""
     vendor = connection.vendor  # 'sqlite', 'postgresql', 'mysql', etc.
 
@@ -2483,7 +2483,7 @@ def calculate_efficiency_scores(df):
     return scores, metrics
 
 
-def get_database_tables():
+def get_database_tables(self):
     """
     Return all non-internal tables from the database.
     Supports SQLite and PostgreSQL.
@@ -10996,7 +10996,7 @@ class MLModelManager:
             self._available_tables = self.get_database_tables()
         return self._available_tables
 
-    def get_database_tables():
+    def get_database_tables(self):
         """
         Return all non-internal tables from the database.
         Works with SQLite and PostgreSQL.
@@ -11999,7 +11999,7 @@ class FraudDetector:
 # Fraud Detection Views
 # =======================
 
-def get_database_tables():
+def get_database_tables(self):
     """
     Return all user-defined tables from the database.
     Supports SQLite and PostgreSQL.
@@ -12236,7 +12236,7 @@ from scipy.spatial.distance import cdist
 logger = logging.getLogger(__name__)
 
 # Helper functions
-def get_database_tables():
+def get_database_tables(self):
     """Get list of available database tables across different database backends."""
     vendor = connection.vendor  # 'sqlite', 'postgresql', 'mysql', etc.
 
