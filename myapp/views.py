@@ -107,7 +107,7 @@ def login_view(request):
     return render(request, 'myapp/login.html', {'form': form})
 
 
-def get_database_tables(self):
+def get_database_tables():
     """Return all non-internal tables from the database (works with SQLite & PostgreSQL)."""
     vendor = connection.vendor  # 'sqlite', 'postgresql', 'mysql', etc.
 
@@ -146,7 +146,32 @@ def claims_upload_landing(request):
 # =========================================
 @login_required(login_url='login')
 def home_view(request):
-    dataset_ids = get_database_tables()
+    # Get database tables directly (inline implementation to avoid the TypeError)
+    vendor = connection.vendor
+    with connection.cursor() as cursor:
+        if vendor == 'sqlite':
+            cursor.execute("""
+                SELECT name 
+                FROM sqlite_master 
+                WHERE type='table' 
+                AND name NOT LIKE 'sqlite_%'
+                AND name NOT LIKE 'django_%'
+                AND name NOT LIKE 'auth_%'
+                AND name NOT LIKE 'sessions%'
+            """)
+        elif vendor == 'postgresql':
+            cursor.execute("""
+                SELECT tablename 
+                FROM pg_catalog.pg_tables 
+                WHERE schemaname='public'
+                AND tablename NOT LIKE 'django_%'
+                AND tablename NOT LIKE 'auth_%'
+                AND tablename NOT LIKE 'sessions%'
+            """)
+        else:
+            raise NotImplementedError(f"Database vendor '{vendor}' not supported yet.")
+        dataset_ids = [row[0] for row in cursor.fetchall()]
+
     selected_id = request.GET.get('dataset_id')
     show_stats = 'desc_btn' in request.GET
     start_date = request.GET.get('start_date')
@@ -2483,7 +2508,7 @@ def calculate_efficiency_scores(df):
     return scores, metrics
 
 
-def get_database_tables(self):
+def get_database_tables():
     """
     Return all non-internal tables from the database.
     Supports SQLite and PostgreSQL.
@@ -10996,7 +11021,7 @@ class MLModelManager:
             self._available_tables = self.get_database_tables()
         return self._available_tables
 
-    def get_database_tables(self):
+    def get_database_tables():
         """
         Return all non-internal tables from the database.
         Works with SQLite and PostgreSQL.
@@ -11999,7 +12024,7 @@ class FraudDetector:
 # Fraud Detection Views
 # =======================
 
-def get_database_tables(self):
+def get_database_tables():
     """
     Return all user-defined tables from the database.
     Supports SQLite and PostgreSQL.
@@ -12236,7 +12261,7 @@ from scipy.spatial.distance import cdist
 logger = logging.getLogger(__name__)
 
 # Helper functions
-def get_database_tables(self):
+def get_database_tables():
     """Get list of available database tables across different database backends."""
     vendor = connection.vendor  # 'sqlite', 'postgresql', 'mysql', etc.
 
